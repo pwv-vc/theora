@@ -1,20 +1,28 @@
-# kb
+# Theora
+
+> *"She's the one who actually knows how everything works."*
 
 LLM-powered knowledge base that turns raw research into a living wiki.
 
 Dump research into a folder. Let the model organise it into a wiki. Ask questions. The answers get filed back in. Every query makes the wiki smarter.
 
+## The Name
+
+**Theora** is named after Theora Jones — network controller and systems operator at Network 23 in *Max Headroom: 20 Minutes into the Future*. While others exploit the media landscape around her, Theora is the one who understands the infrastructure, keeps things running, and bridges systems and people. She's calm, competent, and grounded in a chaotic world.
+
+It's also short for **the oracle** — a knowledge base that doesn't just store what you put in, but synthesises, connects, and answers. The more you feed it, the more it knows.
+
 ## Why This Works
 
-Most tools treat knowledge as static — you write notes, they sit there. `kb` flips this. The LLM writes and maintains everything. You just steer.
+Most tools treat knowledge as static — you write notes, they sit there. Theora flips this. The LLM writes and maintains everything. You just steer.
 
 The real insight is the loop:
 
 ```mermaid
 flowchart LR
-    S[Sources<br/>files · URLs · images] -->|kb ingest| R[raw/]
-    R -->|kb compile| W[wiki/<br/>sources · concepts · index]
-    W -->|kb ask| O[output/<br/>answers · slides · charts]
+    S[Sources<br/>files · URLs · images] -->|theora ingest| R[raw/]
+    R -->|theora compile| W[wiki/<br/>sources · concepts · index]
+    W -->|theora ask| O[output/<br/>answers · slides · charts]
     O -->|filed back| W
     W -->|improves| W
 ```
@@ -23,7 +31,7 @@ Every answer filed back into the wiki makes the next answer better. The wiki com
 
 ### The Compile Pipeline
 
-`kb compile` transforms raw sources into a structured wiki in three stages:
+`theora compile` transforms raw sources into a structured wiki in three stages:
 
 ```mermaid
 flowchart TD
@@ -41,7 +49,7 @@ Each source gets its own article with consistent sections — Summary, Key Point
 
 ### The Ask Loop
 
-`kb ask` is where the compounding happens:
+`theora ask` is where the compounding happens:
 
 ```mermaid
 flowchart LR
@@ -79,6 +87,8 @@ When you ask a question, the LLM researches your wiki, synthesizes an answer, an
 This is a second brain that builds itself.
 
 The bigger implication: agents that own their own knowledge layer don't need infinite context windows. They need good file organization and the ability to read their own indexes. Way cheaper, way more scalable, and way more inspectable than stuffing everything into one giant prompt.
+
+---
 
 ## Getting Started
 
@@ -125,10 +135,10 @@ npm link
 
 ```bash
 mkdir my-research && cd my-research
-kb init my-research
+theora init my-research
 ```
 
-`kb init` checks for optional dependencies and tells you what to install if anything is missing. It creates the directory structure and a `.env` file for your API keys:
+`theora init` checks for optional dependencies and tells you what to install if anything is missing. It creates the directory structure and a `.env` file for your API keys:
 
 ```
 raw/              Source documents you feed in
@@ -153,40 +163,42 @@ OPENAI_API_KEY=sk-...
 # ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-### Ingest sources
+---
+
+## Commands
+
+### Ingest
 
 Drop articles, papers, images, PDFs, or any text into the pipeline:
 
 ```bash
-kb ingest ~/Downloads/some-paper.pdf
-kb ingest ~/notes/research/*.md --tag transformers
-kb ingest ./diagrams/*.png --tag architecture
+theora ingest ~/Downloads/some-paper.pdf
+theora ingest ~/notes/research/*.md --tag transformers
+theora ingest ./diagrams/*.png --tag architecture
 ```
 
 Point it at an entire directory and it walks the tree, picking up every supported file:
 
 ```bash
-kb ingest ~/research/project-alpha/
-kb ingest ~/Downloads/conference-papers/ --tag neurips-2025
+theora ingest ~/research/project-alpha/
+theora ingest ~/Downloads/conference-papers/ --tag neurips-2025
 ```
 
 Ingest URLs directly — web pages are saved as HTML, remote images are downloaded as-is:
 
 ```bash
-kb ingest https://example.com/article --tag research
-kb ingest https://arxiv.org/abs/2310.01234 --tag transformers
-kb ingest https://example.com/architecture-diagram.png --tag architecture
+theora ingest https://example.com/article --tag research
+theora ingest https://arxiv.org/abs/2310.01234 --tag transformers
+theora ingest https://example.com/diagram.png --tag architecture
 ```
 
 You can mix files, directories, and URLs in a single command:
 
 ```bash
-kb ingest ./local-notes.md https://example.com/article ~/Downloads/paper.pdf --tag project
+theora ingest ./local-notes.md https://example.com/article ~/Downloads/paper.pdf --tag project
 ```
 
-Only valid file types are ingested — everything else is skipped. Duplicates are detected automatically so you can re-run the same ingest without creating copies.
-
-Files get copied (flattened) into `raw/`. Use `--tag` to organize by topic.
+Only valid file types are ingested — everything else is skipped. Duplicates are detected automatically so you can re-run the same ingest without creating copies. Files get copied (flattened) into `raw/`.
 
 Supported file types:
 
@@ -200,35 +212,35 @@ Supported file types:
 
 Images are especially useful for diagrams, charts, screenshots, and figures from papers. The LLM describes what it sees, extracts any text or data, and links the image from the wiki article so you can view it in Obsidian.
 
-### Compile the wiki
+### Compile
 
 ```bash
-kb compile
+theora compile
 ```
 
 The LLM reads every new source in `raw/`, writes a summary article for each, extracts key concepts into their own articles with backlinks, and rebuilds the master index. Run it again after ingesting new sources — it only processes what's new.
 
 ```bash
-kb compile --sources-only    # skip concept extraction
-kb compile --concepts-only   # delete and regenerate all concept articles from existing sources
-kb compile --reindex          # just rebuild the index
-kb compile --force            # delete existing articles and recompile everything from scratch
-kb compile --concurrency 5   # run 5 parallel LLM calls (faster, uses more API quota)
-kb compile --concurrency 1   # sequential (useful for debugging or strict rate limits)
+theora compile --sources-only    # skip concept extraction
+theora compile --concepts-only   # delete and regenerate all concept articles from existing sources
+theora compile --reindex         # just rebuild the index
+theora compile --force           # delete existing articles and recompile everything from scratch
+theora compile --concurrency 5   # run 5 parallel LLM calls (faster, uses more API quota)
+theora compile --concurrency 1   # sequential (useful for debugging or strict rate limits)
 ```
 
 Use `--concepts-only` to regenerate all concept articles without re-summarizing sources — useful after adding new sources or when you want concepts to reflect the latest wiki content. It clears `wiki/concepts/` and re-extracts from your already-compiled source articles.
 
 Use `--force` when you want to reprocess all sources with updated prompts or settings. It clears `wiki/sources/` and `wiki/concepts/` then runs a full compile. Your `raw/` files are never touched.
 
-By default, `kb compile` runs **3 parallel LLM calls** at a time — safe for both OpenAI and Anthropic rate limits. Use `--concurrency` to tune this per-run, or set a permanent default for the KB with `kb init --concurrency <n>` (stored in `.kb/config.json`).
+By default, `theora compile` runs **3 parallel LLM calls** at a time — safe for both OpenAI and Anthropic rate limits. Use `--concurrency` to tune this per-run, or set a permanent default with `theora init --concurrency <n>` (stored in `.kb/config.json`).
 
-### Ask questions
+### Ask
 
 ```bash
-kb ask "what are the key differences between transformers and RNNs?"
-kb ask "summarize the main findings across all papers"
-kb ask "what open questions remain in this research area?"
+theora ask "what are the key differences between transformers and RNNs?"
+theora ask "summarize the main findings across all papers"
+theora ask "what open questions remain in this research area?"
 ```
 
 The LLM reads the wiki index, finds relevant articles, and streams an answer. By default, every answer gets filed into `output/` — and that's the compounding loop. The next time you ask something, those previous answers are part of the knowledge base.
@@ -236,26 +248,42 @@ The LLM reads the wiki index, finds relevant articles, and streams an answer. By
 Use `--no-file` to ask without filing the answer back:
 
 ```bash
-kb ask "quick question" --no-file
+theora ask "quick question" --no-file
 ```
 
-Generate a slide deck instead of markdown:
+#### Output formats
+
+**Markdown** (default) — a written answer filed to `output/`:
 
 ```bash
-kb ask "present the key findings" --output slides
+theora ask "what are the main themes?"
 ```
 
-This generates a [Marp](https://marp.app/) slide deck and converts it to PDF automatically if you have `marp-cli` installed. The `.marp.md` intermediate is kept too. See [Slide Decks](#slide-decks) below for setup.
+**Slides** — a Marp PDF deck:
+
+```bash
+theora ask "present the key findings" --output slides
+```
+
+Generates a [Marp](https://marp.app/) slide deck and converts it to PDF automatically if you have `marp-cli` installed. The `.marp.md` intermediate is always kept. See [Slide Decks](#slide-decks) below.
+
+**Chart** — a matplotlib PNG:
+
+```bash
+theora ask "line chart of revenue by month" --output chart
+```
+
+See [Charts](#charts) below.
 
 ### Search
 
 Full-text search across every compiled wiki article — sources and concepts:
 
 ```bash
-kb search "attention mechanism"
-kb search "transformer" -n 5
-kb search "encoder" --tag transformers    # filter by tag
-kb search anything --tags                 # list all tags
+theora search "attention mechanism"
+theora search "transformer" -n 5
+theora search "encoder" --tag transformers    # filter by tag
+theora search anything --tags                 # list all tags
 ```
 
 Search reads every article in `wiki/` and scores them using term frequency with bonuses:
@@ -266,18 +294,18 @@ Search reads every article in `wiki/` and scores them using term frequency with 
 | Term appears in the article title | +5 bonus |
 | A tag matches a query term | +3 bonus |
 
-Results are ranked by score and each result shows the article title, tags, file path, score, and a snippet of the first matching line.
+Results are ranked by score and show the article title, tags, file path, score, and a snippet of the first matching line.
 
 Use `--tag` to pre-filter articles before scoring — only articles with that tag are searched:
 
 ```bash
-kb search "performance" --tag transformers
+theora search "performance" --tag transformers
 ```
 
 Use `--tags` to list every tag in the wiki (no query needed):
 
 ```bash
-kb search anything --tags
+theora search anything --tags
 ```
 
 ### Lint
@@ -285,27 +313,27 @@ kb search anything --tags
 Health-check the wiki for broken links, orphaned sources, and missing data:
 
 ```bash
-kb lint
-kb lint --suggest    # LLM suggests improvements and new articles
+theora lint
+theora lint --suggest    # LLM suggests improvements and new articles
 ```
+
+---
 
 ## LLM Providers
 
-`kb` supports multiple LLM providers. OpenAI is the default.
+Theora supports multiple LLM providers. OpenAI is the default.
 
 | Provider | Default Model | API Key Variable |
 |----------|--------------|-----------------|
 | `openai` | `gpt-4o` | `OPENAI_API_KEY` |
 | `anthropic` | `claude-sonnet-4-20250514` | `ANTHROPIC_API_KEY` |
 
-### Switch providers
-
 Set the provider at init time:
 
 ```bash
-kb init my-research --provider anthropic
-kb init my-research --provider openai --model gpt-4o-mini
-kb init my-research --concurrency 5   # set default compile concurrency for this KB
+theora init my-research --provider anthropic
+theora init my-research --provider openai --model gpt-4o-mini
+theora init my-research --concurrency 5
 ```
 
 Or edit `.kb/config.json` directly:
@@ -320,13 +348,15 @@ Or edit `.kb/config.json` directly:
 
 All API keys live in `.env` at the knowledge base root. This file is gitignored by default.
 
+---
+
 ## Tags
 
 Tags are how you tell the wiki what things are about. Without tags, the LLM guesses — and it's decent at guessing. But when you're researching multiple topics at once, tags keep everything organized and findable.
 
 ### Two layers of tagging
 
-**You tag at ingest time.** When you run `kb ingest paper.pdf --tag transformers`, that tag flows into the compile step. The LLM sees it and uses it to categorize the article — it'll include "transformers" in the frontmatter tags and use that context to write a better summary.
+**You tag at ingest time.** When you run `theora ingest paper.pdf --tag transformers`, that tag flows into the compile step. The LLM sees it and uses it to categorize the article — it'll include "transformers" in the frontmatter tags and use that context to write a better summary.
 
 **The LLM also generates its own tags.** During compilation, the LLM reads each source and adds tags based on the content. If you tagged a paper "transformers" but it also covers attention mechanisms and encoder-decoder architectures, the LLM will add those too. Your tag seeds the categorization; the LLM expands it.
 
@@ -343,51 +373,47 @@ tags: [transformers, attention-mechanism, encoder-decoder, self-attention]
 
 Tags are the cross-cutting links in your wiki. The directory structure gives you two buckets — `sources/` and `concepts/` — but tags let you slice across both:
 
-- **Filter search results**: `kb search "performance" --tag transformers` — only show results tagged "transformers"
-- **See all tags**: `kb search anything --tags` — list every tag in the wiki
-- **Index grouping**: `kb compile --reindex` rebuilds the master index with a Tags section showing which articles share each tag
-- **Better Q&A**: when you `kb ask` a question, the LLM sees tags in the index and uses them to find relevant articles faster
+- **Filter search results**: `theora search "performance" --tag transformers` — only show results tagged "transformers"
+- **See all tags**: `theora search anything --tags` — list every tag in the wiki
+- **Index grouping**: `theora compile --reindex` rebuilds the master index with a Tags section showing which articles share each tag
+- **Better Q&A**: when you `theora ask` a question, the LLM sees tags in the index and uses them to find relevant articles faster
 
 ### When to use tags
 
-**Use tags when you're researching multiple topics.** If your knowledge base covers one narrow subject, tags are nice but not critical — the LLM will figure it out. But once you're ingesting papers on transformers _and_ diffusion models _and_ reinforcement learning, tags are what keep the wiki navigable.
+Use tags when you're researching multiple topics. If your knowledge base covers one narrow subject, tags are nice but not critical — the LLM will figure it out. But once you're ingesting papers on transformers _and_ diffusion models _and_ reinforcement learning, tags are what keep the wiki navigable.
 
-**Tag at ingest time, not after.** It's one flag: `--tag transformers`. The earlier you tag, the better the LLM categorizes. You can always re-compile later, but the ingest tag gives the LLM a head start.
+Tag at ingest time, not after. It's one flag: `--tag transformers`. The earlier you tag, the better the LLM categorizes.
 
 ```bash
-# Research across multiple areas — tags keep them organized
-kb ingest ./papers/attention/*.pdf --tag transformers
-kb ingest ./papers/diffusion/*.pdf --tag diffusion
-kb ingest ./papers/rl/*.pdf --tag reinforcement-learning
-kb ingest ./diagrams/*.png --tag architecture
+theora ingest ./papers/attention/*.pdf --tag transformers
+theora ingest ./papers/diffusion/*.pdf --tag diffusion
+theora ingest ./papers/rl/*.pdf --tag reinforcement-learning
+theora ingest ./diagrams/*.png --tag architecture
 
-# Now you can search within a topic
-kb search "scaling laws" --tag transformers
-
-# Or ask questions scoped to a tag
-kb ask "compare the training approaches" --tag diffusion
+theora search "scaling laws" --tag transformers
+theora ask "compare the training approaches" --tag diffusion
 ```
+
+---
 
 ## Slide Decks
 
-`kb` can generate slide decks from your wiki using [Marp](https://marp.app/). The LLM structures its answer as slides — title slide, focused bullet points, section dividers, and a summary at the end. If you have `marp-cli` installed, the deck is automatically exported to PDF.
+Theora can generate slide decks from your wiki using [Marp](https://marp.app/). The LLM structures its answer as slides — title slide, focused bullet points, section dividers, and a summary at the end. If you have `marp-cli` installed, the deck is automatically exported to PDF.
 
 ### Setup
-
-Install Marp CLI for automatic PDF export:
 
 ```bash
 npm install -g @marp-team/marp-cli
 ```
 
-Without it, `kb` still generates the `.marp.md` source file — you just won't get the PDF automatically.
+Without it, Theora still generates the `.marp.md` source file — you just won't get the PDF automatically.
 
 ### Generate slides
 
 ```bash
-kb ask "present the key findings on attention mechanisms" --output slides
-kb ask "compare transformer architectures" --output slides
-kb ask "give a 10-slide overview of this research area" --output slides
+theora ask "present the key findings on attention mechanisms" --output slides
+theora ask "compare transformer architectures" --output slides
+theora ask "give a 10-slide overview of this research area" --output slides
 ```
 
 This produces two files in `output/`:
@@ -396,58 +422,44 @@ This produces two files in `output/`:
 
 ### View slides
 
-**PDF** — Open the generated PDF in any viewer.
-
-**Obsidian** — Install the [Marp Slides](https://github.com/samuele-cozzi/obsidian-marp-slides) plugin to preview `.marp.md` files as slides.
-
-**VS Code** — Install the [Marp for VS Code](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode) extension.
-
-**Manual export** — If you want other formats:
-
-```bash
-marp output/my-slides.marp.md -o slides.html   # HTML
-marp output/my-slides.marp.md -o slides.pptx   # PowerPoint
-```
+- **PDF** — open in any viewer
+- **Obsidian** — install the [Marp Slides](https://github.com/samuele-cozzi/obsidian-marp-slides) plugin to preview `.marp.md` files as slides
+- **VS Code** — install the [Marp for VS Code](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode) extension
+- **Manual export** — `marp output/my-slides.marp.md -o slides.html`
 
 ### Theming
 
-`kb init` creates a default slide theme at `.kb/theme.css`. This is a [Marp custom theme](https://marpit.marp.app/theme-css) that controls fonts, colors, layout, and styling for all generated decks.
-
-Customize it by editing `.kb/theme.css`:
+`theora init` creates a default slide theme at `.kb/theme.css`. Customize it to control fonts, colors, and layout for all generated decks:
 
 ```css
 :root {
-  --color-accent: #c0392b;       /* headings, bullets, highlights */
-  --color-fg: #1a1a2e;           /* body text */
-  --color-bg: #ffffff;           /* slide background */
+  --color-accent: #c0392b;
+  --color-fg: #1a1a2e;
+  --color-bg: #ffffff;
   --font-heading: 'Inter', sans-serif;
   --font-body: 'Inter', sans-serif;
   --font-code: 'JetBrains Mono', monospace;
 }
 ```
 
-The theme includes styled title slides (dark background with `<!-- _class: lead -->`), accent-colored headings and bullet markers, clean table styling, and code blocks. The PDF export automatically picks up your theme — no extra flags needed.
-
 If you delete `.kb/theme.css`, slides fall back to Marp's built-in default theme.
 
-### What makes a good slide prompt
-
-The LLM does better with specific prompts:
+### Good slide prompts
 
 ```bash
-# Good — tells the LLM what to present
-kb ask "present the 5 most important findings with evidence" --output slides
-kb ask "create a tutorial on how attention mechanisms work" --output slides
+# Good — specific
+theora ask "present the 5 most important findings with evidence" --output slides
+theora ask "create a tutorial on how attention mechanisms work" --output slides
 
-# Less good — too vague for slides
-kb ask "tell me about transformers" --output slides
+# Less good — too vague
+theora ask "tell me about transformers" --output slides
 ```
 
-Slide decks get filed to `output/` like any other answer, so they compound into the knowledge base too.
+---
 
 ## Charts
 
-`kb ask` can generate matplotlib charts directly from your wiki data using `--output chart`. The LLM reads the relevant wiki articles, extracts the data, and writes a Python script that renders a PNG.
+`theora ask` can generate matplotlib charts directly from your wiki data using `--output chart`. The LLM reads the relevant wiki articles, extracts the data, and writes a Python script that renders a PNG.
 
 ### Setup
 
@@ -455,26 +467,26 @@ Slide decks get filed to `output/` like any other answer, so they compound into 
 pip3 install matplotlib
 ```
 
-Python 3 must be available (`python3` or `python` in your PATH).
+Python 3 must be available in your PATH.
 
 ### Generate charts
 
 ```bash
-kb ask "line chart of revenue by month" --output chart
-kb ask "pie chart of customer segments" --output chart
-kb ask "bar chart of user signups over time" --output chart
-kb ask "scatter plot of price vs volume" --output chart
+theora ask "line chart of revenue by month" --output chart
+theora ask "pie chart of customer segments" --output chart
+theora ask "bar chart of user signups over time" --output chart
+theora ask "scatter plot of price vs volume" --output chart
 ```
 
 This produces two files in `output/`:
 - `<slug>.png` — the rendered chart
 - `<slug>.py` — the Python source (always kept)
 
-A markdown note referencing the PNG is also filed back into `output/` so the chart compounds into the knowledge base — future answers can reference it.
+A markdown note referencing the PNG is also filed back into `output/` so the chart compounds into the knowledge base.
 
 ### How it works
 
-The LLM reads the wiki, extracts relevant numbers and categories as inline Python data, and generates a complete self-contained matplotlib script. No pandas, no CSV files — just Python literals derived from your wiki content. The chart type (line, bar, pie, scatter) is chosen automatically based on the data and your question.
+The LLM reads the wiki, extracts relevant numbers and categories as inline Python data, and generates a complete self-contained matplotlib script. No pandas, no CSV files — just Python literals derived from your wiki content. The chart type is chosen automatically based on the data and your question.
 
 If rendering fails, the `.py` source is saved and you can fix and re-run it manually:
 
@@ -484,29 +496,29 @@ python3 output/my-chart.py
 
 ### Good chart prompts
 
-Be specific about the chart type and what data you want visualized:
-
 ```bash
 # Good — specific chart type and data
-kb ask "line chart of monthly revenue for the last year" --output chart
-kb ask "horizontal bar chart comparing feature adoption rates" --output chart
-kb ask "pie chart breaking down revenue by product category" --output chart
+theora ask "line chart of monthly revenue for the last year" --output chart
+theora ask "horizontal bar chart comparing feature adoption rates" --output chart
+theora ask "pie chart breaking down revenue by product category" --output chart
 
 # Less good — too vague
-kb ask "show me the data" --output chart
+theora ask "show me the data" --output chart
 ```
+
+---
 
 ## How It Compounds
 
-A typical session looks like this:
+A typical session:
 
-1. You ingest 10 papers on a topic
-2. `kb compile` produces 10 source summaries + 5 concept articles + an index
-3. You ask "what are the main themes?" — answer filed back
-4. You ask "where do the authors disagree?" — answer filed back, now cross-referencing the previous answer
-5. You ask "what's missing from this research?" — the LLM now has your previous analysis to build on
-6. `kb lint --suggest` finds gaps and suggests new articles
-7. You ingest more sources, compile again — the wiki grows
+1. Ingest 10 papers on a topic
+2. `theora compile` produces 10 source summaries + 5 concept articles + an index
+3. Ask "what are the main themes?" — answer filed back
+4. Ask "where do the authors disagree?" — answer filed back, now cross-referencing the previous answer
+5. Ask "what's missing from this research?" — the LLM now has your previous analysis to build on
+6. `theora lint --suggest` finds gaps and suggests new articles
+7. Ingest more sources, compile again — the wiki grows
 
 Each cycle makes the next one better. The wiki isn't a snapshot — it's a living document that gets smarter every time you interact with it.
 
@@ -522,4 +534,3 @@ flowchart TD
 
     style A3 fill:#c0392b,color:#fff
 ```
-# kb
