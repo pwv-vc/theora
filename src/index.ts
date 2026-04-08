@@ -9,6 +9,7 @@ import { compileCommand } from './commands/compile.js'
 import { askCommand } from './commands/ask.js'
 import { searchCommand } from './commands/search.js'
 import { lintCommand } from './commands/lint.js'
+import { statsCommand } from './commands/stats.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -20,12 +21,12 @@ function getVersion(): string {
 }
 
 const BANNER = `
-${pc.white('██╗  ██╗██████╗ ')}
-${pc.white('██║ ██╔╝██╔══██╗')}
-${pc.white('█████╔╝ ██████╔╝')}
-${pc.white('██╔═██╗ ██╔══██╗')}
-${pc.white('██║  ██╗██████╔╝')}
-${pc.gray('╚═╝  ╚═╝╚═════╝ ')}
+${pc.white('████████╗██╗  ██╗███████╗ ██████╗ ██████╗  █████╗ ')}
+${pc.white('╚══██╔══╝██║  ██║██╔════╝██╔═══██╗██╔══██╗██╔══██╗')}
+${pc.white('   ██║   ███████║█████╗  ██║   ██║██████╔╝███████║')}
+${pc.white('   ██║   ██╔══██║██╔══╝  ██║   ██║██╔══██╗██╔══██║')}
+${pc.white('   ██║   ██║  ██║███████╗╚██████╔╝██║  ██║██║  ██║')}
+${pc.gray('   ╚═╝   ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝')}
 `
 
 const program = new Command()
@@ -42,6 +43,7 @@ program.addCommand(compileCommand)
 program.addCommand(askCommand)
 program.addCommand(searchCommand)
 program.addCommand(lintCommand)
+program.addCommand(statsCommand)
 
 function handleError(err: unknown): never {
   const msg = err instanceof Error ? err.message : String(err)

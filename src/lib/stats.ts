@@ -88,7 +88,7 @@ export function getSession(): SessionStats {
 function statsPath(): string | null {
   const root = findKbRoot()
   if (!root) return null
-  return join(root, '.kb', 'stats.json')
+  return join(root, '.theora', 'stats.json')
 }
 
 function readCumulativeStats(): CumulativeStats {

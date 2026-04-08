@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs'
 export function findKbRoot(from: string = process.cwd()): string | null {
   let dir = resolve(from)
   while (true) {
-    if (existsSync(join(dir, '.kb'))) {
+    if (existsSync(join(dir, '.theora'))) {
       return dir
     }
     const parent = resolve(dir, '..')
@@ -32,8 +32,8 @@ export function kbPaths(root: string) {
     wikiConcepts: join(root, 'wiki', 'concepts'),
     wikiSources: join(root, 'wiki', 'sources'),
     output: join(root, 'output'),
-    config: join(root, '.kb'),
-    configFile: join(root, '.kb', 'config.json'),
-    theme: join(root, '.kb', 'theme.css'),
+    config: join(root, '.theora'),
+    configFile: join(root, '.theora', 'config.json'),
+    theme: join(root, '.theora', 'theme.css'),
   }
 }

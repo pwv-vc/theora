@@ -1,5 +1,6 @@
 # Cli
 - The CLI for this project is named `theora` (not `kb`) — named after Theora Jones from Max Headroom, and a play on "the oracle" of knowledge. Use `theora` in all command examples, error messages, and documentation. Confidence: 0.95
+- The project's local data directory is `.theora` (not `.kb`) — use `.theora` in `init`, directory detection, and all file path references throughout the codebase. Confidence: 0.90
 - Use pnpm as the package manager for CLI projects. Confidence: 1.00
 - Use TypeScript for CLI projects. Confidence: 0.95
 - Use tsup as the build tool for CLI projects. Confidence: 0.95
