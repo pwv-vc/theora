@@ -1,0 +1,525 @@
+# kb
+
+LLM-powered knowledge base that turns raw research into a living wiki.
+
+Dump research into a folder. Let the model organise it into a wiki. Ask questions. The answers get filed back in. Every query makes the wiki smarter.
+
+## Why This Works
+
+Most tools treat knowledge as static — you write notes, they sit there. `kb` flips this. The LLM writes and maintains everything. You just steer.
+
+The real insight is the loop:
+
+```mermaid
+flowchart LR
+    S[Sources<br/>files · URLs · images] -->|kb ingest| R[raw/]
+    R -->|kb compile| W[wiki/<br/>sources · concepts · index]
+    W -->|kb ask| O[output/<br/>answers · slides · charts]
+    O -->|filed back| W
+    W -->|improves| W
+```
+
+Every answer filed back into the wiki makes the next answer better. The wiki compounds.
+
+### The Compile Pipeline
+
+`kb compile` transforms raw sources into a structured wiki in three stages:
+
+```mermaid
+flowchart TD
+    R[raw/ files] --> C{Classify}
+    C -->|text / HTML / PDF| T[LLM summarizes<br/>text content]
+    C -->|images| V[LLM vision<br/>describes image]
+    T --> SA[wiki/sources/<br/>article.md]
+    V --> SA
+    SA --> CE[Extract concepts<br/>across all sources]
+    CE --> CA[wiki/concepts/<br/>concept.md]
+    SA & CA --> IX[Rebuild<br/>wiki/index.md]
+```
+
+Each source gets its own article with consistent sections — Summary, Key Points, Named Entities, Notable Details. Concepts are extracted across all sources and linked back. The index ties everything together with tags and a brief overview.
+
+### The Ask Loop
+
+`kb ask` is where the compounding happens:
+
+```mermaid
+flowchart LR
+    Q[Your question] --> RI[Read wiki index]
+    RI --> RR[Rank relevant<br/>articles]
+    RR --> CTX[Build context<br/>from articles]
+    CTX --> LLM[LLM synthesizes<br/>answer]
+    LLM --> OUT{Output format}
+    OUT -->|md| ANS[Markdown answer]
+    OUT -->|slides| PDF[Marp PDF deck]
+    OUT -->|chart| PNG[matplotlib PNG]
+    ANS & PDF & PNG -->|filed back| W[wiki/]
+    W -->|next question<br/>knows more| Q
+```
+
+The answer is filed back into `output/` and becomes part of the knowledge base. The next question can reference it. Every query adds to the base — your explorations compound.
+
+### How the Wiki Improves Over Time
+
+```mermaid
+flowchart TD
+    I1[Ingest batch 1] --> C1[Compile<br/>10 source articles<br/>5 concepts]
+    C1 --> A1[Ask questions<br/>3 answers filed back]
+    A1 --> L1[Lint --suggest<br/>new article ideas]
+    L1 --> I2[Ingest batch 2<br/>new sources]
+    I2 --> C2[Compile<br/>+8 source articles<br/>+4 concepts]
+    C2 --> A2[Ask deeper questions<br/>LLM now has prior answers]
+    A2 --> A3[Wiki is denser<br/>more connected<br/>more useful]
+
+    style A3 fill:#c0392b,color:#fff
+```
+
+When you ask a question, the LLM researches your wiki, synthesizes an answer, and **files that answer back into the knowledge base**. The next question benefits from every previous answer. Your explorations compound. The wiki gets denser, more connected, more useful — not because you're writing, but because you're asking.
+
+This is a second brain that builds itself.
+
+The bigger implication: agents that own their own knowledge layer don't need infinite context windows. They need good file organization and the ability to read their own indexes. Way cheaper, way more scalable, and way more inspectable than stuffing everything into one giant prompt.
+
+## Getting Started
+
+### Prerequisites
+
+**Required — Node.js 20+**
+
+```bash
+brew install fnm
+eval "$(fnm env --use-on-cd)"   # add to ~/.zshrc for persistence
+fnm install 22
+fnm default 22
+```
+
+**Required — an LLM API key**
+
+Get one from [OpenAI](https://platform.openai.com/api-keys) (default) or [Anthropic](https://console.anthropic.com/).
+
+**Optional — slide deck export**
+
+```bash
+npm install -g @marp-team/marp-cli
+```
+
+Needed for `--output slides` to produce PDFs. Without it, the `.marp.md` source is still generated.
+
+**Optional — chart generation**
+
+```bash
+pip3 install matplotlib
+```
+
+Needed for `--output chart`. Requires Python 3 (`brew install python` if not installed).
+
+### Install
+
+```bash
+pnpm install
+pnpm build
+npm link
+```
+
+### Initialize a knowledge base
+
+```bash
+mkdir my-research && cd my-research
+kb init my-research
+```
+
+`kb init` checks for optional dependencies and tells you what to install if anything is missing. It creates the directory structure and a `.env` file for your API keys:
+
+```
+raw/              Source documents you feed in
+wiki/             LLM-compiled wiki (don't edit — the LLM owns this)
+  index.md        Auto-maintained master index
+  concepts/       Concept articles
+  sources/        Source summaries
+output/           Answers, slides, charts, and rendered outputs
+.env              API keys
+.kb/              Config and slide theme
+```
+
+### Add your API key
+
+Edit `.env` in your knowledge base root:
+
+```bash
+# OpenAI (default)
+OPENAI_API_KEY=sk-...
+
+# Or Anthropic
+# ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Ingest sources
+
+Drop articles, papers, images, PDFs, or any text into the pipeline:
+
+```bash
+kb ingest ~/Downloads/some-paper.pdf
+kb ingest ~/notes/research/*.md --tag transformers
+kb ingest ./diagrams/*.png --tag architecture
+```
+
+Point it at an entire directory and it walks the tree, picking up every supported file:
+
+```bash
+kb ingest ~/research/project-alpha/
+kb ingest ~/Downloads/conference-papers/ --tag neurips-2025
+```
+
+Ingest URLs directly — web pages are saved as HTML, remote images are downloaded as-is:
+
+```bash
+kb ingest https://example.com/article --tag research
+kb ingest https://arxiv.org/abs/2310.01234 --tag transformers
+kb ingest https://example.com/architecture-diagram.png --tag architecture
+```
+
+You can mix files, directories, and URLs in a single command:
+
+```bash
+kb ingest ./local-notes.md https://example.com/article ~/Downloads/paper.pdf --tag project
+```
+
+Only valid file types are ingested — everything else is skipped. Duplicates are detected automatically so you can re-run the same ingest without creating copies.
+
+Files get copied (flattened) into `raw/`. Use `--tag` to organize by topic.
+
+Supported file types:
+
+| Type | Extensions | How it's compiled |
+|------|-----------|-------------------|
+| Text | `.md` `.mdx` `.txt` `.html` `.json` `.csv` `.xml` `.yaml` | Read as text, summarized by LLM |
+| PDF | `.pdf` | Text extracted, then summarized by LLM |
+| Image | `.png` `.jpg` `.jpeg` `.gif` `.webp` | Analyzed via LLM vision, described and indexed |
+| URL (page) | `http://` `https://` | Fetched as HTML, compiled as text |
+| URL (image) | `http://` `https://` | Downloaded, analyzed via LLM vision |
+
+Images are especially useful for diagrams, charts, screenshots, and figures from papers. The LLM describes what it sees, extracts any text or data, and links the image from the wiki article so you can view it in Obsidian.
+
+### Compile the wiki
+
+```bash
+kb compile
+```
+
+The LLM reads every new source in `raw/`, writes a summary article for each, extracts key concepts into their own articles with backlinks, and rebuilds the master index. Run it again after ingesting new sources — it only processes what's new.
+
+```bash
+kb compile --sources-only    # skip concept extraction
+kb compile --concepts-only   # delete and regenerate all concept articles from existing sources
+kb compile --reindex          # just rebuild the index
+kb compile --force            # delete existing articles and recompile everything from scratch
+kb compile --concurrency 5   # run 5 parallel LLM calls (faster, uses more API quota)
+kb compile --concurrency 1   # sequential (useful for debugging or strict rate limits)
+```
+
+Use `--concepts-only` to regenerate all concept articles without re-summarizing sources — useful after adding new sources or when you want concepts to reflect the latest wiki content. It clears `wiki/concepts/` and re-extracts from your already-compiled source articles.
+
+Use `--force` when you want to reprocess all sources with updated prompts or settings. It clears `wiki/sources/` and `wiki/concepts/` then runs a full compile. Your `raw/` files are never touched.
+
+By default, `kb compile` runs **3 parallel LLM calls** at a time — safe for both OpenAI and Anthropic rate limits. Use `--concurrency` to tune this per-run, or set a permanent default for the KB with `kb init --concurrency <n>` (stored in `.kb/config.json`).
+
+### Ask questions
+
+```bash
+kb ask "what are the key differences between transformers and RNNs?"
+kb ask "summarize the main findings across all papers"
+kb ask "what open questions remain in this research area?"
+```
+
+The LLM reads the wiki index, finds relevant articles, and streams an answer. By default, every answer gets filed into `output/` — and that's the compounding loop. The next time you ask something, those previous answers are part of the knowledge base.
+
+Use `--no-file` to ask without filing the answer back:
+
+```bash
+kb ask "quick question" --no-file
+```
+
+Generate a slide deck instead of markdown:
+
+```bash
+kb ask "present the key findings" --output slides
+```
+
+This generates a [Marp](https://marp.app/) slide deck and converts it to PDF automatically if you have `marp-cli` installed. The `.marp.md` intermediate is kept too. See [Slide Decks](#slide-decks) below for setup.
+
+### Search
+
+Full-text search across every compiled wiki article — sources and concepts:
+
+```bash
+kb search "attention mechanism"
+kb search "transformer" -n 5
+kb search "encoder" --tag transformers    # filter by tag
+kb search anything --tags                 # list all tags
+```
+
+Search reads every article in `wiki/` and scores them using term frequency with bonuses:
+
+| Signal | Score |
+|--------|-------|
+| Each occurrence of the term in title or body | +1 |
+| Term appears in the article title | +5 bonus |
+| A tag matches a query term | +3 bonus |
+
+Results are ranked by score and each result shows the article title, tags, file path, score, and a snippet of the first matching line.
+
+Use `--tag` to pre-filter articles before scoring — only articles with that tag are searched:
+
+```bash
+kb search "performance" --tag transformers
+```
+
+Use `--tags` to list every tag in the wiki (no query needed):
+
+```bash
+kb search anything --tags
+```
+
+### Lint
+
+Health-check the wiki for broken links, orphaned sources, and missing data:
+
+```bash
+kb lint
+kb lint --suggest    # LLM suggests improvements and new articles
+```
+
+## LLM Providers
+
+`kb` supports multiple LLM providers. OpenAI is the default.
+
+| Provider | Default Model | API Key Variable |
+|----------|--------------|-----------------|
+| `openai` | `gpt-4o` | `OPENAI_API_KEY` |
+| `anthropic` | `claude-sonnet-4-20250514` | `ANTHROPIC_API_KEY` |
+
+### Switch providers
+
+Set the provider at init time:
+
+```bash
+kb init my-research --provider anthropic
+kb init my-research --provider openai --model gpt-4o-mini
+kb init my-research --concurrency 5   # set default compile concurrency for this KB
+```
+
+Or edit `.kb/config.json` directly:
+
+```json
+{
+  "provider": "anthropic",
+  "model": "claude-sonnet-4-20250514",
+  "compileConcurrency": 3
+}
+```
+
+All API keys live in `.env` at the knowledge base root. This file is gitignored by default.
+
+## Tags
+
+Tags are how you tell the wiki what things are about. Without tags, the LLM guesses — and it's decent at guessing. But when you're researching multiple topics at once, tags keep everything organized and findable.
+
+### Two layers of tagging
+
+**You tag at ingest time.** When you run `kb ingest paper.pdf --tag transformers`, that tag flows into the compile step. The LLM sees it and uses it to categorize the article — it'll include "transformers" in the frontmatter tags and use that context to write a better summary.
+
+**The LLM also generates its own tags.** During compilation, the LLM reads each source and adds tags based on the content. If you tagged a paper "transformers" but it also covers attention mechanisms and encoder-decoder architectures, the LLM will add those too. Your tag seeds the categorization; the LLM expands it.
+
+Both layers end up in the article's YAML frontmatter:
+
+```yaml
+---
+title: "Attention Is All You Need"
+tags: [transformers, attention-mechanism, encoder-decoder, self-attention]
+---
+```
+
+### Why tags matter
+
+Tags are the cross-cutting links in your wiki. The directory structure gives you two buckets — `sources/` and `concepts/` — but tags let you slice across both:
+
+- **Filter search results**: `kb search "performance" --tag transformers` — only show results tagged "transformers"
+- **See all tags**: `kb search anything --tags` — list every tag in the wiki
+- **Index grouping**: `kb compile --reindex` rebuilds the master index with a Tags section showing which articles share each tag
+- **Better Q&A**: when you `kb ask` a question, the LLM sees tags in the index and uses them to find relevant articles faster
+
+### When to use tags
+
+**Use tags when you're researching multiple topics.** If your knowledge base covers one narrow subject, tags are nice but not critical — the LLM will figure it out. But once you're ingesting papers on transformers _and_ diffusion models _and_ reinforcement learning, tags are what keep the wiki navigable.
+
+**Tag at ingest time, not after.** It's one flag: `--tag transformers`. The earlier you tag, the better the LLM categorizes. You can always re-compile later, but the ingest tag gives the LLM a head start.
+
+```bash
+# Research across multiple areas — tags keep them organized
+kb ingest ./papers/attention/*.pdf --tag transformers
+kb ingest ./papers/diffusion/*.pdf --tag diffusion
+kb ingest ./papers/rl/*.pdf --tag reinforcement-learning
+kb ingest ./diagrams/*.png --tag architecture
+
+# Now you can search within a topic
+kb search "scaling laws" --tag transformers
+
+# Or ask questions scoped to a tag
+kb ask "compare the training approaches" --tag diffusion
+```
+
+## Slide Decks
+
+`kb` can generate slide decks from your wiki using [Marp](https://marp.app/). The LLM structures its answer as slides — title slide, focused bullet points, section dividers, and a summary at the end. If you have `marp-cli` installed, the deck is automatically exported to PDF.
+
+### Setup
+
+Install Marp CLI for automatic PDF export:
+
+```bash
+npm install -g @marp-team/marp-cli
+```
+
+Without it, `kb` still generates the `.marp.md` source file — you just won't get the PDF automatically.
+
+### Generate slides
+
+```bash
+kb ask "present the key findings on attention mechanisms" --output slides
+kb ask "compare transformer architectures" --output slides
+kb ask "give a 10-slide overview of this research area" --output slides
+```
+
+This produces two files in `output/`:
+- `<slug>.pdf` — the final slide deck (if marp-cli is installed)
+- `<slug>.marp.md` — the Marp markdown source (always kept)
+
+### View slides
+
+**PDF** — Open the generated PDF in any viewer.
+
+**Obsidian** — Install the [Marp Slides](https://github.com/samuele-cozzi/obsidian-marp-slides) plugin to preview `.marp.md` files as slides.
+
+**VS Code** — Install the [Marp for VS Code](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode) extension.
+
+**Manual export** — If you want other formats:
+
+```bash
+marp output/my-slides.marp.md -o slides.html   # HTML
+marp output/my-slides.marp.md -o slides.pptx   # PowerPoint
+```
+
+### Theming
+
+`kb init` creates a default slide theme at `.kb/theme.css`. This is a [Marp custom theme](https://marpit.marp.app/theme-css) that controls fonts, colors, layout, and styling for all generated decks.
+
+Customize it by editing `.kb/theme.css`:
+
+```css
+:root {
+  --color-accent: #c0392b;       /* headings, bullets, highlights */
+  --color-fg: #1a1a2e;           /* body text */
+  --color-bg: #ffffff;           /* slide background */
+  --font-heading: 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
+}
+```
+
+The theme includes styled title slides (dark background with `<!-- _class: lead -->`), accent-colored headings and bullet markers, clean table styling, and code blocks. The PDF export automatically picks up your theme — no extra flags needed.
+
+If you delete `.kb/theme.css`, slides fall back to Marp's built-in default theme.
+
+### What makes a good slide prompt
+
+The LLM does better with specific prompts:
+
+```bash
+# Good — tells the LLM what to present
+kb ask "present the 5 most important findings with evidence" --output slides
+kb ask "create a tutorial on how attention mechanisms work" --output slides
+
+# Less good — too vague for slides
+kb ask "tell me about transformers" --output slides
+```
+
+Slide decks get filed to `output/` like any other answer, so they compound into the knowledge base too.
+
+## Charts
+
+`kb ask` can generate matplotlib charts directly from your wiki data using `--output chart`. The LLM reads the relevant wiki articles, extracts the data, and writes a Python script that renders a PNG.
+
+### Setup
+
+```bash
+pip3 install matplotlib
+```
+
+Python 3 must be available (`python3` or `python` in your PATH).
+
+### Generate charts
+
+```bash
+kb ask "line chart of revenue by month" --output chart
+kb ask "pie chart of customer segments" --output chart
+kb ask "bar chart of user signups over time" --output chart
+kb ask "scatter plot of price vs volume" --output chart
+```
+
+This produces two files in `output/`:
+- `<slug>.png` — the rendered chart
+- `<slug>.py` — the Python source (always kept)
+
+A markdown note referencing the PNG is also filed back into `output/` so the chart compounds into the knowledge base — future answers can reference it.
+
+### How it works
+
+The LLM reads the wiki, extracts relevant numbers and categories as inline Python data, and generates a complete self-contained matplotlib script. No pandas, no CSV files — just Python literals derived from your wiki content. The chart type (line, bar, pie, scatter) is chosen automatically based on the data and your question.
+
+If rendering fails, the `.py` source is saved and you can fix and re-run it manually:
+
+```bash
+python3 output/my-chart.py
+```
+
+### Good chart prompts
+
+Be specific about the chart type and what data you want visualized:
+
+```bash
+# Good — specific chart type and data
+kb ask "line chart of monthly revenue for the last year" --output chart
+kb ask "horizontal bar chart comparing feature adoption rates" --output chart
+kb ask "pie chart breaking down revenue by product category" --output chart
+
+# Less good — too vague
+kb ask "show me the data" --output chart
+```
+
+## How It Compounds
+
+A typical session looks like this:
+
+1. You ingest 10 papers on a topic
+2. `kb compile` produces 10 source summaries + 5 concept articles + an index
+3. You ask "what are the main themes?" — answer filed back
+4. You ask "where do the authors disagree?" — answer filed back, now cross-referencing the previous answer
+5. You ask "what's missing from this research?" — the LLM now has your previous analysis to build on
+6. `kb lint --suggest` finds gaps and suggests new articles
+7. You ingest more sources, compile again — the wiki grows
+
+Each cycle makes the next one better. The wiki isn't a snapshot — it's a living document that gets smarter every time you interact with it.
+
+```mermaid
+flowchart TD
+    I1[Ingest batch 1] --> C1[Compile<br/>10 source articles<br/>5 concepts]
+    C1 --> A1[Ask questions<br/>3 answers filed back]
+    A1 --> L1[Lint --suggest<br/>new article ideas]
+    L1 --> I2[Ingest batch 2<br/>new sources]
+    I2 --> C2[Compile<br/>+8 source articles<br/>+4 concepts]
+    C2 --> A2[Ask deeper questions<br/>LLM now has prior answers]
+    A2 --> A3[Wiki is denser<br/>more connected<br/>more useful]
+
+    style A3 fill:#c0392b,color:#fff
+```
+# kb
