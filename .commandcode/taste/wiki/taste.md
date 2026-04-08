@@ -1,4 +1,5 @@
 # wiki
+- The `output/` directory must be included in `listWikiArticles()` so filed query answers are visible to future `ask` calls — the compounding loop (every answer makes the next answer better) depends on output/ being read back, not just written to. Confidence: 0.90
 - Concept frontmatter `ontology` should be a YAML array of bare strings (e.g., `ontology: [person, author]`), NOT quoted Obsidian wiki links — `"[[organization]]"` does not render as a link in Obsidian frontmatter properties; use plain values instead. Confidence: 0.85
 - Concept `ontology` should support multiple values (e.g., `[person, author]`) since a concept can belong to more than one ontology type simultaneously. Confidence: 0.85
 - Ontology vocabulary used in concept frontmatter should map to well-known external ontologies (e.g., Wikipedia categories, Wikidata entity types, schema.org types) for clarity and consistency — avoid inventing ad-hoc type names when a standard equivalent exists. Confidence: 0.70

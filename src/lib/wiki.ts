@@ -145,6 +145,7 @@ export function listWikiArticles(): WikiArticle[] {
   }
 
   walk(paths.wiki)
+  walk(paths.output)
   return articles
 }
 

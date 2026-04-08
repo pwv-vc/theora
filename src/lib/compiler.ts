@@ -318,6 +318,7 @@ export async function rebuildIndex(root: string): Promise<void> {
   const articles = listWikiArticles()
   const sources = articles.filter(a => a.path.startsWith(paths.wikiSources))
   const concepts = articles.filter(a => a.path.startsWith(paths.wikiConcepts))
+  const queries = articles.filter(a => a.path.startsWith(paths.output))
 
   const toObsidianTag = (tag: string) => `#${tag.toLowerCase().replace(/\s+/g, '-')}`
 
@@ -369,7 +370,7 @@ ${sources.map(articleLink).join('\n') || '_No sources compiled yet._'}
 ## Concepts (${concepts.length})
 
 ${concepts.map(articleLink).join('\n') || '_No concepts extracted yet._'}
-${tagSection ? `\n## Tags (${tagMap.size})\n\n${tagSection}\n` : ''}
+${queries.length > 0 ? `\n## Previous Queries (${queries.length})\n\n${queries.map(articleLink).join('\n')}\n` : ''}${tagSection ? `\n## Tags (${tagMap.size})\n\n${tagSection}\n` : ''}
 ## Stats
 
 - **Articles**: ${stats.articles}
