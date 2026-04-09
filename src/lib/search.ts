@@ -9,17 +9,37 @@ export interface SearchResult {
   snippet: string
 }
 
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\[\[([^\]]+)\]\]/g, (_, s) => s.replace(/-/g, ' '))  // [[wiki-link]] → wiki link
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')                        // [text](url) → text
+    .replace(/^#{1,6}\s+/gm, '')                                    // ## headings
+    .replace(/\*\*([^*]+)\*\*/g, '$1')                              // **bold**
+    .replace(/\*([^*]+)\*/g, '$1')                                  // *italic*
+    .replace(/_([^_]+)_/g, '$1')                                    // _italic_
+    .replace(/`([^`]+)`/g, '$1')                                    // `code`
+    .replace(/^[-*+]\s+/gm, '')                                     // - list items
+    .replace(/^\d+\.\s+/gm, '')                                     // 1. ordered list
+    .replace(/^---+$/gm, '')                                        // --- dividers
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function extractSnippet(content: string, terms: string[]): string {
   const lines = content.split('\n').filter(l => l.trim())
   for (const line of lines) {
     const lower = line.toLowerCase()
     if (terms.some(t => lower.includes(t))) {
-      const trimmed = line.trim()
-      return trimmed.length > 120 ? trimmed.slice(0, 120) + '...' : trimmed
+      const clean = stripMarkdown(line)
+      if (!clean) continue
+      return clean.length > 160 ? clean.slice(0, 160) + '...' : clean
     }
   }
-  const first = lines[0]?.trim() ?? ''
-  return first.length > 120 ? first.slice(0, 120) + '...' : first
+  for (const line of lines) {
+    const clean = stripMarkdown(line)
+    if (clean) return clean.length > 160 ? clean.slice(0, 160) + '...' : clean
+  }
+  return ''
 }
 
 export function searchArticles(query: string, filterTag?: string): SearchResult[] {

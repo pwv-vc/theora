@@ -44,6 +44,28 @@ export function Layout({ title, active, children }: LayoutProps) {
         {/* Runs before first paint to avoid flash of wrong theme */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theora-theme')||'broadcast';document.documentElement.setAttribute('data-theme',t);})();` }} />
         <script src="https://unpkg.com/htmx.org@2.0.4" defer />
+        <script type="module" dangerouslySetInnerHTML={{ __html: `
+          import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+          const theme = document.documentElement.getAttribute('data-theme');
+          mermaid.initialize({
+            startOnLoad: true,
+            theme: theme === 'broadcast' ? 'default' : 'dark',
+            securityLevel: 'loose',
+          });
+          window.__mermaid = mermaid;
+          window.renderMermaid = async function(el) {
+            el.querySelectorAll('pre > code.language-mermaid').forEach(code => {
+              const div = document.createElement('div');
+              div.className = 'mermaid';
+              div.textContent = code.textContent;
+              code.parentElement.replaceWith(div);
+            });
+            const nodes = Array.from(el.querySelectorAll('.mermaid:not([data-processed])'));
+            if (nodes.length > 0) {
+              await mermaid.run({ nodes });
+            }
+          };
+        ` }} />
       </head>
       <body class="bg-zinc-950 text-zinc-100 min-h-screen font-mono antialiased flex flex-col">
         {/* z-[20000] keeps header above form elements (z-10000) and scanline overlay (z-9999) */}

@@ -1,4 +1,6 @@
 # web
+- The web `ask` handler must share the same library code as the CLI `ask` command — extract shared logic (article separation, context building, filing answers) into shared lib functions so behavior stays consistent and changes propagate to both. Confidence: 0.85
+- All web handlers (ask, compile, search) must use the same shared lib code as their CLI counterparts — web and CLI should always behave identically; shared logic lives in src/lib/, not duplicated in src/web/ or src/commands/. Confidence: 0.90
 - The brand name is "theroa" — logo/favicon should use an SVG icon alongside the wordmark, inspired by the Max Headroom 80s aesthetic, evoking knowledge, coordination, and multi-source data (e.g., multi-colored converging lines). The icon should work per-theme and as a favicon. Confidence: 0.75
 - Wiki tag filtering should stay on the wiki/home page (/?tag=...) — clicking a tag should filter articles in-place, NOT redirect to the search page. Search is a separate action that can optionally filter by tag. Confidence: 0.85
 - Tag filter UX must scale to 100s of tags — a flat horizontal pill list is not acceptable at scale. Prefer patterns like: collapsible panel/drawer, popover/overlay picker, sorted-by-popularity with a "show more" expand, or a searchable tag dropdown. Show most-used tags first. Confidence: 0.80
@@ -16,6 +18,8 @@
 - Suppress CRT scanlines in the sticky nav/header — the header should use a solid theme-based background color with no scanline overlay. Confidence: 0.75
 - Suppress CRT scanlines on form elements (inputs, textareas, selects, buttons) — use z-index or isolation to prevent the body::after scanline overlay from rendering over interactive form controls. Confidence: 0.80
 - Ask answer results must be displayed in a card UI component with rendered markdown (not raw markdown text). Confidence: 0.85
+- Render Mermaid diagrams in concepts, sources, and answers pages — these sections may contain Mermaid code blocks that must be rendered as diagrams, not displayed as raw code. Confidence: 0.80
+- Search result card preview snippets must render markdown as HTML — never display raw markdown text (e.g., `**bold**`, `[[links]]`) in search result previews. Confidence: 0.80
 - Split shared UI components out of a single ui.tsx monolith into individual files in a ui/ directory — one component (or closely related group) per file. Confidence: 0.85
 - All card and UI components must suppress CRT scanlines and use a solid background — cards should never show the scanline overlay. Use `position: relative; z-index` above the `body::after` scanline, plus an explicit solid background color (e.g., `bg-zinc-950`) so the overlay cannot bleed through. Confidence: 0.90
 - Card titles should use `font-bold` for strong visual hierarchy. Tag/pill badges need high-contrast text (e.g., `text-zinc-700` or darker) so they remain legible in both dark and light (broadcast) themes — avoid washed-out `text-zinc-400` on light backgrounds. Confidence: 0.80

@@ -1,18 +1,31 @@
-import { readFileSync, existsSync, rmSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, rmSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
 import { streamSSE } from 'hono/streaming'
-import { marked } from 'marked'
+import { marked, Renderer } from 'marked'
+
+function parseMarkdown(content: string): string {
+  const renderer = new Renderer()
+  const originalCode = renderer.code.bind(renderer)
+  renderer.code = function(token) {
+    if (token.lang === 'mermaid') {
+      return `<div class="mermaid">${token.text}</div>`
+    }
+    return originalCode(token)
+  }
+  return marked.parse(content, { renderer }) as string
+}
 import { requireKbRoot, kbPaths } from '../lib/paths.js'
 import { listWikiArticles, readWikiIndex, getAllTagsWithCounts } from '../lib/wiki.js'
 import { findRelevantArticles, buildContext } from '../lib/query.js'
 import { llmStream } from '../lib/llm.js'
 import { searchArticles } from '../lib/search.js'
-import { compileSources, extractConcepts, rebuildIndex } from '../lib/compiler.js'
+import { runCompile } from '../lib/compile.js'
 import { MD_SYSTEM, buildMdUserPrompt } from '../lib/prompts.js'
-import { normalizeLinks } from '../lib/wiki.js'
+import { normalizeLinksForWeb } from '../lib/wiki.js'
+import { streamAsk } from '../lib/ask.js'
 import { readManifest, writeManifest } from '../lib/manifest.js'
 import { ingestWebFile, ingestWebUrl } from '../lib/ingest.js'
 import { Layout } from './templates/layout.js'
@@ -154,7 +167,7 @@ export function startServer(port: number): void {
     const article = articles.find(a => a.path === filePath)
     if (!article) return c.notFound()
 
-    const html = marked.parse(article.content) as string
+    const html = parseMarkdown(normalizeLinksForWeb(article.content, articles))
 
     return c.html(
       Layout({
@@ -177,7 +190,7 @@ export function startServer(port: number): void {
     const article = articles.find(a => a.path === filePath)
     if (!article) return c.notFound()
 
-    const html = marked.parse(article.content) as string
+    const html = parseMarkdown(normalizeLinksForWeb(article.content, articles))
 
     return c.html(
       Layout({
@@ -233,27 +246,15 @@ export function startServer(port: number): void {
 
     return streamSSE(c, async (stream) => {
       try {
-        const index = readWikiIndex()
-        let articles = listWikiArticles()
+        const tag = c.req.query('tag') || undefined
+        const { rawAnswer } = await streamAsk(question, {
+          tag,
+          file: true,
+          onChunk: (text) => { stream.writeSSE({ data: text }).catch(() => {}) },
+        })
 
-        const tag = c.req.query('tag')
-        if (tag) {
-          articles = articles.filter(a => a.tags.some(t => t.toLowerCase() === tag.toLowerCase()))
-        }
-
-        const relevant = await findRelevantArticles(question, index, articles)
-        const context = buildContext(relevant)
-        const prompt = buildMdUserPrompt(question, index, context)
-
-        const fullAnswer = await llmStream(
-          prompt,
-          { system: MD_SYSTEM, maxTokens: 8192 },
-          (text) => {
-            stream.writeSSE({ data: text }).catch(() => {})
-          },
-        )
-
-        const normalized = normalizeLinks(fullAnswer, articles)
+        const allArticles = listWikiArticles()
+        const normalized = normalizeLinksForWeb(rawAnswer, allArticles)
         await stream.writeSSE({ event: 'done', data: normalized })
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
@@ -351,30 +352,12 @@ export function startServer(port: number): void {
     return streamSSE(c, async (stream) => {
       try {
         const root = requireKbRoot()
-        const paths = kbPaths(root)
 
-        const onProgress = async (msg: string) => {
-          await stream.writeSSE({ data: msg })
-        }
-
-        if (force) {
-          if (existsSync(paths.wikiSources)) rmSync(paths.wikiSources, { recursive: true, force: true })
-          if (existsSync(paths.wikiConcepts)) rmSync(paths.wikiConcepts, { recursive: true, force: true })
-          await stream.writeSSE({ data: 'Cleared existing wiki articles — recompiling from scratch' })
-        }
-
-        if (conceptsOnly) {
-          if (existsSync(paths.wikiConcepts)) rmSync(paths.wikiConcepts, { recursive: true, force: true })
-          await stream.writeSSE({ data: 'Cleared existing concepts — regenerating from compiled sources' })
-          await extractConcepts(root, undefined, onProgress)
-          await rebuildIndex(root, onProgress)
-        } else {
-          await compileSources(root, undefined, onProgress)
-          if (!sourcesOnly) {
-            await extractConcepts(root, undefined, onProgress)
-          }
-          await rebuildIndex(root, onProgress)
-        }
+        await runCompile(
+          root,
+          { force, sourcesOnly, conceptsOnly },
+          async (msg) => { await stream.writeSSE({ data: msg }) },
+        )
 
         await stream.writeSSE({ event: 'done', data: 'Compilation complete' })
       } catch (err) {

@@ -198,6 +198,23 @@ input, textarea, button, select, pre {
   background-color: color-mix(in srgb, var(--color-red-950) 40%, transparent);
 }
 
+/* ── Mermaid Diagram Styles ─────────────────────────────────
+   Center diagrams and suppress scanline overlay on SVG output.
+   ─────────────────────────────────────────────────────────── */
+.mermaid {
+  position: relative;
+  z-index: 10001;
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+}
+
+.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* ── Broadcast Prose Override ───────────────────────────────
    prose-invert sets light-on-dark colors. In broadcast (light)
    theme we restore dark-on-light prose typography.

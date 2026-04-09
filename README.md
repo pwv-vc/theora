@@ -1,3 +1,15 @@
+## Inspiration
+
+![Andrej Karpathy LLM Knowledge Bases post](https://github.com/user-attachments/assets/4c272e32-d912-4eb3-9240-fddd72c648ab)
+
+Theora was directly inspired by two X posts: [@jumperz](https://x.com/jumperz/status/2039826228224430323?s=20) and Andrej Karpathy's viral ["LLM Knowledge Bases"](https://x.com/karpathy/status/2039805659525644595) post.
+
+Karpathy described a shift away from using LLMs primarily to generate code, and toward using them to compile and maintain personal knowledge bases. The idea: dump raw source material — articles, papers, repos, datasets, images — into a `raw/` directory, then have an LLM incrementally "compile" a structured wiki of interlinked markdown files with summaries, backlinks, and concept articles. The LLM writes and maintains everything; you rarely touch the wiki directly. Once the wiki is large enough, you can ask complex questions against it, get synthesized answers, and file those answers back in — so every query compounds the knowledge base. He also described linting passes where the LLM scans for inconsistencies and suggests new articles, and output formats like Marp slides and matplotlib charts. Karpathy noted: "I think there is room here for an incredible new product instead of a hacky collection of scripts." Theora is that product.
+
+> Built with [CommandCode](https://commandcode.ai)
+
+---
+
 # Theora
 
 > *"She's the one who actually knows how everything works."*
@@ -54,18 +66,23 @@ Each source gets its own article with consistent sections — Summary, Key Point
 ```mermaid
 flowchart LR
     Q[Your question] --> RI[Read wiki index]
-    RI --> RR[Rank relevant<br/>articles]
-    RR --> CTX[Build context<br/>from articles]
-    CTX --> LLM[LLM synthesizes<br/>answer]
+    RI --> RR[Rank relevant
+wiki articles]
+    RR --> CTX[Build context:
+ranked sources + concepts
++ ALL prior answers]
+    CTX --> LLM[LLM synthesizes
+answer]
     LLM --> OUT{Output format}
     OUT -->|md| ANS[Markdown answer]
     OUT -->|slides| PDF[Marp PDF deck]
     OUT -->|chart| PNG[matplotlib PNG]
-    ANS & PDF & PNG -->|filed back| W[wiki/]
-    W -->|next question<br/>knows more| Q
+    ANS & PDF & PNG -->|filed back| W[output/]
+    W -->|always in context
+next question| Q
 ```
 
-The answer is filed back into `output/` and becomes part of the knowledge base. The next question can reference it. Every query adds to the base — your explorations compound.
+The answer is filed back into `output/` and becomes part of the knowledge base. Prior answers are **always** included in context — they bypass the relevance ranker entirely. Every query adds to the base — your explorations compound.
 
 ### How the Wiki Improves Over Time
 
@@ -243,7 +260,23 @@ theora ask "summarize the main findings across all papers"
 theora ask "what open questions remain in this research area?"
 ```
 
-The LLM reads the wiki index, finds relevant articles, and streams an answer. By default, every answer gets filed into `output/` — and that's the compounding loop. The next time you ask something, those previous answers are part of the knowledge base.
+Each `ask` builds context in two distinct tiers before calling the LLM:
+
+**Tier 1 — Ranked wiki articles (sources + concepts)**
+
+The wiki index is read first. If you have 10 or fewer wiki articles, all of them are included. With more than 10, a fast LLM call acts as a relevance ranker — it sees every article's title and path, picks the most relevant (up to 15), and those full articles become the context. If the ranker fails, the first 15 articles are used as a fallback.
+
+Use `--tag` to pre-filter wiki articles before ranking — only articles tagged with that value are considered:
+
+```bash
+theora ask "what are the scaling challenges?" --tag transformers
+```
+
+**Tier 2 — Prior answers (always included)**
+
+Every answer filed to `output/` is injected into context unconditionally — they bypass the ranker entirely. This is intentional: the ranker only sees titles and paths, not content. A prior answer titled *"what are the main themes?"* would never be ranked as relevant to a different question, even if its content is directly useful. By always including prior answers, every query you've asked compounds into the next one.
+
+**Scaling note:** The two tiers have different scaling characteristics. Wiki articles scale reasonably well — the ranker caps selection at 15 regardless of how many articles exist. Prior answers don't scale the same way: every single filed answer is always injected in full, unconditionally. At a handful of answers this is fine. At dozens it's manageable. At hundreds, the context window fills up before the LLM even sees your question. If you're doing heavy research with frequent `ask` calls, use `--no-file` for exploratory questions and only file answers that genuinely add durable knowledge. Splitting a large research area across multiple focused knowledge bases also helps — fewer prior answers per KB means more headroom per query.
 
 Use `--no-file` to ask without filing the answer back:
 

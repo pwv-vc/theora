@@ -251,3 +251,17 @@ export function normalizeLinks(text: string, articles: WikiArticle[]): string {
     return `**${linkText}**`
   })
 }
+
+export function normalizeLinksForWeb(text: string, articles: WikiArticle[]): string {
+  const bySlug = new Map(articles.map(a => [basename(a.path, '.md'), a]))
+
+  return text.replace(/\[\[([^\]]+)\]\]/g, (match, linkText: string) => {
+    const slug = linkText.toLowerCase().replace(/\s+/g, '-')
+    const article = bySlug.get(slug)
+    if (article) {
+      const webPath = '/' + article.relativePath.replace(/\.md$/, '')
+      return `[${article.title}](${webPath})`
+    }
+    return `**${linkText}**`
+  })
+}

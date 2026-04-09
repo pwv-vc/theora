@@ -113,6 +113,9 @@ export function AskPage({ tagsWithCounts }: AskPageProps) {
               renderedEl.innerHTML = marked.parse(fullAnswer);
               streamEl.classList.add('hidden');
               renderedEl.classList.remove('hidden');
+              if (typeof window.renderMermaid === 'function') {
+                window.renderMermaid(renderedEl);
+              }
             }
           });
 
