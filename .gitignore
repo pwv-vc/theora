@@ -3,3 +3,4 @@ dist/
 *.tgz
 .env
 .env.local
+src/web/static/styles.css

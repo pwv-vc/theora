@@ -7,7 +7,10 @@
     "theora": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsup",
+    "build:css": "tailwindcss -i src/web/styles/input.css -o src/web/static/styles.css --minify",
+    "copy:static": "node -e \"const{mkdirSync,copyFileSync}=require('fs');mkdirSync('dist/web/static',{recursive:true});copyFileSync('src/web/static/styles.css','dist/web/static/styles.css')\"",
+    "build": "pnpm build:css && tsup && pnpm copy:static",
+    "dev:css": "tailwindcss -i src/web/styles/input.css -o src/web/static/styles.css --watch",
     "dev": "tsup --watch",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
@@ -22,16 +25,22 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@tailwindcss/cli": "^4.2.2",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^22.0.0",
+    "tailwindcss": "^4.2.2",
     "tsup": "^8.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@hono/node-server": "^1.19.13",
     "commander": "^13.0.0",
     "dotenv": "^17.4.1",
     "gray-matter": "^4.0.3",
+    "hono": "^4.12.12",
+    "marked": "^18.0.0",
     "openai": "^6.33.0",
     "ora": "^8.0.0",
     "p-limit": "^7.3.0",

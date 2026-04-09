@@ -10,6 +10,7 @@ import { askCommand } from './commands/ask.js'
 import { searchCommand } from './commands/search.js'
 import { lintCommand } from './commands/lint.js'
 import { statsCommand } from './commands/stats.js'
+import { serveCommand } from './commands/serve.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -44,6 +45,7 @@ program.addCommand(askCommand)
 program.addCommand(searchCommand)
 program.addCommand(lintCommand)
 program.addCommand(statsCommand)
+program.addCommand(serveCommand)
 
 function handleError(err: unknown): never {
   const msg = err instanceof Error ? err.message : String(err)

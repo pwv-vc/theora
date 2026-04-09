@@ -142,7 +142,7 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
 
 // --- Pipeline stages ---
 
-export async function compileSources(root: string, concurrency?: number): Promise<void> {
+export async function compileSources(root: string, concurrency?: number, onProgress?: (msg: string) => void): Promise<void> {
   const paths = kbPaths(root)
   const rawFiles = listRawFiles()
   const existingSlugs = getExistingSourceSlugs(root)
@@ -175,11 +175,16 @@ export async function compileSources(root: string, concurrency?: number): Promis
 
   let done = 0
   const inFlight = new Set<string>()
-  const spinner = ora(`Compiling sources [0/${newFiles.length}]`).start()
+  const spinner = onProgress ? null : ora(`Compiling sources [0/${newFiles.length}]`).start()
 
   const updateSpinner = () => {
-    const files = [...inFlight].map(f => pc.cyan(f)).join(pc.gray(', '))
-    spinner.text = `Compiling sources [${done}/${newFiles.length}]\n  ${pc.gray('→')} ${files}`
+    if (onProgress) {
+      const files = [...inFlight].join(', ')
+      onProgress(`Compiling sources [${done}/${newFiles.length}]${files ? ` → ${files}` : ''}`)
+    } else if (spinner) {
+      const files = [...inFlight].map(f => pc.cyan(f)).join(pc.gray(', '))
+      spinner.text = `Compiling sources [${done}/${newFiles.length}]\n  ${pc.gray('→')} ${files}`
+    }
   }
 
   await Promise.all(
@@ -203,15 +208,20 @@ export async function compileSources(root: string, concurrency?: number): Promis
     )
   )
 
-  spinner.succeed(`Compiled ${newFiles.length} source${newFiles.length !== 1 ? 's' : ''}`)
+  if (spinner) {
+    spinner.succeed(`Compiled ${newFiles.length} source${newFiles.length !== 1 ? 's' : ''}`)
+  } else {
+    onProgress?.(`✓ Compiled ${newFiles.length} source${newFiles.length !== 1 ? 's' : ''}`)
+  }
 }
 
-export async function extractConcepts(root: string, concurrency?: number): Promise<void> {
+export async function extractConcepts(root: string, concurrency?: number, onProgress?: (msg: string) => void): Promise<void> {
   const paths = kbPaths(root)
   const sourceArticles = listWikiArticles().filter(a => a.path.startsWith(paths.wikiSources))
   if (sourceArticles.length === 0) return
 
-  const spinner = ora('Extracting concepts').start()
+  const spinner = onProgress ? null : ora('Extracting concepts').start()
+  onProgress?.('Extracting concepts...')
 
   const summaries = sourceArticles
     .map(a => `### ${a.title}\n${a.content.slice(0, 2000)}`)
@@ -239,11 +249,13 @@ Only return the JSON array, no other text. Identify 3-10 of the most important c
   try {
     concepts = JSON.parse(conceptsRaw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim())
   } catch {
-    spinner.warn('Could not parse concepts. Skipping concept generation.')
+    if (spinner) spinner.warn('Could not parse concepts. Skipping concept generation.')
+    else onProgress?.('⚠ Could not parse concepts. Skipping concept generation.')
     return
   }
 
-  spinner.succeed(`Found ${concepts.length} concepts`)
+  if (spinner) spinner.succeed(`Found ${concepts.length} concepts`)
+  else onProgress?.(`Found ${concepts.length} concepts`)
 
   const existingConcepts = listWikiArticles()
     .filter(a => a.path.startsWith(paths.wikiConcepts))
@@ -264,18 +276,23 @@ Only return the JSON array, no other text. Identify 3-10 of the most important c
 
   let done = 0
   const inFlight = new Set<string>()
-  const conceptSpinner = ora(`Writing concepts [0/${newConcepts.length}]`).start()
+  const conceptSpinner = onProgress ? null : ora(`Writing concepts [0/${newConcepts.length}]`).start()
 
-  const updateSpinner = () => {
-    const titles = [...inFlight].map(t => pc.cyan(t)).join(pc.gray(', '))
-    conceptSpinner.text = `Writing concepts [${done}/${newConcepts.length}]\n  ${pc.gray('→')} ${titles}`
+  const updateConceptSpinner = () => {
+    if (onProgress) {
+      const titles = [...inFlight].join(', ')
+      onProgress(`Writing concepts [${done}/${newConcepts.length}]${titles ? ` → ${titles}` : ''}`)
+    } else if (conceptSpinner) {
+      const titles = [...inFlight].map(t => pc.cyan(t)).join(pc.gray(', '))
+      conceptSpinner.text = `Writing concepts [${done}/${newConcepts.length}]\n  ${pc.gray('→')} ${titles}`
+    }
   }
 
   await Promise.all(
     newConcepts.map(concept =>
       limit(async () => {
         inFlight.add(concept.title)
-        updateSpinner()
+        updateConceptSpinner()
 
         const relatedContent = sourceArticles
           .filter(a => concept.related_sources.some(s => a.path.includes(s)))
@@ -303,17 +320,22 @@ Only return the JSON array, no other text. Identify 3-10 of the most important c
         writeArticle(join(paths.wikiConcepts, `${concept.slug}.md`), meta, body)
         inFlight.delete(concept.title)
         done++
-        updateSpinner()
+        updateConceptSpinner()
       })
     )
   )
 
-  conceptSpinner.succeed(`Wrote ${newConcepts.length} concept${newConcepts.length !== 1 ? 's' : ''}`)
+  if (conceptSpinner) {
+    conceptSpinner.succeed(`Wrote ${newConcepts.length} concept${newConcepts.length !== 1 ? 's' : ''}`)
+  } else {
+    onProgress?.(`✓ Wrote ${newConcepts.length} concept${newConcepts.length !== 1 ? 's' : ''}`)
+  }
 }
 
-export async function rebuildIndex(root: string): Promise<void> {
+export async function rebuildIndex(root: string, onProgress?: (msg: string) => void): Promise<void> {
   const paths = kbPaths(root)
-  const spinner = ora('Rebuilding index').start()
+  const spinner = onProgress ? null : ora('Rebuilding index').start()
+  onProgress?.('Rebuilding index...')
 
   const articles = listWikiArticles()
   const sources = articles.filter(a => a.path.startsWith(paths.wikiSources))
@@ -378,5 +400,6 @@ ${queries.length > 0 ? `\n## Previous Queries (${queries.length})\n\n${queries.m
 `
 
   writeFileSync(paths.wikiIndex, index)
-  spinner.succeed('Index rebuilt')
+  if (spinner) spinner.succeed('Index rebuilt')
+  else onProgress?.('✓ Index rebuilt')
 }
