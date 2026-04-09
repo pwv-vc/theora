@@ -1,4 +1,7 @@
 # wiki
+- The wiki page IS the sources view — "wiki" and "sources" are the same section. Concepts and queries are separate subpages under wiki (e.g., /wiki/concepts, /wiki/queries), not mixed into the sources list. Confidence: 0.80
+- Concepts and queries must be browsable as navigable links on the wiki — not hidden or non-obvious. Surface them as clickable links/cards so users can clearly see they can browse both. Confidence: 0.80
+- The navbar wiki menu should include links to all wiki subsections: sources (wiki home), concepts, and queries — so users can navigate directly to any of the three from the nav. Confidence: 0.80
 - The `output/` directory must be included in `listWikiArticles()` so filed query answers are visible to future `ask` calls — the compounding loop (every answer makes the next answer better) depends on output/ being read back, not just written to. Confidence: 0.90
 - Concept frontmatter `ontology` should be a YAML array of bare strings (e.g., `ontology: [person, author]`), NOT quoted Obsidian wiki links — `"[[organization]]"` does not render as a link in Obsidian frontmatter properties; use plain values instead. Confidence: 0.85
 - Concept `ontology` should support multiple values (e.g., `[person, author]`) since a concept can belong to more than one ontology type simultaneously. Confidence: 0.85

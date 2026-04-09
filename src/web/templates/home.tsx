@@ -1,62 +1,57 @@
 /** @jsxImportSource hono/jsx */
-import type { WikiArticle } from '../../lib/wiki.js'
+import type { WikiArticle, TagWithCount } from '../../lib/wiki.js'
+import { Card, EmptyState, Pill, SectionHeader, StatCard, TagFilterBar } from './ui/index.js'
 
 interface HomePageProps {
   sources: WikiArticle[]
   concepts: WikiArticle[]
   queries: WikiArticle[]
-  tags: string[]
+  tagsWithCounts: TagWithCount[]
+  activeTag: string
   stats: Record<string, unknown> | null
   config: Record<string, unknown>
 }
 
-function ArticleCard({ article, type }: { article: WikiArticle; type: 'sources' | 'concepts' | 'output' }) {
-  const href = type === 'output'
-    ? `/output/${article.path.split('/').pop()?.replace('.md', '')}`
-    : `/wiki/${type}/${article.path.split('/').pop()?.replace('.md', '')}`
+function ArticleCard({ article }: { article: WikiArticle }) {
+  const slug = article.path.split('/').pop()?.replace('.md', '')
+  const href = `/wiki/sources/${slug}`
 
   return (
-    <a href={href} class="block group">
-      <div class="border border-zinc-800 rounded-lg p-4 hover:border-zinc-600 hover:bg-zinc-900/50 transition-all">
-        <div class="text-zinc-100 text-sm font-medium group-hover:text-white mb-1 truncate">
-          {article.title}
+    <Card href={href}>
+      <div class="text-zinc-100 text-sm font-bold group-hover:text-red-500 mb-1 truncate">
+        {article.title}
+      </div>
+      {article.tags.length > 0 && (
+        <div class="flex flex-wrap gap-1 mt-2">
+          {article.tags.slice(0, 4).map(tag => (
+            <Pill key={tag}>{tag}</Pill>
+          ))}
         </div>
-        {article.tags.length > 0 && (
-          <div class="flex flex-wrap gap-1 mt-2">
-            {article.tags.slice(0, 4).map(tag => (
-              <span key={tag} class="bg-zinc-800 text-zinc-400 text-xs px-1.5 py-0.5 rounded">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+      )}
+    </Card>
+  )
+}
+
+function BrowseCard({ href, label, count, description }: { href: string; label: string; count: number; description: string }) {
+  return (
+    <a href={href} class="block group">
+      <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:border-zinc-600 hover:bg-zinc-800 transition-all no-scanline flex items-center justify-between" style="position: relative; z-index: 10001;">
+        <div>
+          <div class="text-zinc-100 text-sm font-bold group-hover:text-red-500 mb-0.5">{label}</div>
+          <div class="text-zinc-500 text-xs">{description}</div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="text-zinc-600 text-sm">{count}</span>
+          <svg class="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
       </div>
     </a>
   )
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div class="border border-zinc-800 rounded-lg p-4">
-      <div class="text-zinc-500 text-xs uppercase tracking-wider mb-1">{label}</div>
-      <div class="text-zinc-100 text-lg font-bold">{value}</div>
-    </div>
-  )
-}
-
-function Section({ title, count, children }: { title: string; count: number; children: unknown }) {
-  return (
-    <section class="mb-10">
-      <div class="flex items-center gap-3 mb-4">
-        <h2 class="text-zinc-100 font-bold text-sm uppercase tracking-wider">{title}</h2>
-        <span class="text-zinc-600 text-xs">{count}</span>
-      </div>
-      {children}
-    </section>
-  )
-}
-
-export function HomePage({ sources, concepts, queries, tags, stats, config }: HomePageProps) {
+export function HomePage({ sources, concepts, queries, tagsWithCounts, activeTag, stats, config }: HomePageProps) {
   const kbName = String(config.name ?? 'Knowledge Base')
 
   const formatCost = (usd: number) => usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`
@@ -71,11 +66,15 @@ export function HomePage({ sources, concepts, queries, tags, stats, config }: Ho
       <div class="mb-8">
         <h1 class="text-2xl font-bold text-zinc-100 mb-1">{kbName}</h1>
         <p class="text-zinc-500 text-sm">
-          {sources.length} sources · {concepts.length} concepts · {queries.length} queries
+          <a href="/" class="hover:text-zinc-300 transition-colors">{sources.length} sources</a>
+          {' · '}
+          <a href="/wiki/concepts" class="hover:text-zinc-300 transition-colors">{concepts.length} concepts</a>
+          {' · '}
+          <a href="/wiki/queries" class="hover:text-zinc-300 transition-colors">{queries.length} queries</a>
         </p>
       </div>
 
-      {stats && (
+      {stats && !activeTag && (
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
           <StatCard label="LLM Calls" value={Number(stats.totalLlmCalls ?? 0)} />
           <StatCard label="Tokens In" value={formatTokens(Number(stats.totalInputTokens ?? 0))} />
@@ -84,52 +83,62 @@ export function HomePage({ sources, concepts, queries, tags, stats, config }: Ho
         </div>
       )}
 
-      {tags.length > 0 && (
-        <div class="mb-8 flex flex-wrap gap-2">
-          {tags.map(tag => (
-            <a
-              key={tag}
-              href={`/search?tag=${encodeURIComponent(tag)}`}
-              class="bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 text-xs px-2 py-1 rounded transition-colors"
-            >
-              #{tag}
-            </a>
-          ))}
+      {tagsWithCounts.length > 0 && (
+        <div class="mb-8">
+          <TagFilterBar
+            tagsWithCounts={tagsWithCounts}
+            activeTag={activeTag}
+            hrefBase="/"
+            clearHref="/"
+          />
         </div>
       )}
 
-      {sources.length > 0 && (
-        <Section title="Sources" count={sources.length}>
+      {sources.length > 0 ? (
+        <section class="mb-10">
+          <SectionHeader title="Sources" count={sources.length} />
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {sources.map(a => <ArticleCard key={a.path} article={a} type="sources" />)}
+            {sources.map(a => <ArticleCard key={a.path} article={a} />)}
           </div>
-        </Section>
+        </section>
+      ) : (
+        <EmptyState>
+          {activeTag ? (
+            <p class="text-zinc-500 text-sm">No sources tagged <span class="text-zinc-300">#{activeTag}</span>.</p>
+          ) : (
+            <>
+              <p class="text-zinc-500 text-sm mb-2">No sources compiled yet.</p>
+              <p class="text-zinc-600 text-xs">
+                Run <code class="text-zinc-400">theora ingest</code> then{' '}
+                <a href="/compile" class="text-red-500 hover:text-red-400">compile</a> to get started.
+              </p>
+            </>
+          )}
+        </EmptyState>
       )}
 
-      {concepts.length > 0 && (
-        <Section title="Concepts" count={concepts.length}>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {concepts.map(a => <ArticleCard key={a.path} article={a} type="concepts" />)}
-          </div>
-        </Section>
-      )}
-
-      {queries.length > 0 && (
-        <Section title="Previous Queries" count={queries.length}>
+      {!activeTag && (concepts.length > 0 || queries.length > 0) && (
+        <section class="mb-10">
+          <SectionHeader title="Browse" count={concepts.length + queries.length} />
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {queries.map(a => <ArticleCard key={a.path} article={a} type="output" />)}
+            {concepts.length > 0 && (
+              <BrowseCard
+                href="/wiki/concepts"
+                label="Concepts"
+                count={concepts.length}
+                description="Key ideas extracted across all sources"
+              />
+            )}
+            {queries.length > 0 && (
+              <BrowseCard
+                href="/wiki/queries"
+                label="Queries"
+                count={queries.length}
+                description="Previous answers filed back into the wiki"
+              />
+            )}
           </div>
-        </Section>
-      )}
-
-      {sources.length === 0 && concepts.length === 0 && (
-        <div class="border border-zinc-800 rounded-lg p-8 text-center">
-          <p class="text-zinc-500 text-sm mb-2">No articles compiled yet.</p>
-          <p class="text-zinc-600 text-xs">
-            Run <code class="text-zinc-400">theora ingest</code> then{' '}
-            <a href="/compile" class="text-red-500 hover:text-red-400">compile</a> to get started.
-          </p>
-        </div>
+        </section>
       )}
     </div>
   )

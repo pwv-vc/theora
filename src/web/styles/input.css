@@ -1,2 +1,222 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+/* ============================================================
+   THEORA THEMES — 80s Retro-Futuristic / Max Headroom
+   ============================================================
+   Four palettes inspired by the visual language of Max Headroom
+   and 80s broadcast television: neon on black, phosphor green,
+   electric cyan, and the clean white of the control room.
+
+   Strategy: override Tailwind v4's --color-zinc-* and
+   --color-red-* CSS variables per [data-theme] so every
+   existing utility class adapts automatically — no template
+   changes required.
+   ============================================================ */
+
+/* ── MAX (default dark) ─────────────────────────────────────
+   Hot magenta neon on near-black. The signature Max Headroom
+   palette: black void, hot pink scan lines, electric accents.
+   ─────────────────────────────────────────────────────────── */
+:root,
+[data-theme="max"] {
+  --color-zinc-950: #050508;
+  --color-zinc-900: #0a0a14;
+  --color-zinc-800: #141428;
+  --color-zinc-700: #1e1e3c;
+  --color-zinc-600: #383860;
+  --color-zinc-500: #585890;
+  --color-zinc-400: #7878b8;
+  --color-zinc-300: #a8a8d8;
+  --color-zinc-200: #c8c8ec;
+  --color-zinc-100: #e8e8ff;
+  --color-red-950: #2d0020;
+  --color-red-900: #4a0035;
+  --color-red-800: #7a0055;
+  --color-red-700: #cc0077;
+  --color-red-600: #ff0090;
+  --color-red-500: #ff00aa;
+  --color-red-400: #ff44cc;
+  --color-red-300: #ff88dd;
+  --th-glow: rgba(255, 0, 144, 0.35);
+  --th-scanline: rgba(255, 0, 144, 0.03);
+}
+
+/* ── PHOSPHOR (dark) ────────────────────────────────────────
+   Classic green phosphor CRT. Pure terminal nostalgia —
+   the glow of a monitor at 2am in 1987.
+   ─────────────────────────────────────────────────────────── */
+[data-theme="phosphor"] {
+  --color-zinc-950: #000800;
+  --color-zinc-900: #001200;
+  --color-zinc-800: #002200;
+  --color-zinc-700: #003300;
+  --color-zinc-600: #1a5c1a;
+  --color-zinc-500: #2d8c2d;
+  --color-zinc-400: #44aa44;
+  --color-zinc-300: #66cc66;
+  --color-zinc-200: #88ee88;
+  --color-zinc-100: #aaffaa;
+  --color-red-950: #001a00;
+  --color-red-900: #003300;
+  --color-red-800: #006600;
+  --color-red-700: #009900;
+  --color-red-600: #00cc00;
+  --color-red-500: #00ff00;
+  --color-red-400: #33ff33;
+  --color-red-300: #66ff66;
+  --th-glow: rgba(0, 255, 0, 0.35);
+  --th-scanline: rgba(0, 255, 0, 0.04);
+}
+
+/* ── NEON (dark) ────────────────────────────────────────────
+   Deep purple void with electric cyan. Cyberpunk broadcast
+   signal cutting through the static.
+   ─────────────────────────────────────────────────────────── */
+[data-theme="neon"] {
+  --color-zinc-950: #060010;
+  --color-zinc-900: #0e0020;
+  --color-zinc-800: #1a0040;
+  --color-zinc-700: #280060;
+  --color-zinc-600: #4400aa;
+  --color-zinc-500: #6633cc;
+  --color-zinc-400: #9966ee;
+  --color-zinc-300: #cc99ff;
+  --color-zinc-200: #e0bbff;
+  --color-zinc-100: #f0ddff;
+  --color-red-950: #001a33;
+  --color-red-900: #003366;
+  --color-red-800: #0055aa;
+  --color-red-700: #0077dd;
+  --color-red-600: #0099ff;
+  --color-red-500: #00bbff;
+  --color-red-400: #44ccff;
+  --color-red-300: #88ddff;
+  --th-glow: rgba(0, 187, 255, 0.35);
+  --th-scanline: rgba(0, 187, 255, 0.03);
+}
+
+/* ── BROADCAST (light) ──────────────────────────────────────
+   TV broadcast aesthetic. Clean white studio with bold
+   magenta accents — the control room behind the screen.
+   Zinc scale is inverted: 950 = lightest, 100 = darkest.
+   ─────────────────────────────────────────────────────────── */
+[data-theme="broadcast"] {
+  --color-zinc-950: #f8f8ff;
+  --color-zinc-900: #ededf8;
+  --color-zinc-800: #d8d8ee;
+  --color-zinc-700: #c0c0e0;
+  --color-zinc-600: #8888b8;
+  --color-zinc-500: #6666a0;
+  --color-zinc-400: #444480;
+  --color-zinc-300: #222260;
+  --color-zinc-200: #111140;
+  --color-zinc-100: #080820;
+  --color-red-950: #ffe0f0;
+  --color-red-900: #ffccee;
+  --color-red-800: #ff99dd;
+  --color-red-700: #cc0066;
+  --color-red-600: #ee0077;
+  --color-red-500: #ff0088;
+  --color-red-400: #cc0055;
+  --color-red-300: #aa0044;
+  --th-glow: rgba(204, 0, 102, 0.25);
+  --th-scanline: rgba(0, 0, 60, 0.03);
+}
+
+/* ── CRT Scanlines ──────────────────────────────────────────
+   Subtle horizontal scan lines overlay. Invisible in broadcast
+   (light) theme via --th-scanline: transparent.
+   ─────────────────────────────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    var(--th-scanline) 2px,
+    var(--th-scanline) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Form Element Scanline Exclusion ────────────────────────
+   Lift inputs, textareas, buttons, and selects above the
+   body::after scanline overlay (z-9999) so they render clean.
+   ─────────────────────────────────────────────────────────── */
+input, textarea, button, select, pre {
+  position: relative;
+  z-index: 10000;
+}
+
+/* ── No-Scanline Utility ─────────────────────────────────────
+   Apply to cards, panels, and content areas to suppress the
+   CRT scanline overlay. Sits above body::after (z-9999) but
+   below the sticky header (z-20000).
+   ─────────────────────────────────────────────────────────── */
+.no-scanline {
+  position: relative;
+  z-index: 10001;
+}
+
+/* ── Neon Glow ──────────────────────────────────────────────
+   Apply to accent text (logo, headings) for CRT bloom effect.
+   ─────────────────────────────────────────────────────────── */
+.glow {
+  text-shadow:
+    0 0 6px var(--th-glow),
+    0 0 14px var(--th-glow);
+}
+
+/* ── Theme Swatch Active State ──────────────────────────────
+   Pure CSS active indicator — the selected swatch gets an
+   outline matching the current theme's primary text color.
+   ─────────────────────────────────────────────────────────── */
+.theme-swatch {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: transform 0.15s ease, outline-color 0.15s ease;
+}
+
+[data-theme="max"] [data-theme-id="max"],
+[data-theme="phosphor"] [data-theme-id="phosphor"],
+[data-theme="neon"] [data-theme-id="neon"],
+[data-theme="broadcast"] [data-theme-id="broadcast"] {
+  outline-color: var(--color-zinc-100);
+}
+
+/* ── Drop Zone Active State ─────────────────────────────────
+   Applied via JS when files are dragged over the ingest drop
+   zone. Uses the theme accent color for the glow effect.
+   ─────────────────────────────────────────────────────────── */
+.drop-zone-active {
+  border-color: var(--color-red-500) !important;
+  box-shadow: 0 0 0 1px var(--color-red-500), 0 0 16px color-mix(in srgb, var(--color-red-500) 25%, transparent);
+  background-color: color-mix(in srgb, var(--color-red-950) 40%, transparent);
+}
+
+/* ── Broadcast Prose Override ───────────────────────────────
+   prose-invert sets light-on-dark colors. In broadcast (light)
+   theme we restore dark-on-light prose typography.
+   ─────────────────────────────────────────────────────────── */
+[data-theme="broadcast"] .prose-invert {
+  --tw-prose-body: #222260;
+  --tw-prose-headings: #080820;
+  --tw-prose-lead: #444480;
+  --tw-prose-links: #cc0055;
+  --tw-prose-bold: #080820;
+  --tw-prose-counters: #444480;
+  --tw-prose-bullets: #444480;
+  --tw-prose-hr: #d8d8ee;
+  --tw-prose-quotes: #222260;
+  --tw-prose-quote-borders: #cc0066;
+  --tw-prose-captions: #6666a0;
+  --tw-prose-code: #080820;
+  --tw-prose-pre-code: #080820;
+  --tw-prose-pre-bg: #ededf8;
+  --tw-prose-th-borders: #d8d8ee;
+  --tw-prose-td-borders: #d8d8ee;
+}

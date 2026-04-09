@@ -41,11 +41,7 @@ See [cli-design/taste.md](cli-design/taste.md)
 # wiki
 See [wiki/taste.md](wiki/taste.md)
 # web
-- Do not use Next.js for web interfaces in this project. Confidence: 0.90
-- Use Tailwind CSS for styling web interfaces in this project. Confidence: 0.85
-- Use Hono (with @hono/node-server) as the web server framework for local web interfaces in this project. Confidence: 0.65
-- Use HTMX for frontend interactivity in Hono-based web interfaces — avoids a JS framework while supporting SSE streaming and partial page updates. Confidence: 0.65
-
+See [web/taste.md](web/taste.md)
 # documentation
 - Write thorough README docs that explain not just how to use features, but why they're useful and when to use them. Confidence: 0.75
 - Always update the README after implementing each new feature or feature update — include what the feature does, how to use it, and a usage example. User explicitly stated "always" and consistently requests this after every addition. Confidence: 0.95

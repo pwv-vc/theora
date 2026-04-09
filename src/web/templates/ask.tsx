@@ -1,62 +1,60 @@
 /** @jsxImportSource hono/jsx */
+import type { TagWithCount } from '../../lib/wiki.js'
+import { GhostButton, Input, PageHeader, PrimaryButton, SectionLabel, StatusDot, TagSelectorBar } from './ui/index.js'
 
-export function AskPage() {
+interface AskPageProps {
+  tagsWithCounts: TagWithCount[]
+}
+
+export function AskPage({ tagsWithCounts }: AskPageProps) {
   return (
     <div>
-      <div class="mb-6">
-        <h1 class="text-xl font-bold text-zinc-100 mb-1">Ask</h1>
-        <p class="text-zinc-500 text-sm">Ask a question against the compiled wiki.</p>
-      </div>
+      <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" />
+
+      <PageHeader title="Ask" subtitle="Ask a question against the compiled wiki." />
 
       <div class="mb-6">
-        <div class="flex gap-3">
-          <input
+        <div class="flex gap-3 mb-4">
+          <Input
+            inputSize="md"
+            class="flex-1"
             id="question-input"
             type="text"
             placeholder="What are the key themes in this research?"
-            class="flex-1 bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 px-4 py-2.5 rounded-lg text-sm focus:border-red-600 focus:outline-none transition-colors"
             onkeydown="if(event.key==='Enter')askQuestion()"
           />
-          <button
-            onclick="askQuestion()"
-            id="ask-btn"
-            class="bg-red-700 hover:bg-red-600 disabled:bg-zinc-800 disabled:text-zinc-600 text-white text-sm px-5 py-2.5 rounded-lg transition-colors font-medium"
-          >
-            Ask
-          </button>
+          <PrimaryButton onclick="askQuestion()" id="ask-btn">Ask</PrimaryButton>
         </div>
-        <div class="flex items-center gap-2 mt-2">
-          <label class="text-zinc-600 text-xs">Tag filter:</label>
-          <input
-            id="tag-filter"
-            type="text"
-            placeholder="optional tag"
-            class="bg-zinc-900 border border-zinc-800 text-zinc-400 placeholder-zinc-700 px-2 py-1 rounded text-xs focus:border-zinc-600 focus:outline-none w-32"
+
+        {tagsWithCounts.length > 0 && (
+          <TagSelectorBar
+            tagsWithCounts={tagsWithCounts}
+            inputId="ask-tag-input"
+            chipId="ask-tag-chip"
           />
-        </div>
+        )}
       </div>
 
       <div id="status" class="hidden mb-4">
         <div class="flex items-center gap-2 text-zinc-500 text-xs">
-          <span id="status-dot" class="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <StatusDot id="status-dot" />
           <span id="status-text">Thinking...</span>
         </div>
       </div>
 
       <div id="answer-wrapper" class="hidden">
-        <div class="border-t border-zinc-800 pt-6">
+        <div class="border border-zinc-800 rounded-lg p-5 no-scanline">
           <div class="flex items-center justify-between mb-4">
-            <div class="text-zinc-600 text-xs uppercase tracking-wider">Answer</div>
-            <button
-              onclick="clearAnswer()"
-              class="text-zinc-700 hover:text-zinc-500 text-xs transition-colors"
-            >
-              clear
-            </button>
+            <SectionLabel>Answer</SectionLabel>
+            <GhostButton onclick="clearAnswer()">clear</GhostButton>
           </div>
           <pre
-            id="answer"
-            class="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap font-mono"
+            id="answer-stream"
+            class="text-zinc-400 text-sm leading-relaxed whitespace-pre-wrap font-mono"
+          />
+          <div
+            id="answer-rendered"
+            class="hidden prose prose-invert prose-zinc max-w-none prose-headings:font-mono prose-headings:text-zinc-100 prose-p:text-zinc-300 prose-a:text-red-400 prose-a:no-underline hover:prose-a:text-red-300 prose-code:text-zinc-300 prose-code:bg-zinc-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800 prose-strong:text-zinc-100 prose-li:text-zinc-300 prose-blockquote:border-red-800 prose-blockquote:text-zinc-400"
           />
         </div>
       </div>
@@ -69,8 +67,10 @@ export function AskPage() {
           const question = input.value.trim();
           if (!question) return;
 
-          const tag = document.getElementById('tag-filter').value.trim();
-          const answerEl = document.getElementById('answer');
+          const tagInput = document.getElementById('ask-tag-input');
+          const tag = tagInput ? tagInput.value.trim() : '';
+          const streamEl = document.getElementById('answer-stream');
+          const renderedEl = document.getElementById('answer-rendered');
           const wrapper = document.getElementById('answer-wrapper');
           const status = document.getElementById('status');
           const statusText = document.getElementById('status-text');
@@ -81,7 +81,10 @@ export function AskPage() {
             currentSource = null;
           }
 
-          answerEl.textContent = '';
+          streamEl.textContent = '';
+          streamEl.classList.remove('hidden');
+          renderedEl.innerHTML = '';
+          renderedEl.classList.add('hidden');
           wrapper.classList.add('hidden');
           status.classList.remove('hidden');
           statusText.textContent = 'Thinking...';
@@ -95,7 +98,7 @@ export function AskPage() {
 
           source.onmessage = (e) => {
             wrapper.classList.remove('hidden');
-            answerEl.textContent += e.data;
+            streamEl.textContent += e.data;
             statusText.textContent = 'Streaming...';
           };
 
@@ -104,6 +107,13 @@ export function AskPage() {
             currentSource = null;
             status.classList.add('hidden');
             btn.disabled = false;
+
+            const fullAnswer = e.data;
+            if (typeof marked !== 'undefined' && fullAnswer) {
+              renderedEl.innerHTML = marked.parse(fullAnswer);
+              streamEl.classList.add('hidden');
+              renderedEl.classList.remove('hidden');
+            }
           });
 
           source.addEventListener('error', (e) => {
@@ -112,7 +122,7 @@ export function AskPage() {
             status.classList.add('hidden');
             btn.disabled = false;
             if (e.data) {
-              answerEl.textContent += '\\n\\nError: ' + e.data;
+              streamEl.textContent += '\\n\\nError: ' + e.data;
             }
           });
 
@@ -129,7 +139,10 @@ export function AskPage() {
             currentSource.close();
             currentSource = null;
           }
-          document.getElementById('answer').textContent = '';
+          document.getElementById('answer-stream').textContent = '';
+          document.getElementById('answer-rendered').innerHTML = '';
+          document.getElementById('answer-rendered').classList.add('hidden');
+          document.getElementById('answer-stream').classList.remove('hidden');
           document.getElementById('answer-wrapper').classList.add('hidden');
           document.getElementById('status').classList.add('hidden');
           document.getElementById('ask-btn').disabled = false;

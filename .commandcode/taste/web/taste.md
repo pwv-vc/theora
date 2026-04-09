@@ -1,0 +1,24 @@
+# web
+- Wiki tag filtering should stay on the wiki/home page (/?tag=...) — clicking a tag should filter articles in-place, NOT redirect to the search page. Search is a separate action that can optionally filter by tag. Confidence: 0.85
+- Tag filter UX must scale to 100s of tags — a flat horizontal pill list is not acceptable at scale. Prefer patterns like: collapsible panel/drawer, popover/overlay picker, sorted-by-popularity with a "show more" expand, or a searchable tag dropdown. Show most-used tags first. Confidence: 0.80
+- The tag filter component (top N quick-filter chips + "Browse all tags" searchable popover) must be shared and consistent across all pages/actions — wiki/home, search, and ask should all use the same TagPopover/TagFilterLink components. Confidence: 0.85
+- Always create shared UI components (cards, pills/tags, form inputs, buttons) for DRY reuse — avoid duplicating Tailwind class strings across templates. Confidence: 0.85
+- Never use emoji for UI icons — always use SVG icons, preferring Lucide-style icons. Confidence: 0.85
+- Do not use Next.js for web interfaces in this project. Confidence: 0.90
+- Use Tailwind CSS for styling web interfaces in this project. Confidence: 0.85
+- Use Hono (with @hono/node-server) as the web server framework for local web interfaces in this project. Confidence: 0.65
+- Use HTMX for frontend interactivity in Hono-based web interfaces — avoids a JS framework while supporting SSE streaming and partial page updates. Confidence: 0.65
+- Web UI color themes should follow an 80s retro-futuristic / Max Headroom aesthetic: neon cyan, magenta, electric blue, phosphor green on dark backgrounds, with CRT-style glow effects. Confidence: 0.70
+- Implement Tailwind CSS light/dark mode themes with a user-accessible mode picker toggle in the UI; place the light theme first in the picker and make it the default. Confidence: 0.75
+- Keep rounded corners (rounded-lg, rounded, etc.) on inputs, cards, and small UI elements — user likes them. Only avoid rounded corners on the main page/layout container edges (e.g., bottom-left and bottom-right of the viewport frame) which looked like a CRT screen bezel. Confidence: 0.85
+- CRT scanlines should be very subtle across all themes — use low-opacity semi-transparent colors (e.g., 0.03–0.05 range); light (broadcast) theme scanlines should be even more toned down than dark themes. User explicitly asked to make all scanlines more subtle. Confidence: 0.85
+- Suppress CRT scanlines in the sticky nav/header — the header should use a solid theme-based background color with no scanline overlay. Confidence: 0.75
+- Suppress CRT scanlines on form elements (inputs, textareas, selects, buttons) — use z-index or isolation to prevent the body::after scanline overlay from rendering over interactive form controls. Confidence: 0.80
+- Ask answer results must be displayed in a card UI component with rendered markdown (not raw markdown text). Confidence: 0.85
+- Split shared UI components out of a single ui.tsx monolith into individual files in a ui/ directory — one component (or closely related group) per file. Confidence: 0.85
+- All card and UI components must suppress CRT scanlines and use a solid background — cards should never show the scanline overlay. Use `position: relative; z-index` above the `body::after` scanline, plus an explicit solid background color (e.g., `bg-zinc-950`) so the overlay cannot bleed through. Confidence: 0.90
+- Card titles should use `font-bold` for strong visual hierarchy. Tag/pill badges need high-contrast text (e.g., `text-zinc-700` or darker) so they remain legible in both dark and light (broadcast) themes — avoid washed-out `text-zinc-400` on light backgrounds. Confidence: 0.80
+- In the broadcast (light) theme, card hover states and tag badges must maintain legibility — use solid opaque backgrounds on badges and ensure hover states don't reduce text contrast. Confidence: 0.80
+- In the broadcast (light) theme, anchor/link hover colors must be dark enough to remain legible — light hover colors (e.g., washed-out zinc or low-contrast tints) are unreadable; cross-check link and hover styles against the wiki source cards as a reference for acceptable contrast. Confidence: 0.80
+- The sticky nav/header must use `position: sticky` (or `fixed`) with a high `z-index` so that scrolling body content slides underneath it, not over it. Confidence: 0.85
+- The main layout should include a sticky top navigation bar and a footer. Confidence: 0.80

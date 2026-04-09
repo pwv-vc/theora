@@ -1,35 +1,11 @@
 import { Command } from 'commander'
-import { copyFileSync, existsSync, mkdirSync, statSync, readdirSync, writeFileSync } from 'node:fs'
-import { join, basename, resolve, extname } from 'node:path'
+import { copyFileSync, existsSync, mkdirSync, statSync, readdirSync } from 'node:fs'
+import { join, basename, resolve } from 'node:path'
 import pc from 'picocolors'
 import ora from 'ora'
 import { kbPaths, requireKbRoot } from '../lib/paths.js'
 import { readManifest, writeManifest } from '../lib/manifest.js'
-import { slugify } from '../lib/utils.js'
-
-const VALID_EXTS = new Set([
-  '.md', '.mdx', '.txt', '.html', '.json', '.csv', '.xml', '.yaml', '.yml',
-  '.pdf',
-  '.png', '.jpg', '.jpeg', '.gif', '.webp',
-])
-
-const CONTENT_TYPE_EXT: Record<string, string> = {
-  'text/html': '.html',
-  'text/plain': '.txt',
-  'application/json': '.json',
-  'image/png': '.png',
-  'image/jpeg': '.jpg',
-  'image/gif': '.gif',
-  'image/webp': '.webp',
-}
-
-function isUrl(source: string): boolean {
-  return source.startsWith('http://') || source.startsWith('https://')
-}
-
-function isValidFile(path: string): boolean {
-  return VALID_EXTS.has(extname(path).toLowerCase())
-}
+import { VALID_EXTS, isUrl, isValidFile, fetchUrl } from '../lib/ingest.js'
 
 function collectFiles(dir: string): string[] {
   const results: string[] = []
@@ -40,49 +16,6 @@ function collectFiles(dir: string): string[] {
     else if (isValidFile(full)) results.push(full)
   }
   return results
-}
-
-function filenameFromUrl(url: string, contentType: string): string {
-  const parsed = new URL(url)
-  const pathPart = parsed.pathname.replace(/\/$/, '')
-  const urlBasename = pathPart.split('/').pop() ?? ''
-  const urlExt = extname(urlBasename).toLowerCase()
-
-  // Use URL's own extension if it's valid
-  if (urlExt && VALID_EXTS.has(urlExt)) {
-    const stem = urlBasename.slice(0, -urlExt.length)
-    return `${slugify(stem || parsed.hostname)}${urlExt}`
-  }
-
-  // Derive extension from Content-Type
-  const mimeBase = contentType.split(';')[0].trim()
-  const ext = CONTENT_TYPE_EXT[mimeBase] ?? '.html'
-  const stem = urlBasename ? slugify(urlBasename) : slugify(parsed.hostname + parsed.pathname)
-  return `${stem}${ext}`
-}
-
-async function fetchUrl(url: string, destDir: string): Promise<{ name: string; skipped: boolean }> {
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} fetching ${url}`)
-  }
-
-  const contentType = response.headers.get('content-type') ?? 'text/html'
-  const name = filenameFromUrl(url, contentType)
-  const destPath = join(destDir, name)
-
-  const mimeBase = contentType.split(';')[0].trim()
-  const isImage = mimeBase.startsWith('image/')
-
-  if (isImage) {
-    const buffer = Buffer.from(await response.arrayBuffer())
-    writeFileSync(destPath, buffer)
-  } else {
-    const text = await response.text()
-    writeFileSync(destPath, text)
-  }
-
-  return { name, skipped: false }
 }
 
 export const ingestCommand = new Command('ingest')

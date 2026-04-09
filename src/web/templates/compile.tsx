@@ -1,73 +1,71 @@
 /** @jsxImportSource hono/jsx */
+import { CheckboxField, LogPanel, PageHeader, Panel, PrimaryButton, SectionLabel, StatusDot } from './ui/index.js'
 
-export function CompilePage() {
+interface CompilePageProps {
+  ingestedCount?: number
+  ingestedFiles?: string
+}
+
+export function CompilePage({ ingestedCount = 0, ingestedFiles = '' }: CompilePageProps = {}) {
+  const fileNames = ingestedFiles ? ingestedFiles.split(',').filter(Boolean) : []
+
   return (
     <div>
-      <div class="mb-6">
-        <h1 class="text-xl font-bold text-zinc-100 mb-1">Compile</h1>
-        <p class="text-zinc-500 text-sm">Process raw sources into the wiki.</p>
-      </div>
+      <PageHeader title="Compile" subtitle="Process raw sources into the wiki." />
 
-      <div class="border border-zinc-800 rounded-lg p-5 mb-6">
-        <div class="space-y-3 mb-5">
-          <label class="flex items-center gap-3 cursor-pointer group">
-            <input
-              type="checkbox"
-              id="opt-force"
-              class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-red-600 focus:ring-red-600 focus:ring-offset-zinc-950"
-            />
-            <div>
-              <div class="text-zinc-200 text-sm group-hover:text-white transition-colors">Force recompile</div>
-              <div class="text-zinc-600 text-xs">Delete existing articles and reprocess everything from scratch</div>
+      {ingestedCount > 0 && (
+        <div class="mb-6 bg-green-950 border border-green-800 rounded-lg p-4 no-scanline" style="position: relative; z-index: 10001;">
+          <div class="flex items-start gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400 shrink-0 mt-0.5">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <div class="min-w-0">
+              <div class="text-green-300 text-sm font-bold">
+                Added {ingestedCount} file{ingestedCount !== 1 ? 's' : ''} to the knowledge base
+              </div>
+              {fileNames.length > 0 && (
+                <div class="text-green-600 text-xs mt-1 font-mono truncate">
+                  {fileNames.join(' · ')}
+                </div>
+              )}
+              <div class="text-green-700 text-xs mt-2">
+                Run compile below to process {ingestedCount === 1 ? 'it' : 'them'} into the wiki.
+              </div>
             </div>
-          </label>
-
-          <label class="flex items-center gap-3 cursor-pointer group">
-            <input
-              type="checkbox"
-              id="opt-sources-only"
-              class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-red-600 focus:ring-red-600 focus:ring-offset-zinc-950"
-            />
-            <div>
-              <div class="text-zinc-200 text-sm group-hover:text-white transition-colors">Sources only</div>
-              <div class="text-zinc-600 text-xs">Skip concept extraction after compiling sources</div>
-            </div>
-          </label>
-
-          <label class="flex items-center gap-3 cursor-pointer group">
-            <input
-              type="checkbox"
-              id="opt-concepts-only"
-              class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-red-600 focus:ring-red-600 focus:ring-offset-zinc-950"
-            />
-            <div>
-              <div class="text-zinc-200 text-sm group-hover:text-white transition-colors">Concepts only</div>
-              <div class="text-zinc-600 text-xs">Regenerate all concept articles from existing compiled sources</div>
-            </div>
-          </label>
+          </div>
         </div>
+      )}
 
-        <button
-          id="compile-btn"
-          onclick="runCompile()"
-          class="bg-red-700 hover:bg-red-600 disabled:bg-zinc-800 disabled:text-zinc-600 text-white text-sm px-5 py-2.5 rounded-lg transition-colors font-medium"
-        >
-          Run Compile
-        </button>
-      </div>
+      <Panel class="mb-6">
+        <div class="space-y-3 mb-5">
+          <CheckboxField
+            id="opt-force"
+            label="Force recompile"
+            description="Delete existing articles and reprocess everything from scratch"
+          />
+          <CheckboxField
+            id="opt-sources-only"
+            label="Sources only"
+            description="Skip concept extraction after compiling sources"
+          />
+          <CheckboxField
+            id="opt-concepts-only"
+            label="Concepts only"
+            description="Regenerate all concept articles from existing compiled sources"
+          />
+        </div>
+        <PrimaryButton id="compile-btn" onclick="runCompile()">Run Compile</PrimaryButton>
+      </Panel>
 
       <div id="progress-wrapper" class="hidden">
         <div class="flex items-center justify-between mb-3">
-          <div class="text-zinc-600 text-xs uppercase tracking-wider">Progress</div>
+          <SectionLabel>Progress</SectionLabel>
           <div id="compile-status" class="flex items-center gap-2 text-zinc-500 text-xs">
-            <span id="status-dot" class="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            <StatusDot id="status-dot" />
             <span>Running...</span>
           </div>
         </div>
-        <pre
-          id="progress-log"
-          class="bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-zinc-400 text-xs leading-relaxed font-mono overflow-auto max-h-96 whitespace-pre-wrap"
-        />
+        <LogPanel id="progress-log" />
       </div>
 
       <script dangerouslySetInnerHTML={{ __html: `

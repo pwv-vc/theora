@@ -30,6 +30,20 @@ export function searchArticles(query: string, filterTag?: string): SearchResult[
   }
 
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
+
+  if (terms.length === 0) {
+    return articles
+      .sort((a, b) => a.title.localeCompare(b.title))
+      .map(article => ({
+        title: article.title,
+        path: article.path,
+        relativePath: article.relativePath,
+        tags: article.tags,
+        score: 0,
+        snippet: extractSnippet(article.content, []),
+      }))
+  }
+
   const results: SearchResult[] = []
 
   for (const article of articles) {
