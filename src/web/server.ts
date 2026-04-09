@@ -40,6 +40,13 @@ export function startServer(port: number): void {
     return c.text(css, 200, { 'Content-Type': 'text/css; charset=utf-8' })
   })
 
+  app.get('/static/logo.svg', (c) => {
+    const svgPath = join(__dirname, 'web', 'static', 'logo.svg')
+    if (!existsSync(svgPath)) return c.notFound()
+    const svg = readFileSync(svgPath, 'utf-8')
+    return c.text(svg, 200, { 'Content-Type': 'image/svg+xml; charset=utf-8' })
+  })
+
   app.get('/', (c) => {
     const root = requireKbRoot()
     const paths = kbPaths(root)

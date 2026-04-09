@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Theora — Room Corner Icon</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #050508;
+      color: #e8e8ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      padding: 40px;
+      line-height: 1.6;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px,
+        rgba(255,0,144,0.03) 2px, rgba(255,0,144,0.03) 4px);
+      pointer-events: none; z-index: 9999;
+    }
+    h1 { color: #ff00aa; text-shadow: 0 0 6px rgba(255,0,144,0.5), 0 0 14px rgba(255,0,144,0.3); font-size: 1.4rem; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 6px; }
+    .subtitle { color: #585890; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 48px; }
+    .label { color: #585890; font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase; border-bottom: 1px solid #1e1e3c; padding-bottom: 8px; margin-bottom: 28px; }
+    section { margin-bottom: 56px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .card { background: #0a0a14; border: 1px solid #1e1e3c; border-radius: 8px; padding: 24px 20px; transition: border-color 0.15s, box-shadow 0.15s; }
+    .card:hover { border-color: #ff00aa; box-shadow: 0 0 0 1px #ff00aa, 0 0 20px rgba(255,0,144,0.12); }
+    .card-title { color: #ff00aa; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 3px; }
+    .card-desc { color: #585890; font-size: 0.65rem; margin-bottom: 20px; }
+    .icon-center { display: flex; justify-content: center; margin-bottom: 20px; }
+    .size-row { display: flex; align-items: flex-end; justify-content: center; gap: 16px; }
+    .size-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .sz { color: #585890; font-size: 0.6rem; letter-spacing: 0.08em; }
+    .lockup { display: flex; align-items: center; gap: 10px; }
+    .glow { color: #ff00aa; text-shadow: 0 0 6px rgba(255,0,144,0.5), 0 0 14px rgba(255,0,144,0.3); font-weight: 700; letter-spacing: 0.12em; }
+    .favicon-bar { background: #141428; border: 1px solid #1e1e3c; border-radius: 6px; padding: 7px 14px; display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: #a8a8d8; width: fit-content; }
+    .bg-light { background: #f8f8ff; padding: 20px 24px; border-radius: 8px; display: inline-flex; flex-direction: column; gap: 12px; }
+    hr { border: none; border-top: 1px solid #1e1e3c; margin: 48px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>theora — room corner</h1>
+  <p class="subtitle">Magenta left · Green right · Yellow floor · 3 middle icon options</p>
+
+  <!-- 3 VARIANTS -->
+  <section>
+    <div class="label">Middle icon variants · 128px</div>
+    <div class="grid-3">
+
+      <div class="card">
+        <div class="card-title">Clean</div>
+        <div class="card-desc">No middle icon — pure corner geometry</div>
+        <div class="icon-center"><img src="icon-room-clean.svg" width="128" height="128" alt=""/></div>
+        <div class="size-row">
+          <div class="size-item"><img src="icon-room-clean.svg" width="64" height="64" alt=""/><span class="sz">64</span></div>
+          <div class="size-item"><img src="icon-room-clean.svg" width="32" height="32" alt=""/><span class="sz">32</span></div>
+          <div class="size-item"><img src="icon-room-clean.svg" width="16" height="16" alt=""/><span class="sz">16</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Dot</div>
+        <div class="card-desc">White circle at vanishing point — the oracle eye</div>
+        <div class="icon-center"><img src="icon-room-dot.svg" width="128" height="128" alt=""/></div>
+        <div class="size-row">
+          <div class="size-item"><img src="icon-room-dot.svg" width="64" height="64" alt=""/><span class="sz">64</span></div>
+          <div class="size-item"><img src="icon-room-dot.svg" width="32" height="32" alt=""/><span class="sz">32</span></div>
+          <div class="size-item"><img src="icon-room-dot.svg" width="16" height="16" alt=""/><span class="sz">16</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">T glyph</div>
+        <div class="card-desc">White "T" at corner — Theora's initial at the signal source</div>
+        <div class="icon-center"><img src="icon-room-t.svg" width="128" height="128" alt=""/></div>
+        <div class="size-row">
+          <div class="size-item"><img src="icon-room-t.svg" width="64" height="64" alt=""/><span class="sz">64</span></div>
+          <div class="size-item"><img src="icon-room-t.svg" width="32" height="32" alt=""/><span class="sz">32</span></div>
+          <div class="size-item"><img src="icon-room-t.svg" width="16" height="16" alt=""/><span class="sz">16</span></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- LARGE DETAIL -->
+  <section>
+    <div class="label">Detail · 256px</div>
+    <div style="display:flex; gap:40px; flex-wrap:wrap; align-items:flex-start;">
+      <div class="size-item"><img src="icon-room-clean.svg" width="256" height="256" alt=""/><span class="sz" style="margin-top:8px">Clean</span></div>
+      <div class="size-item"><img src="icon-room-dot.svg"   width="256" height="256" alt=""/><span class="sz" style="margin-top:8px">Dot</span></div>
+      <div class="size-item"><img src="icon-room-t.svg"     width="256" height="256" alt=""/><span class="sz" style="margin-top:8px">T glyph</span></div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- LOCKUPS -->
+  <section>
+    <div class="label">Logo lockup · icon + "theora"</div>
+    <div style="display:flex; gap:24px; flex-wrap:wrap;">
+
+      <div class="card" style="flex:1; min-width:180px;">
+        <div class="card-title" style="margin-bottom:14px">Clean</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="lockup"><img src="icon-room-clean.svg" width="48" height="48" alt=""/><span class="glow" style="font-size:2.4rem">theora</span></div>
+          <div class="lockup"><img src="icon-room-clean.svg" width="28" height="28" alt=""/><span class="glow" style="font-size:1.4rem">theora</span></div>
+          <div class="lockup"><img src="icon-room-clean.svg" width="20" height="20" alt=""/><span class="glow" style="font-size:1rem">theora</span></div>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1; min-width:180px;">
+        <div class="card-title" style="margin-bottom:14px">Dot</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="lockup"><img src="icon-room-dot.svg" width="48" height="48" alt=""/><span class="glow" style="font-size:2.4rem">theora</span></div>
+          <div class="lockup"><img src="icon-room-dot.svg" width="28" height="28" alt=""/><span class="glow" style="font-size:1.4rem">theora</span></div>
+          <div class="lockup"><img src="icon-room-dot.svg" width="20" height="20" alt=""/><span class="glow" style="font-size:1rem">theora</span></div>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1; min-width:180px;">
+        <div class="card-title" style="margin-bottom:14px">T glyph</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="lockup"><img src="icon-room-t.svg" width="48" height="48" alt=""/><span class="glow" style="font-size:2.4rem">theora</span></div>
+          <div class="lockup"><img src="icon-room-t.svg" width="28" height="28" alt=""/><span class="glow" style="font-size:1.4rem">theora</span></div>
+          <div class="lockup"><img src="icon-room-t.svg" width="20" height="20" alt=""/><span class="glow" style="font-size:1rem">theora</span></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- FAVICON -->
+  <section>
+    <div class="label">Favicon · 16px</div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div class="favicon-bar"><img src="icon-room-clean.svg" width="16" height="16" alt=""/><span>theora — Clean</span></div>
+      <div class="favicon-bar"><img src="icon-room-dot.svg"   width="16" height="16" alt=""/><span>theora — Dot</span></div>
+      <div class="favicon-bar"><img src="icon-room-t.svg"     width="16" height="16" alt=""/><span>theora — T glyph</span></div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- LIGHT THEME -->
+  <section>
+    <div class="label">Broadcast (light) theme</div>
+    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+      <div class="bg-light">
+        <div style="color:#8080a0;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px">Clean</div>
+        <div class="lockup"><img src="icon-room-clean.svg" width="36" height="36" alt=""/><span style="color:#cc0077;font-weight:700;font-size:1.8rem;letter-spacing:0.12em">theora</span></div>
+      </div>
+      <div class="bg-light">
+        <div style="color:#8080a0;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px">Dot</div>
+        <div class="lockup"><img src="icon-room-dot.svg" width="36" height="36" alt=""/><span style="color:#cc0077;font-weight:700;font-size:1.8rem;letter-spacing:0.12em">theora</span></div>
+      </div>
+      <div class="bg-light">
+        <div style="color:#8080a0;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px">T glyph</div>
+        <div class="lockup"><img src="icon-room-t.svg" width="36" height="36" alt=""/><span style="color:#cc0077;font-weight:700;font-size:1.8rem;letter-spacing:0.12em">theora</span></div>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

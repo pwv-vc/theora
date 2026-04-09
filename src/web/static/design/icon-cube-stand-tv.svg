@@ -1,0 +1,50 @@
+<!--
+  Cube Wide + TV Stand (neck + base)
+  A narrow neck drops from the cube's bottom vertex, then widens into
+  a broad base — the classic CRT television stand silhouette.
+
+  Neck: x=26–38, y=46–54  (12px wide, 8px tall, touching cube bottom)
+  Base: x=10–54, y=54–62  (44px wide, 8px tall)
+-->
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="top-st">
+      <polygon points="32,2 56,14 32,28 8,14"/>
+    </clipPath>
+    <clipPath id="left-st">
+      <polygon points="8,14 32,28 32,46 8,32"/>
+    </clipPath>
+    <clipPath id="right-st">
+      <polygon points="56,14 56,32 32,46 32,28"/>
+    </clipPath>
+    <pattern id="top-p-st" patternUnits="userSpaceOnUse" width="8" height="7">
+      <rect width="8" height="4" fill="#00ff00"/>
+      <rect y="4" width="8" height="3" fill="#050508"/>
+    </pattern>
+    <pattern id="left-p-st" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(45 0 0)">
+      <rect width="6" height="10" fill="#00bbff"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+    <pattern id="right-p-st" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(-45 0 0)">
+      <rect width="6" height="10" fill="#ff00aa"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+  </defs>
+
+  <!-- TV stand: neck + base, both solid yellow -->
+  <rect x="26" y="46" width="12" height="8"  fill="#ffdd00"/>
+  <rect x="10" y="54" width="44" height="8" rx="2" fill="#ffdd00"/>
+
+  <!-- Cube -->
+  <polygon points="32,2 56,14 56,32 32,46 8,32 8,14" fill="#050508"/>
+  <rect width="64" height="64" fill="url(#top-p-st)"   clip-path="url(#top-st)"/>
+  <rect width="64" height="64" fill="url(#left-p-st)"  clip-path="url(#left-st)"/>
+  <rect width="64" height="64" fill="url(#right-p-st)" clip-path="url(#right-st)"/>
+  <polygon points="32,2 56,14 56,32 32,46 8,32 8,14"
+           fill="none" stroke="#050508" stroke-width="2"/>
+  <line x1="32" y1="28" x2="56" y2="14" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="28" x2="8"  y2="14" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="28" x2="32" y2="46" stroke="#050508" stroke-width="1.5"/>
+</svg>

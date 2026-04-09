@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Theora — Cube + Perspective Floor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #050508;
+      color: #e8e8ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      padding: 40px;
+      line-height: 1.6;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px,
+        rgba(255,0,144,0.03) 2px, rgba(255,0,144,0.03) 4px);
+      pointer-events: none; z-index: 9999;
+    }
+    h1 {
+      color: #ff00aa;
+      text-shadow: 0 0 6px rgba(255,0,144,0.5), 0 0 14px rgba(255,0,144,0.3);
+      font-size: 1.4rem; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 6px;
+    }
+    .subtitle { color: #585890; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 48px; }
+    .label { color: #585890; font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase; border-bottom: 1px solid #1e1e3c; padding-bottom: 8px; margin-bottom: 28px; }
+    section { margin-bottom: 56px; }
+    .row { display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+    .col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .sz { color: #585890; font-size: 0.6rem; letter-spacing: 0.08em; }
+    .lockup { display: flex; align-items: center; gap: 10px; }
+    .glow { color: #ff00aa; text-shadow: 0 0 6px rgba(255,0,144,0.5), 0 0 14px rgba(255,0,144,0.3); font-weight: 700; letter-spacing: 0.12em; }
+    .favicon-bar { background: #141428; border: 1px solid #1e1e3c; border-radius: 6px; padding: 7px 14px; display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: #a8a8d8; width: fit-content; }
+    .bg-light { background: #f8f8ff; padding: 20px 24px; border-radius: 8px; display: inline-flex; flex-direction: column; gap: 12px; }
+    hr { border: none; border-top: 1px solid #1e1e3c; margin: 48px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>theora — cube + perspective floor</h1>
+  <p class="subtitle">Cyan top · Magenta left · Green right · Yellow perspective floor</p>
+
+  <!-- SIZES -->
+  <section>
+    <div class="label">All sizes</div>
+    <div class="row">
+      <div class="col">
+        <img src="icon-cube-floor.svg" width="256" height="256" alt=""/>
+        <span class="sz">256</span>
+      </div>
+      <div class="col">
+        <img src="icon-cube-floor.svg" width="128" height="128" alt=""/>
+        <span class="sz">128</span>
+      </div>
+      <div class="col">
+        <img src="icon-cube-floor.svg" width="64" height="64" alt=""/>
+        <span class="sz">64</span>
+      </div>
+      <div class="col">
+        <img src="icon-cube-floor.svg" width="32" height="32" alt=""/>
+        <span class="sz">32</span>
+      </div>
+      <div class="col">
+        <img src="icon-cube-floor.svg" width="16" height="16" alt=""/>
+        <span class="sz">16</span>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- LOCKUPS -->
+  <section>
+    <div class="label">Logo lockup</div>
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <div class="lockup">
+        <img src="icon-cube-floor.svg" width="48" height="48" alt=""/>
+        <span class="glow" style="font-size:2.4rem">theora</span>
+      </div>
+      <div class="lockup">
+        <img src="icon-cube-floor.svg" width="32" height="32" alt=""/>
+        <span class="glow" style="font-size:1.6rem">theora</span>
+      </div>
+      <div class="lockup">
+        <img src="icon-cube-floor.svg" width="22" height="22" alt=""/>
+        <span class="glow" style="font-size:1.1rem">theora</span>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- FAVICON -->
+  <section>
+    <div class="label">Favicon · 16px</div>
+    <div class="favicon-bar">
+      <img src="icon-cube-floor.svg" width="16" height="16" alt=""/>
+      <span>theora — knowledge base</span>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- LIGHT THEME -->
+  <section>
+    <div class="label">Broadcast (light) theme</div>
+    <div class="bg-light">
+      <div class="lockup">
+        <img src="icon-cube-floor.svg" width="40" height="40" alt=""/>
+        <span style="color:#cc0077;font-weight:700;font-size:2rem;letter-spacing:0.12em">theora</span>
+      </div>
+      <div class="lockup">
+        <img src="icon-cube-floor.svg" width="24" height="24" alt=""/>
+        <span style="color:#cc0077;font-weight:700;font-size:1.2rem;letter-spacing:0.12em">theora</span>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- COMPARE WITH STANDARD -->
+  <section>
+    <div class="label">vs standard cube (no floor)</div>
+    <div class="row" style="align-items:center;">
+      <div class="col">
+        <img src="icon-cube-standard.svg" width="128" height="128" alt=""/>
+        <span class="sz">standard</span>
+      </div>
+      <div style="color:#585890; font-size:1.2rem;">→</div>
+      <div class="col">
+        <img src="icon-cube-floor.svg" width="128" height="128" alt=""/>
+        <span class="sz">with floor</span>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

@@ -39,6 +39,8 @@ export function Layout({ title, active, children }: LayoutProps) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{title} — Theora</title>
         <link rel="stylesheet" href="/static/styles.css" />
+        <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
+        <link rel="shortcut icon" href="/static/logo.svg" />
         {/* Runs before first paint to avoid flash of wrong theme */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theora-theme')||'broadcast';document.documentElement.setAttribute('data-theme',t);})();` }} />
         <script src="https://unpkg.com/htmx.org@2.0.4" defer />
@@ -47,7 +49,10 @@ export function Layout({ title, active, children }: LayoutProps) {
         {/* z-[20000] keeps header above form elements (z-10000) and scanline overlay (z-9999) */}
         <header class="border-b border-zinc-800 bg-zinc-950 sticky top-0 z-[20000]">
           <div class="max-w-5xl mx-auto px-6 py-3 flex items-center gap-8">
-            <a href="/" class="text-red-500 font-bold text-sm tracking-widest uppercase glow shrink-0">theora</a>
+            <a href="/" class="flex items-center gap-2 shrink-0">
+              <img src="/static/logo.svg" width="28" height="28" alt="theora logo" />
+              <span class="text-red-500 font-bold text-sm tracking-widest uppercase glow">theora</span>
+            </a>
             <nav class="flex gap-6 items-center">
               {/* Wiki dropdown */}
               <div class="relative group">
@@ -115,6 +120,7 @@ export function Layout({ title, active, children }: LayoutProps) {
         <footer class="border-t border-zinc-800 bg-zinc-950 mt-auto">
           <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-4">
+              <img src="/static/logo.svg" width="20" height="20" alt="theora logo" />
               <span class="text-red-500 font-bold text-xs tracking-widest uppercase glow">theora</span>
               <span class="text-zinc-500 text-xs">LLM-powered knowledge base</span>
             </div>

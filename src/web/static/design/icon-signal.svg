@@ -1,0 +1,23 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="diamond-a1">
+      <polygon points="32,1 63,32 32,63 1,32"/>
+    </clipPath>
+  </defs>
+  <!-- Black background -->
+  <polygon points="32,1 63,32 32,63 1,32" fill="#050508"/>
+  <!-- Stripes with gaps -->
+  <rect x="0" y="1"  width="64" height="8"  fill="#ff00aa" clip-path="url(#diamond-a1)"/>
+  <rect x="0" y="9"  width="64" height="2"  fill="#050508" clip-path="url(#diamond-a1)"/>
+  <rect x="0" y="11" width="64" height="8"  fill="#00ff00" clip-path="url(#diamond-a1)"/>
+  <rect x="0" y="19" width="64" height="2"  fill="#050508" clip-path="url(#diamond-a1)"/>
+  <rect x="0" y="21" width="64" height="8"  fill="#00bbff" clip-path="url(#diamond-a1)"/>
+  <rect x="0" y="29" width="64" height="2"  fill="#050508" clip-path="url(#diamond-a1)"/>
+  <rect x="0" y="31" width="64" height="8"  fill="#ffdd00" clip-path="url(#diamond-a1)"/>
+  <rect x="0" y="39" width="64" height="2"  fill="#050508" clip-path="url(#diamond-a1)"/>
+  <rect x="0" y="41" width="64" height="8"  fill="#ff00aa" clip-path="url(#diamond-a1)"/>
+  <rect x="0" y="49" width="64" height="2"  fill="#050508" clip-path="url(#diamond-a1)"/>
+  <rect x="0" y="51" width="64" height="8"  fill="#00ff00" clip-path="url(#diamond-a1)"/>
+  <rect x="0" y="59" width="64" height="2"  fill="#050508" clip-path="url(#diamond-a1)"/>
+  <rect x="0" y="61" width="64" height="2"  fill="#00bbff" clip-path="url(#diamond-a1)"/>
+</svg>

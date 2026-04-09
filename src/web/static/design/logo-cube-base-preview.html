@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Theora Cube + Base Variations</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #050508;
+      color: #e8e8ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      padding: 40px;
+      line-height: 1.6;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent, transparent 2px,
+        rgba(255,0,144,0.03) 2px, rgba(255,0,144,0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    h1 {
+      color: #ff00aa;
+      text-shadow: 0 0 6px rgba(255,0,144,0.5), 0 0 14px rgba(255,0,144,0.3);
+      font-size: 1.4rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: #585890;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 48px;
+    }
+
+    .section-label {
+      color: #585890;
+      font-size: 0.68rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border-bottom: 1px solid #1e1e3c;
+      padding-bottom: 8px;
+      margin-bottom: 28px;
+    }
+
+    section { margin-bottom: 56px; }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .card {
+      background: #0a0a14;
+      border: 1px solid #1e1e3c;
+      border-radius: 8px;
+      padding: 24px 20px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .card:hover {
+      border-color: #ff00aa;
+      box-shadow: 0 0 0 1px #ff00aa, 0 0 20px rgba(255,0,144,0.12);
+    }
+
+    .card-title {
+      color: #ff00aa;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .card-desc {
+      color: #585890;
+      font-size: 0.65rem;
+      margin-bottom: 20px;
+    }
+
+    .icon-center {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .size-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .size-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .size-label {
+      color: #585890;
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+    }
+
+    .lockup {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .lockup-text {
+      color: #ff00aa;
+      text-shadow: 0 0 6px rgba(255,0,144,0.5), 0 0 14px rgba(255,0,144,0.3);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+    }
+
+    .favicon-bar {
+      background: #141428;
+      border: 1px solid #1e1e3c;
+      border-radius: 6px;
+      padding: 7px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.72rem;
+      color: #a8a8d8;
+      width: fit-content;
+    }
+
+    .bg-light {
+      background: #f8f8ff;
+      padding: 20px 24px;
+      border-radius: 8px;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Reference: standard cube for comparison */
+    .ref-card {
+      background: #0a0a14;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .ref-label {
+      color: #585890;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    hr { border: none; border-top: 1px solid #1e1e3c; margin: 48px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>theora — cube + yellow base</h1>
+  <p class="subtitle">Wide cube · 3 base styles · all 4 theme colors · 64×64 square</p>
+
+  <!-- REFERENCE -->
+  <div class="ref-card">
+    <img src="icon-cube-standard.svg" width="48" height="48" alt="Standard reference"/>
+    <div>
+      <div class="ref-label">Reference: Standard cube (no base)</div>
+      <div style="color:#a8a8d8;font-size:0.7rem;margin-top:4px">The base variations below use wide proportions + yellow base to fill the square</div>
+    </div>
+  </div>
+
+  <!-- MAIN COMPARISON -->
+  <section>
+    <div class="section-label">Base variations · 128px</div>
+    <div class="grid-3">
+
+      <div class="card">
+        <div class="card-title">Solid Base</div>
+        <div class="card-desc">Yellow triangle · solid fill · clean pedestal</div>
+        <div class="icon-center">
+          <img src="icon-cube-base-solid.svg" width="128" height="128" alt="Solid base"/>
+        </div>
+        <div class="size-row">
+          <div class="size-item">
+            <img src="icon-cube-base-solid.svg" width="64" height="64" alt=""/>
+            <span class="size-label">64</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube-base-solid.svg" width="32" height="32" alt=""/>
+            <span class="size-label">32</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube-base-solid.svg" width="16" height="16" alt=""/>
+            <span class="size-label">16</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Lines Base</div>
+        <div class="card-desc">Yellow scan lines · triangle · Max Headroom floor</div>
+        <div class="icon-center">
+          <img src="icon-cube-base-lines.svg" width="128" height="128" alt="Lines base"/>
+        </div>
+        <div class="size-row">
+          <div class="size-item">
+            <img src="icon-cube-base-lines.svg" width="64" height="64" alt=""/>
+            <span class="size-label">64</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube-base-lines.svg" width="32" height="32" alt=""/>
+            <span class="size-label">32</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube-base-lines.svg" width="16" height="16" alt=""/>
+            <span class="size-label">16</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Perspective Base</div>
+        <div class="card-desc">Wider triangle · fans out · room floor effect</div>
+        <div class="icon-center">
+          <img src="icon-cube-base-perspective.svg" width="128" height="128" alt="Perspective base"/>
+        </div>
+        <div class="size-row">
+          <div class="size-item">
+            <img src="icon-cube-base-perspective.svg" width="64" height="64" alt=""/>
+            <span class="size-label">64</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube-base-perspective.svg" width="32" height="32" alt=""/>
+            <span class="size-label">32</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube-base-perspective.svg" width="16" height="16" alt=""/>
+            <span class="size-label">16</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- LARGE DETAIL -->
+  <section>
+    <div class="section-label">Detail · 256px</div>
+    <div style="display:flex; gap:40px; flex-wrap:wrap; align-items:flex-start;">
+      <div class="size-item">
+        <img src="icon-cube-base-solid.svg" width="256" height="256" alt=""/>
+        <span class="size-label" style="margin-top:8px">Solid</span>
+      </div>
+      <div class="size-item">
+        <img src="icon-cube-base-lines.svg" width="256" height="256" alt=""/>
+        <span class="size-label" style="margin-top:8px">Lines</span>
+      </div>
+      <div class="size-item">
+        <img src="icon-cube-base-perspective.svg" width="256" height="256" alt=""/>
+        <span class="size-label" style="margin-top:8px">Perspective</span>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- LOGO LOCKUPS -->
+  <section>
+    <div class="section-label">Logo lockup · icon + "theora"</div>
+    <div style="display:flex; gap:24px; flex-wrap:wrap;">
+
+      <div class="card" style="flex:1; min-width:180px;">
+        <div class="card-title" style="margin-bottom:14px">Solid</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="lockup">
+            <img src="icon-cube-base-solid.svg" width="40" height="40" alt=""/>
+            <span class="lockup-text" style="font-size:2rem">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube-base-solid.svg" width="28" height="28" alt=""/>
+            <span class="lockup-text" style="font-size:1.4rem">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube-base-solid.svg" width="20" height="20" alt=""/>
+            <span class="lockup-text" style="font-size:1rem">theora</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1; min-width:180px;">
+        <div class="card-title" style="margin-bottom:14px">Lines</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="lockup">
+            <img src="icon-cube-base-lines.svg" width="40" height="40" alt=""/>
+            <span class="lockup-text" style="font-size:2rem">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube-base-lines.svg" width="28" height="28" alt=""/>
+            <span class="lockup-text" style="font-size:1.4rem">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube-base-lines.svg" width="20" height="20" alt=""/>
+            <span class="lockup-text" style="font-size:1rem">theora</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1; min-width:180px;">
+        <div class="card-title" style="margin-bottom:14px">Perspective</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="lockup">
+            <img src="icon-cube-base-perspective.svg" width="40" height="40" alt=""/>
+            <span class="lockup-text" style="font-size:2rem">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube-base-perspective.svg" width="28" height="28" alt=""/>
+            <span class="lockup-text" style="font-size:1.4rem">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube-base-perspective.svg" width="20" height="20" alt=""/>
+            <span class="lockup-text" style="font-size:1rem">theora</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- FAVICON -->
+  <section>
+    <div class="section-label">Favicon · 16px browser tab simulation</div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div class="favicon-bar">
+        <img src="icon-cube-base-solid.svg" width="16" height="16" alt=""/>
+        <span>theora — Solid Base</span>
+      </div>
+      <div class="favicon-bar">
+        <img src="icon-cube-base-lines.svg" width="16" height="16" alt=""/>
+        <span>theora — Lines Base</span>
+      </div>
+      <div class="favicon-bar">
+        <img src="icon-cube-base-perspective.svg" width="16" height="16" alt=""/>
+        <span>theora — Perspective Base</span>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- LIGHT THEME -->
+  <section>
+    <div class="section-label">Broadcast (light) theme</div>
+    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+      <div class="bg-light">
+        <div style="color:#8080a0;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase">Solid</div>
+        <div class="lockup">
+          <img src="icon-cube-base-solid.svg" width="32" height="32" alt=""/>
+          <span style="color:#cc0077;font-weight:700;font-size:1.4rem;letter-spacing:0.12em">theora</span>
+        </div>
+      </div>
+      <div class="bg-light">
+        <div style="color:#8080a0;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase">Lines</div>
+        <div class="lockup">
+          <img src="icon-cube-base-lines.svg" width="32" height="32" alt=""/>
+          <span style="color:#cc0077;font-weight:700;font-size:1.4rem;letter-spacing:0.12em">theora</span>
+        </div>
+      </div>
+      <div class="bg-light">
+        <div style="color:#8080a0;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase">Perspective</div>
+        <div class="lockup">
+          <img src="icon-cube-base-perspective.svg" width="32" height="32" alt=""/>
+          <span style="color:#cc0077;font-weight:700;font-size:1.4rem;letter-spacing:0.12em">theora</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

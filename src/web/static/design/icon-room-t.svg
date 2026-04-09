@@ -1,0 +1,38 @@
+<!--
+  Room Corner — "T" glyph at vanishing point
+  Same geometry. A small white "T" sits at the corner — Theora's initial,
+  the oracle at the centre of the signal.
+-->
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="lw-t"><polygon points="0,0 32,0 32,40 0,64"/></clipPath>
+    <clipPath id="rw-t"><polygon points="32,0 64,0 64,64 32,40"/></clipPath>
+    <clipPath id="fl-t"><polygon points="32,40 0,64 64,64"/></clipPath>
+
+    <pattern id="mag-t" patternUnits="userSpaceOnUse" width="64" height="10">
+      <rect width="64" height="6" fill="#ff00aa"/>
+      <rect y="6" width="64" height="4" fill="#050508"/>
+    </pattern>
+    <pattern id="grn-t" patternUnits="userSpaceOnUse" width="64" height="10">
+      <rect width="64" height="6" fill="#00ff00"/>
+      <rect y="6" width="64" height="4" fill="#050508"/>
+    </pattern>
+    <pattern id="yel-t" patternUnits="userSpaceOnUse" width="64" height="7">
+      <rect width="64" height="4" fill="#ffdd00"/>
+      <rect y="4" width="64" height="3" fill="#050508"/>
+    </pattern>
+  </defs>
+
+  <rect width="64" height="64" fill="#050508"/>
+  <rect width="64" height="64" fill="url(#mag-t)" clip-path="url(#lw-t)"/>
+  <rect width="64" height="64" fill="url(#grn-t)" clip-path="url(#rw-t)"/>
+  <rect width="64" height="64" fill="url(#yel-t)" clip-path="url(#fl-t)"/>
+
+  <line x1="32" y1="0"  x2="32" y2="40" stroke="#050508" stroke-width="2"/>
+  <line x1="0"  y1="64" x2="32" y2="40" stroke="#050508" stroke-width="1.5"/>
+  <line x1="64" y1="64" x2="32" y2="40" stroke="#050508" stroke-width="1.5"/>
+
+  <!-- "T" glyph: crossbar + stem, centred on vanishing point -->
+  <line x1="27" y1="37" x2="37" y2="37" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  <line x1="32" y1="37" x2="32" y2="44" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+</svg>

@@ -8,6 +8,9 @@ export interface KbConfig {
   provider: Provider
   model: string
   compileConcurrency: number
+  conceptSummaryChars: number
+  conceptMin: number
+  conceptMax: number
 }
 
 const DEFAULT_CONFIG: KbConfig = {
@@ -16,6 +19,9 @@ const DEFAULT_CONFIG: KbConfig = {
   provider: 'openai',
   model: 'gpt-4o',
   compileConcurrency: 3,
+  conceptSummaryChars: 3000,
+  conceptMin: 5,
+  conceptMax: 10,
 }
 
 export function readConfig(): KbConfig {

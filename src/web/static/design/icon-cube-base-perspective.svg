@@ -1,0 +1,76 @@
+<!--
+  Cube Wide + Yellow Perspective Trapezoid Base
+  The base is a trapezoid that connects the cube's bottom-left (8,34)
+  and bottom-right (56,34) vertices to a wider floor below — like the
+  Max Headroom room floor extending outward from the cube's footprint.
+
+  Base trapezoid: (8,34) → (56,34) → (62,62) → (2,62)
+  Clipped to only show below the cube's bottom vertex (y ≥ 48) to avoid
+  overlapping the cube faces. The visible portion is the lower triangle:
+    (32,48) → (2,62) → (62,62)
+  which is wider than the cube's base — the floor fans out.
+
+  Yellow horizontal lines fill the base, getting visually shorter near
+  the top (the cube's bottom vertex) — natural perspective effect.
+
+  Colors: top=green, left=cyan, right=magenta, base=yellow lines
+-->
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="top-bp">
+      <polygon points="32,2 56,16 32,30 8,16"/>
+    </clipPath>
+    <clipPath id="left-bp">
+      <polygon points="8,16 32,30 32,48 8,34"/>
+    </clipPath>
+    <clipPath id="right-bp">
+      <polygon points="56,16 56,34 32,48 32,30"/>
+    </clipPath>
+    <!-- Wider perspective base: fans out from cube bottom vertex -->
+    <clipPath id="base-bp">
+      <polygon points="32,48 2,62 62,62"/>
+    </clipPath>
+    <!-- Green horizontal lines: top face -->
+    <pattern id="top-p-bp" patternUnits="userSpaceOnUse" width="8" height="7">
+      <rect width="8" height="4" fill="#00ff00"/>
+      <rect y="4" width="8" height="3" fill="#050508"/>
+    </pattern>
+    <!-- Cyan diagonal ╲: left face -->
+    <pattern id="left-p-bp" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(45 0 0)">
+      <rect width="6" height="10" fill="#00bbff"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+    <!-- Magenta diagonal ╱: right face -->
+    <pattern id="right-p-bp" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(-45 0 0)">
+      <rect width="6" height="10" fill="#ff00aa"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+    <!-- Yellow horizontal lines: perspective base -->
+    <pattern id="base-p-bp" patternUnits="userSpaceOnUse" width="8" height="7">
+      <rect width="8" height="4" fill="#ffdd00"/>
+      <rect y="4" width="8" height="3" fill="#050508"/>
+    </pattern>
+  </defs>
+
+  <!-- Perspective base (wider triangle, fans out from cube bottom) -->
+  <polygon points="32,48 2,62 62,62" fill="#050508"/>
+  <rect width="64" height="64" fill="url(#base-p-bp)" clip-path="url(#base-bp)"/>
+
+  <!-- Black hexagon background -->
+  <polygon points="32,2 56,16 56,34 32,48 8,34 8,16" fill="#050508"/>
+
+  <!-- Face fills -->
+  <rect width="64" height="64" fill="url(#top-p-bp)"   clip-path="url(#top-bp)"/>
+  <rect width="64" height="64" fill="url(#left-p-bp)"  clip-path="url(#left-bp)"/>
+  <rect width="64" height="64" fill="url(#right-p-bp)" clip-path="url(#right-bp)"/>
+
+  <!-- Outer hexagon border -->
+  <polygon points="32,2 56,16 56,34 32,48 8,34 8,16"
+           fill="none" stroke="#050508" stroke-width="2"/>
+  <!-- 3 inner edges only -->
+  <line x1="32" y1="30" x2="56" y2="16" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="30" x2="8"  y2="16" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="30" x2="32" y2="48" stroke="#050508" stroke-width="1.5"/>
+</svg>

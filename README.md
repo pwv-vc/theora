@@ -342,9 +342,19 @@ Or edit `.kb/config.json` directly:
 {
   "provider": "anthropic",
   "model": "claude-sonnet-4-20250514",
-  "compileConcurrency": 3
+  "compileConcurrency": 3,
+  "conceptSummaryChars": 3000,
+  "conceptMin": 5,
+  "conceptMax": 10
 }
 ```
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `compileConcurrency` | `3` | Parallel LLM calls during compile |
+| `conceptSummaryChars` | `3000` | Characters of each source article passed to the concept identification pass — higher values give the LLM more context but increase token usage |
+| `conceptMin` | `5` | Minimum number of concepts to extract per compile run |
+| `conceptMax` | `10` | Maximum number of concepts to extract per compile run |
 
 All API keys live in `.env` at the knowledge base root. This file is gitignored by default.
 

@@ -1,0 +1,61 @@
+<!--
+  Cube Standard: equal sections (regular hexagon)
+  Geometry derived from center + 3 arm vectors:
+    center:    (32, 32)
+    top-right: (56, 18)  arm = (+24, -14)
+    top-left:  (8,  18)  arm = (-24, -14)
+    bottom:    (32, 60)  arm = (  0, +28)
+  Outer vertices (parallelogram rule):
+    top          = tr + tl - center = (32,  4)
+    bottom-right = tr + bot - center = (56, 46)
+    bottom-left  = tl + bot - center = (8,  46)
+  Inner edges (3 only — no bisecting lines):
+    center → top-right, center → top-left, center → bottom
+  Colors: top=cyan, left=magenta, right=green
+-->
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="top-s">
+      <polygon points="32,4 56,18 32,32 8,18"/>
+    </clipPath>
+    <clipPath id="left-s">
+      <polygon points="8,18 32,32 32,60 8,46"/>
+    </clipPath>
+    <clipPath id="right-s">
+      <polygon points="56,18 56,46 32,60 32,32"/>
+    </clipPath>
+    <!-- Cyan horizontal lines: top face -->
+    <pattern id="top-pat-s" patternUnits="userSpaceOnUse" width="8" height="7">
+      <rect width="8" height="4" fill="#00bbff"/>
+      <rect y="4" width="8" height="3" fill="#050508"/>
+    </pattern>
+    <!-- Magenta diagonal ╲ lines: left face -->
+    <pattern id="left-pat-s" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(45 0 0)">
+      <rect width="6" height="10" fill="#ff00aa"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+    <!-- Green diagonal ╱ lines: right face -->
+    <pattern id="right-pat-s" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(-45 0 0)">
+      <rect width="6" height="10" fill="#00ff00"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+  </defs>
+
+  <!-- Black hexagon background -->
+  <polygon points="32,4 56,18 56,46 32,60 8,46 8,18" fill="#050508"/>
+
+  <!-- Face fills -->
+  <rect width="64" height="64" fill="url(#top-pat-s)"   clip-path="url(#top-s)"/>
+  <rect width="64" height="64" fill="url(#left-pat-s)"  clip-path="url(#left-s)"/>
+  <rect width="64" height="64" fill="url(#right-pat-s)" clip-path="url(#right-s)"/>
+
+  <!-- Outer border -->
+  <polygon points="32,4 56,18 56,46 32,60 8,46 8,18"
+           fill="none" stroke="#050508" stroke-width="2"/>
+  <!-- 3 inner edges only (center → shared-edge vertices) -->
+  <line x1="32" y1="32" x2="56" y2="18" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="32" x2="8"  y2="18" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="32" x2="32" y2="60" stroke="#050508" stroke-width="1.5"/>
+</svg>
