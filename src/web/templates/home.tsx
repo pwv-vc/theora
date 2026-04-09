@@ -1,5 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiArticle } from '../../lib/wiki.js'
+import { ArticleCard, SectionHeading, TagLink } from './ui.js'
 
 interface HomePageProps {
   sources: WikiArticle[]
@@ -10,125 +11,99 @@ interface HomePageProps {
   config: Record<string, unknown>
 }
 
-function ArticleCard({ article, type }: { article: WikiArticle; type: 'sources' | 'concepts' | 'output' }) {
-  const href = type === 'output'
-    ? `/output/${article.path.split('/').pop()?.replace('.md', '')}`
-    : `/wiki/${type}/${article.path.split('/').pop()?.replace('.md', '')}`
+function BrowseSection({
+  title,
+  href,
+  articles,
+  eyebrow,
+}: {
+  title: string
+  href: string
+  articles: WikiArticle[]
+  eyebrow: string
+}) {
+  if (articles.length === 0) return null
 
   return (
-    <a href={href} class="block group">
-      <div class="border border-zinc-800 rounded-lg p-4 hover:border-zinc-600 hover:bg-zinc-900/50 transition-all">
-        <div class="text-zinc-100 text-sm font-medium group-hover:text-white mb-1 truncate">
-          {article.title}
-        </div>
-        {article.tags.length > 0 && (
-          <div class="flex flex-wrap gap-1 mt-2">
-            {article.tags.slice(0, 4).map(tag => (
-              <span key={tag} class="bg-zinc-800 text-zinc-400 text-xs px-1.5 py-0.5 rounded">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+    <section class="space-y-4">
+      <SectionHeading
+        title={title}
+        action={<a href={href} class="console-chip hover:text-[var(--text-primary)]">open</a>}
+      />
+      <div class="content-grid">
+        {articles.map(article => <ArticleCard key={article.path} article={article} eyebrow={eyebrow} />)}
       </div>
-    </a>
-  )
-}
-
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div class="border border-zinc-800 rounded-lg p-4">
-      <div class="text-zinc-500 text-xs uppercase tracking-wider mb-1">{label}</div>
-      <div class="text-zinc-100 text-lg font-bold">{value}</div>
-    </div>
-  )
-}
-
-function Section({ title, count, children }: { title: string; count: number; children: unknown }) {
-  return (
-    <section class="mb-10">
-      <div class="flex items-center gap-3 mb-4">
-        <h2 class="text-zinc-100 font-bold text-sm uppercase tracking-wider">{title}</h2>
-        <span class="text-zinc-600 text-xs">{count}</span>
-      </div>
-      {children}
     </section>
   )
 }
 
-export function HomePage({ sources, concepts, queries, tags, stats, config }: HomePageProps) {
+export function HomePage({ sources, concepts, queries, tags, stats: _stats, config }: HomePageProps) {
   const kbName = String(config.name ?? 'Knowledge Base')
+  const allArticles = [...sources, ...concepts, ...queries]
+  const tagCounts = new Map<string, number>()
 
-  const formatCost = (usd: number) => usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`
-  const formatTokens = (n: number) => {
-    if (n < 1000) return `${n}`
-    if (n < 1_000_000) return `${(n / 1000).toFixed(1)}k`
-    return `${(n / 1_000_000).toFixed(2)}M`
+  for (const article of allArticles) {
+    for (const tag of article.tags) {
+      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1)
+    }
   }
 
+  const topTags = [...tagCounts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 8)
+
+  const isEmpty = allArticles.length === 0
+
   return (
-    <div>
-      <div class="mb-8">
-        <h1 class="text-2xl font-bold text-zinc-100 mb-1">{kbName}</h1>
-        <p class="text-zinc-500 text-sm">
-          {sources.length} sources · {concepts.length} concepts · {queries.length} queries
-        </p>
-      </div>
-
-      {stats && (
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
-          <StatCard label="LLM Calls" value={Number(stats.totalLlmCalls ?? 0)} />
-          <StatCard label="Tokens In" value={formatTokens(Number(stats.totalInputTokens ?? 0))} />
-          <StatCard label="Tokens Out" value={formatTokens(Number(stats.totalOutputTokens ?? 0))} />
-          <StatCard label="Est. Cost" value={formatCost(Number(stats.totalEstimatedCostUsd ?? 0))} />
+    <div class="page-stack">
+      <section class="hero-strip">
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="console-chip console-chip-active">living wiki</span>
+            <span class="console-chip">{tags.length} tags</span>
+          </div>
+          <div class="space-y-2">
+            <h1 class="console-heading">{kbName}</h1>
+            <p class="max-w-3xl text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
+              Search compiled sources, follow concepts, and file answers back into the knowledge base.
+            </p>
+          </div>
+          <form method="get" action="/search" class="search-row">
+            <input
+              type="search"
+              name="q"
+              placeholder="Search the knowledge base"
+              autofocus
+              class="console-input search-row__input"
+            />
+            <button type="submit" class="console-button">Search</button>
+            <a href="/ask" class="console-button-secondary">Ask</a>
+          </form>
+          {topTags.length > 0 && (
+            <div class="inline-pivots">
+              <span class="console-muted">Start with</span>
+              <div class="flex flex-wrap gap-2">
+                {topTags.map(([tag, count]) => (
+                  <TagLink key={tag} tag={tag} count={count} href={`/search?tag=${encodeURIComponent(tag)}`} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </section>
 
-      {tags.length > 0 && (
-        <div class="mb-8 flex flex-wrap gap-2">
-          {tags.map(tag => (
-            <a
-              key={tag}
-              href={`/search?tag=${encodeURIComponent(tag)}`}
-              class="bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 text-xs px-2 py-1 rounded transition-colors"
-            >
-              #{tag}
-            </a>
-          ))}
-        </div>
-      )}
-
-      {sources.length > 0 && (
-        <Section title="Sources" count={sources.length}>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {sources.map(a => <ArticleCard key={a.path} article={a} type="sources" />)}
-          </div>
-        </Section>
-      )}
-
-      {concepts.length > 0 && (
-        <Section title="Concepts" count={concepts.length}>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {concepts.map(a => <ArticleCard key={a.path} article={a} type="concepts" />)}
-          </div>
-        </Section>
-      )}
-
-      {queries.length > 0 && (
-        <Section title="Previous Queries" count={queries.length}>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {queries.map(a => <ArticleCard key={a.path} article={a} type="output" />)}
-          </div>
-        </Section>
-      )}
-
-      {sources.length === 0 && concepts.length === 0 && (
-        <div class="border border-zinc-800 rounded-lg p-8 text-center">
-          <p class="text-zinc-500 text-sm mb-2">No articles compiled yet.</p>
-          <p class="text-zinc-600 text-xs">
-            Run <code class="text-zinc-400">theora ingest</code> then{' '}
-            <a href="/compile" class="text-red-500 hover:text-red-400">compile</a> to get started.
+      {isEmpty ? (
+        <section class="console-card">
+          <h2 class="console-subheading">No compiled content yet</h2>
+          <p class="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+            Bring in sources with <code>theora ingest</code>, then <a href="/compile" class="text-[var(--accent-secondary)]">compile</a> the wiki.
           </p>
+        </section>
+      ) : (
+        <div class="page-stack">
+          <BrowseSection title="Recent sources" href="/search" articles={sources.slice(0, 6)} eyebrow="source" />
+          <BrowseSection title="Concepts" href="/search" articles={concepts.slice(0, 6)} eyebrow="concept" />
+          <BrowseSection title="Answers" href="/ask" articles={queries.slice(0, 4)} eyebrow="answer" />
         </div>
       )}
     </div>

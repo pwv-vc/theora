@@ -29,7 +29,8 @@ export const searchCommand = new Command('search')
     const query = queryParts.join(' ')
     const limit = parseInt(options.limit, 10)
 
-    const results = searchArticles(query, options.tag).slice(0, limit)
+    const selectedTags = options.tag ? [options.tag] : []
+    const results = searchArticles(query, selectedTags).slice(0, limit)
 
     if (results.length === 0) {
       console.log(pc.yellow(`No results found${options.tag ? ` for tag "${options.tag}"` : ''}.`))

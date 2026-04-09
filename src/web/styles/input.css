@@ -1,2 +1,403 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+@theme {
+  --font-display: "Space Grotesk", "Avenir Next Condensed", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
+}
+
+@layer base {
+  :root {
+    --bg-app: #141414;
+    --bg-panel: #1f1f25;
+    --bg-panel-elevated: #292933;
+    --bg-panel-soft: rgba(31, 31, 37, 0.72);
+    --text-primary: #f2f2ef;
+    --text-secondary: #c9cbc4;
+    --text-muted: #8e938f;
+    --border-subtle: rgba(125, 133, 137, 0.28);
+    --border-strong: rgba(255, 255, 255, 0.12);
+    --accent-primary: #c33a46;
+    --accent-secondary: #4eb8c7;
+    --accent-warning: #c79b2f;
+    --accent-active: #f0ddd0;
+    --focus-ring: rgba(78, 184, 199, 0.42);
+    --tag-muted: rgba(78, 184, 199, 0.14);
+    --hero-glow: radial-gradient(circle at top left, rgba(195, 58, 70, 0.22), transparent 42%),
+      radial-gradient(circle at top right, rgba(78, 184, 199, 0.12), transparent 36%);
+    --surface-shadow: 0 20px 60px rgba(0, 0, 0, 0.32);
+    --scanline: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.03) 0,
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+  }
+
+  :root[data-theme="signal"] {
+    --bg-app: #08090c;
+    --bg-panel: #111217;
+    --bg-panel-elevated: #1a1c23;
+    --bg-panel-soft: rgba(17, 18, 23, 0.72);
+    --text-primary: #f6f6f3;
+    --text-secondary: #d9dddf;
+    --text-muted: #8f969d;
+    --border-subtle: rgba(143, 150, 157, 0.26);
+    --border-strong: rgba(246, 246, 243, 0.16);
+    --accent-primary: #d63b45;
+    --accent-secondary: #3ed5e6;
+    --accent-warning: #e0a43a;
+    --accent-active: #f6f6f3;
+    --focus-ring: rgba(62, 213, 230, 0.34);
+    --tag-muted: rgba(62, 213, 230, 0.12);
+    --hero-glow: radial-gradient(circle at top left, rgba(214, 59, 69, 0.24), transparent 42%),
+      radial-gradient(circle at top right, rgba(62, 213, 230, 0.14), transparent 36%);
+    --surface-shadow: 0 22px 72px rgba(0, 0, 0, 0.42);
+  }
+
+  html {
+    background: var(--bg-app);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+  }
+
+  body {
+    min-height: 100vh;
+    background:
+      var(--hero-glow),
+      var(--scanline),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 24%),
+      var(--bg-app);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    letter-spacing: 0.01em;
+  }
+
+  * {
+    scrollbar-color: var(--accent-primary) var(--bg-panel);
+  }
+
+  ::selection {
+    background: rgba(195, 58, 70, 0.32);
+    color: var(--text-primary);
+  }
+
+  a,
+  button,
+  input,
+  textarea,
+  summary {
+    transition:
+      color 140ms ease,
+      border-color 140ms ease,
+      background-color 140ms ease,
+      box-shadow 140ms ease,
+      transform 140ms ease;
+  }
+
+  summary {
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  input:focus,
+  textarea:focus,
+  button:focus,
+  a:focus,
+  summary:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .console-panel {
+    background: var(--bg-panel-soft);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--surface-shadow);
+    backdrop-filter: blur(16px);
+    @apply rounded-[1.5rem];
+  }
+
+  .console-panel-elevated {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 24%), var(--bg-panel-elevated);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--surface-shadow);
+    @apply rounded-[1.5rem];
+  }
+
+  .console-grid {
+    @apply grid gap-4 md:gap-5;
+  }
+
+  .console-kicker {
+    color: var(--accent-secondary);
+    font-family: var(--font-mono);
+    @apply text-[0.7rem] font-medium uppercase tracking-[0.28em];
+  }
+
+  .console-heading {
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    @apply text-3xl font-semibold uppercase tracking-[0.08em] sm:text-4xl;
+  }
+
+  .console-subheading {
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    @apply text-lg font-semibold uppercase tracking-[0.08em];
+  }
+
+  .console-text {
+    color: var(--text-secondary);
+    @apply text-sm leading-6;
+  }
+
+  .console-muted {
+    color: var(--text-muted);
+    @apply text-xs uppercase tracking-[0.22em];
+  }
+
+  .console-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 100%), var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    @apply rounded-[1.25rem] p-4;
+  }
+
+  .console-card-interactive {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 100%), var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    @apply rounded-[1.25rem] p-4;
+  }
+
+  .console-card-interactive:hover {
+    border-color: color-mix(in srgb, var(--accent-secondary) 38%, white 6%);
+    transform: translateY(-1px);
+  }
+
+  .console-button {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 78%, white 10%), var(--accent-primary));
+    color: #fff7f2;
+    font-family: var(--font-display);
+    @apply inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold uppercase tracking-[0.12em];
+  }
+
+  .console-button:hover {
+    filter: brightness(1.06);
+  }
+
+  .console-button-secondary {
+    background: color-mix(in srgb, var(--accent-secondary) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-secondary) 38%, transparent);
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    @apply inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold uppercase tracking-[0.12em];
+  }
+
+  .console-input {
+    background: rgba(11, 12, 16, 0.52);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    @apply w-full rounded-2xl px-4 py-3 text-sm;
+  }
+
+  .console-input::placeholder {
+    color: color-mix(in srgb, var(--text-muted) 84%, transparent);
+  }
+
+  .console-input:hover {
+    border-color: color-mix(in srgb, var(--accent-secondary) 28%, transparent);
+  }
+
+  .page-stack {
+    @apply space-y-6;
+  }
+
+  .hero-strip {
+    @apply space-y-4;
+  }
+
+  .search-panel {
+    @apply space-y-4 rounded-[1.25rem] border p-4;
+    border-color: var(--border-subtle);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 100%), var(--bg-panel-soft);
+    backdrop-filter: blur(10px);
+  }
+
+  .search-row {
+    @apply flex flex-col gap-3 sm:flex-row;
+  }
+
+  .search-row__input {
+    @apply flex-1;
+  }
+
+  .inline-pivots {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-center;
+  }
+
+  .content-grid {
+    @apply grid gap-3 md:grid-cols-2 xl:grid-cols-3;
+  }
+
+  .result-summary {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .article-header {
+    @apply rounded-[1.25rem] border p-4;
+    border-color: var(--border-subtle);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 100%), var(--bg-panel-soft);
+  }
+
+  .article-meta {
+    color: var(--text-muted);
+    @apply flex flex-wrap gap-x-4 gap-y-1 text-sm;
+  }
+
+  .article-body {
+    @apply p-5 sm:p-6;
+  }
+
+  .console-chip {
+    background: var(--tag-muted);
+    border: 1px solid color-mix(in srgb, var(--accent-secondary) 24%, transparent);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    @apply inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs;
+  }
+
+  .console-chip-active {
+    background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-primary) 34%, transparent);
+    color: var(--accent-active);
+  }
+
+  .tag-picker {
+    @apply space-y-3;
+  }
+
+  .tag-picker__header {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between;
+  }
+
+  .tag-picker__trigger {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    @apply inline-flex cursor-pointer items-center gap-3 rounded-full px-4 py-2 text-sm;
+  }
+
+  .tag-picker__count {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    @apply text-xs uppercase tracking-[0.18em];
+  }
+
+  .tag-picker__icon {
+    color: var(--accent-secondary);
+    font-family: var(--font-mono);
+    @apply text-xs uppercase tracking-[0.18em];
+  }
+
+  details[open] > .tag-picker__header .tag-picker__icon {
+    transform: rotate(45deg);
+  }
+
+  .tag-picker__summary {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .tag-picker__tray {
+    @apply overflow-hidden;
+  }
+
+  .tag-picker__tray-inner {
+    @apply space-y-3 rounded-[1.1rem] border p-3;
+    border-color: var(--border-subtle);
+    background: rgba(11, 12, 16, 0.3);
+  }
+
+  .tag-picker__options {
+    @apply max-h-64 space-y-2 overflow-y-auto pr-1;
+  }
+
+  .tag-picker__option {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid transparent;
+    @apply flex items-center justify-between rounded-2xl px-3 py-2 text-sm;
+  }
+
+  .tag-picker__option:hover {
+    border-color: var(--border-strong);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .tag-picker__option input {
+    accent-color: var(--accent-primary);
+  }
+
+  .tag-picker__empty {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    @apply rounded-2xl border border-dashed px-4 py-5 text-center text-xs uppercase tracking-[0.18em];
+    border-color: var(--border-subtle);
+  }
+
+  .article-card {
+    @apply min-h-44;
+  }
+
+  .search-result-card {
+    @apply p-4 sm:p-5;
+  }
+
+  .prose-theora {
+    color: var(--text-secondary);
+    max-width: none;
+  }
+
+  .prose-theora :where(h1, h2, h3, h4) {
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .prose-theora :where(a) {
+    color: var(--accent-secondary);
+    text-decoration: none;
+  }
+
+  .prose-theora :where(a:hover) {
+    color: color-mix(in srgb, var(--accent-secondary) 72%, white 16%);
+  }
+
+  .prose-theora :where(code) {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+    @apply rounded-md px-1.5 py-0.5 text-sm;
+  }
+
+  .prose-theora :where(pre) {
+    background: rgba(11, 12, 16, 0.72);
+    border: 1px solid var(--border-subtle);
+    @apply rounded-2xl;
+  }
+
+  .prose-theora :where(blockquote) {
+    border-left-color: var(--accent-primary);
+    color: var(--text-secondary);
+  }
+}

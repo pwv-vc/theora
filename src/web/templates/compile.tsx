@@ -2,23 +2,38 @@
 
 export function CompilePage() {
   return (
-    <div>
-      <div class="mb-6">
-        <h1 class="text-xl font-bold text-zinc-100 mb-1">Compile</h1>
-        <p class="text-zinc-500 text-sm">Process raw sources into the wiki.</p>
-      </div>
+    <div class="space-y-8">
+      <section class="console-panel overflow-hidden">
+        <div class="console-grid p-6 sm:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)] sm:p-8">
+          <div class="space-y-5">
+            <div class="console-kicker">Pipeline Control</div>
+            <div>
+              <h1 class="console-heading">Compile</h1>
+              <p class="mt-4 max-w-2xl text-base leading-7 text-[var(--text-secondary)]">
+                Process raw sources into sources, concepts, and index updates without dropping out of the branded shell.
+              </p>
+            </div>
+          </div>
+          <div class="console-card">
+            <div class="console-muted mb-3">Operator note</div>
+            <p class="text-sm leading-6 text-[var(--text-secondary)]">
+              Use force only when you need a full rebuild. The console keeps progress visible while the pipeline runs.
+            </p>
+          </div>
+        </div>
+      </section>
 
-      <div class="border border-zinc-800 rounded-lg p-5 mb-6">
-        <div class="space-y-3 mb-5">
+      <div class="console-card space-y-5">
+        <div class="space-y-3">
           <label class="flex items-center gap-3 cursor-pointer group">
             <input
               type="checkbox"
               id="opt-force"
-              class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-red-600 focus:ring-red-600 focus:ring-offset-zinc-950"
+              class="h-4 w-4 rounded border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--accent-primary)]"
             />
             <div>
-              <div class="text-zinc-200 text-sm group-hover:text-white transition-colors">Force recompile</div>
-              <div class="text-zinc-600 text-xs">Delete existing articles and reprocess everything from scratch</div>
+              <div class="text-sm text-[var(--text-primary)] group-hover:text-white transition-colors">Force recompile</div>
+              <div class="text-xs text-[var(--text-muted)]">Delete existing articles and reprocess everything from scratch</div>
             </div>
           </label>
 
@@ -26,11 +41,11 @@ export function CompilePage() {
             <input
               type="checkbox"
               id="opt-sources-only"
-              class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-red-600 focus:ring-red-600 focus:ring-offset-zinc-950"
+              class="h-4 w-4 rounded border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--accent-primary)]"
             />
             <div>
-              <div class="text-zinc-200 text-sm group-hover:text-white transition-colors">Sources only</div>
-              <div class="text-zinc-600 text-xs">Skip concept extraction after compiling sources</div>
+              <div class="text-sm text-[var(--text-primary)] group-hover:text-white transition-colors">Sources only</div>
+              <div class="text-xs text-[var(--text-muted)]">Skip concept extraction after compiling sources</div>
             </div>
           </label>
 
@@ -38,11 +53,11 @@ export function CompilePage() {
             <input
               type="checkbox"
               id="opt-concepts-only"
-              class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-red-600 focus:ring-red-600 focus:ring-offset-zinc-950"
+              class="h-4 w-4 rounded border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--accent-primary)]"
             />
             <div>
-              <div class="text-zinc-200 text-sm group-hover:text-white transition-colors">Concepts only</div>
-              <div class="text-zinc-600 text-xs">Regenerate all concept articles from existing compiled sources</div>
+              <div class="text-sm text-[var(--text-primary)] group-hover:text-white transition-colors">Concepts only</div>
+              <div class="text-xs text-[var(--text-muted)]">Regenerate all concept articles from existing compiled sources</div>
             </div>
           </label>
         </div>
@@ -50,7 +65,7 @@ export function CompilePage() {
         <button
           id="compile-btn"
           onclick="runCompile()"
-          class="bg-red-700 hover:bg-red-600 disabled:bg-zinc-800 disabled:text-zinc-600 text-white text-sm px-5 py-2.5 rounded-lg transition-colors font-medium"
+          class="console-button"
         >
           Run Compile
         </button>
@@ -58,15 +73,15 @@ export function CompilePage() {
 
       <div id="progress-wrapper" class="hidden">
         <div class="flex items-center justify-between mb-3">
-          <div class="text-zinc-600 text-xs uppercase tracking-wider">Progress</div>
-          <div id="compile-status" class="flex items-center gap-2 text-zinc-500 text-xs">
-            <span id="status-dot" class="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <div class="console-muted">Progress</div>
+          <div id="compile-status" class="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+            <span id="status-dot" class="inline-block h-1.5 w-1.5 rounded-full bg-[var(--accent-primary)] animate-pulse" />
             <span>Running...</span>
           </div>
         </div>
         <pre
           id="progress-log"
-          class="bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-zinc-400 text-xs leading-relaxed font-mono overflow-auto max-h-96 whitespace-pre-wrap"
+          class="console-card max-h-96 overflow-auto whitespace-pre-wrap font-[var(--font-mono)] text-xs leading-relaxed text-[var(--text-secondary)]"
         />
       </div>
 
@@ -93,7 +108,7 @@ export function CompilePage() {
           wrapper.classList.remove('hidden');
           btn.disabled = true;
           statusDot.classList.add('animate-pulse');
-          compileStatus.innerHTML = '<span id="status-dot" class="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span><span>Running...</span>';
+          compileStatus.innerHTML = '<span id="status-dot" class="inline-block h-1.5 w-1.5 rounded-full bg-[var(--accent-primary)] animate-pulse"></span><span>Running...</span>';
 
           fetch('/compile/run', {
             method: 'POST',
@@ -118,11 +133,11 @@ export function CompilePage() {
                   log.scrollTop = log.scrollHeight;
                 } else if (line.startsWith('event: done')) {
                   btn.disabled = false;
-                  compileStatus.innerHTML = '<span class="text-green-500">✓ Complete</span>';
+                  compileStatus.innerHTML = '<span class="text-[var(--accent-secondary)]">Complete</span>';
                   return;
                 } else if (line.startsWith('event: error')) {
                   btn.disabled = false;
-                  compileStatus.innerHTML = '<span class="text-red-400">✗ Error</span>';
+                  compileStatus.innerHTML = '<span class="text-[var(--accent-primary)]">Error</span>';
                   return;
                 }
               }
@@ -134,7 +149,7 @@ export function CompilePage() {
           }).catch(err => {
             log.textContent += 'Error: ' + err.message + '\\n';
             btn.disabled = false;
-            compileStatus.innerHTML = '<span class="text-red-400">✗ Failed</span>';
+            compileStatus.innerHTML = '<span class="text-[var(--accent-primary)]">Failed</span>';
           });
         }
       ` }} />

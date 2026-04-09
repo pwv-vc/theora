@@ -23,6 +23,31 @@ import { CompilePage } from './templates/compile.js'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+function getSelectedTags(url: string): string[] {
+  const params = new URL(url).searchParams
+  return [...new Set(params.getAll('tag').map(tag => tag.trim()).filter(Boolean))]
+}
+
+function buildDiscoveryContent() {
+  const articles = listWikiArticles()
+  const tagCounts = new Map<string, number>()
+
+  for (const article of articles) {
+    for (const tag of article.tags) {
+      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1)
+    }
+  }
+
+  return {
+    recent: articles.filter(article => article.relativePath.startsWith('wiki/sources/')).slice(0, 6),
+    concepts: articles.filter(article => article.relativePath.startsWith('wiki/concepts/')).slice(0, 6),
+    suggestedTags: [...tagCounts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 12)
+      .map(([tag, count]) => ({ tag, count })),
+  }
+}
+
 export function startServer(port: number): void {
   const app = new Hono()
 
@@ -118,36 +143,41 @@ export function startServer(port: number): void {
 
   app.get('/search', (c) => {
     const q = c.req.query('q') ?? ''
-    const tag = c.req.query('tag') ?? ''
+    const selectedTags = getSelectedTags(c.req.url)
     const tags = getAllTags()
+    const results = q.trim() || selectedTags.length > 0
+      ? searchArticles(q, selectedTags).slice(0, 20)
+      : []
+    const discovery = buildDiscoveryContent()
 
     return c.html(
       Layout({
         title: 'Search',
         active: 'search',
-        children: SearchPage({ q, tag, tags }),
+        children: SearchPage({ q, selectedTags, tags, results, discovery }),
       }).toString()
     )
   })
 
   app.get('/search/results', (c) => {
     const q = c.req.query('q') ?? ''
-    const tag = c.req.query('tag') ?? ''
+    const selectedTags = getSelectedTags(c.req.url)
 
-    if (!q.trim()) {
+    if (!q.trim() && selectedTags.length === 0) {
       return c.html('<div></div>')
     }
 
-    const results = searchArticles(q, tag || undefined).slice(0, 20)
-    return c.html(SearchResults({ results, q }).toString())
+    const results = searchArticles(q, selectedTags).slice(0, 20)
+    return c.html(SearchResults({ results, q, selectedTags }).toString())
   })
 
   app.get('/ask', (c) => {
+    const selectedTags = getSelectedTags(c.req.url)
     return c.html(
       Layout({
         title: 'Ask',
         active: 'ask',
-        children: AskPage(),
+        children: AskPage({ tags: getAllTags(), selectedTags }),
       }).toString()
     )
   })
@@ -163,9 +193,12 @@ export function startServer(port: number): void {
         const index = readWikiIndex()
         let articles = listWikiArticles()
 
-        const tag = c.req.query('tag')
-        if (tag) {
-          articles = articles.filter(a => a.tags.some(t => t.toLowerCase() === tag.toLowerCase()))
+        const selectedTags = getSelectedTags(c.req.url)
+        if (selectedTags.length > 0) {
+          articles = articles.filter(article => {
+            const articleTags = new Set(article.tags.map(tag => tag.toLowerCase()))
+            return selectedTags.every(tag => articleTags.has(tag.toLowerCase()))
+          })
         }
 
         const relevant = await findRelevantArticles(question, index, articles)

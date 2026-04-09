@@ -1,5 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiArticle } from '../../lib/wiki.js'
+import { getArticleLabel, TagLink } from './ui.js'
 
 interface ArticlePageProps {
   article: WikiArticle
@@ -11,60 +12,82 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
   const type = String(fm.type ?? '')
   const dateCompiled = String(fm.date_compiled ?? fm.date ?? '')
   const sourceFile = fm.source_file ? String(fm.source_file) : null
+  const sourceType = fm.source_type ? String(fm.source_type) : null
   const ontology = Array.isArray(fm.ontology) ? fm.ontology.map(String) : []
+  const relatedSources = Array.isArray(fm.related_sources) ? fm.related_sources.map(String) : []
 
-  const backHref = type === 'query' ? '/' : type === 'concept' ? '/' : '/'
-  const typeLabel = type === 'source' ? 'source' : type === 'concept' ? 'concept' : type === 'query' ? 'query' : ''
+  const backHref = article.tags[0]
+    ? `/search?tag=${encodeURIComponent(article.tags[0])}`
+    : type === 'query'
+    ? '/ask'
+    : '/search'
+  const typeLabel = getArticleLabel(article)
+  const askHref = article.tags.length > 0
+    ? `/ask?${article.tags.map(tag => `tag=${encodeURIComponent(tag)}`).join('&')}`
+    : '/ask'
+  const searchHref = article.tags.length > 0
+    ? `/search?${article.tags.map(tag => `tag=${encodeURIComponent(tag)}`).join('&')}`
+    : '/search'
 
   return (
-    <div>
-      <div class="mb-6">
-        <a href={backHref} class="text-zinc-500 hover:text-zinc-300 text-xs transition-colors">
-          ← back
-        </a>
-      </div>
+    <div class="page-stack">
+      <a href={backHref} class="console-chip hover:text-[var(--text-primary)]">
+        Back to search
+      </a>
 
-      <div class="mb-6 pb-6 border-b border-zinc-800">
-        <div class="flex items-center gap-2 mb-3">
-          {typeLabel && (
-            <span class="bg-zinc-800 text-zinc-400 text-xs px-2 py-0.5 rounded uppercase tracking-wider">
-              {typeLabel}
-            </span>
-          )}
-          {ontology.map(o => (
-            <span key={o} class="bg-zinc-900 border border-zinc-700 text-zinc-500 text-xs px-2 py-0.5 rounded">
-              {o}
-            </span>
-          ))}
-        </div>
+      <section class="article-header">
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="console-chip console-chip-active">{typeLabel}</span>
+            {ontology.map(item => (
+              <span key={item} class="console-chip">{item}</span>
+            ))}
+            {sourceType && <span class="console-chip">{sourceType}</span>}
+          </div>
 
-        <h1 class="text-2xl font-bold text-zinc-100 mb-3">{article.title}</h1>
+          <div class="space-y-3">
+            <h1 class="console-heading">{article.title}</h1>
+            <div class="article-meta">
+              {dateCompiled && <span>Compiled {dateCompiled}</span>}
+              {sourceFile && <span>{sourceFile}</span>}
+              <span>{article.tags.length} tag{article.tags.length === 1 ? '' : 's'}</span>
+            </div>
+          </div>
 
-        <div class="flex flex-wrap items-center gap-3">
           {article.tags.length > 0 && (
-            <div class="flex flex-wrap gap-1.5">
+            <div class="flex flex-wrap gap-2">
               {article.tags.map(tag => (
-                <a
-                  key={tag}
-                  href={`/search?tag=${encodeURIComponent(tag)}`}
-                  class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 text-xs px-2 py-0.5 rounded transition-colors"
-                >
-                  #{tag}
-                </a>
+                <TagLink key={tag} tag={tag} href={`/search?tag=${encodeURIComponent(tag)}`} />
               ))}
             </div>
           )}
-          {dateCompiled && (
-            <span class="text-zinc-600 text-xs">{dateCompiled}</span>
-          )}
-          {sourceFile && (
-            <span class="text-zinc-600 text-xs">from {sourceFile}</span>
+
+          <div class="flex flex-wrap gap-3">
+            <a href={searchHref} class="console-button-secondary">Search related</a>
+            <a href={askHref} class="console-chip hover:text-[var(--text-primary)]">Ask with these tags</a>
+          </div>
+
+          {relatedSources.length > 0 && (
+            <div class="inline-pivots">
+              <span class="console-muted">Related</span>
+              <div class="flex flex-wrap gap-2">
+                {relatedSources.slice(0, 4).map(source => (
+                  <a
+                    key={source}
+                    href={`/search?q=${encodeURIComponent(source.replaceAll('[[', '').replaceAll(']]', ''))}`}
+                    class="console-chip hover:text-[var(--text-primary)]"
+                  >
+                    {source}
+                  </a>
+                ))}
+              </div>
+            </div>
           )}
         </div>
-      </div>
+      </section>
 
-      <div
-        class="prose prose-invert prose-zinc max-w-none prose-headings:font-mono prose-headings:text-zinc-100 prose-p:text-zinc-300 prose-a:text-red-400 prose-a:no-underline hover:prose-a:text-red-300 prose-code:text-zinc-300 prose-code:bg-zinc-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800 prose-strong:text-zinc-100 prose-li:text-zinc-300 prose-blockquote:border-red-800 prose-blockquote:text-zinc-400"
+      <section
+        class="console-card prose prose-theora article-body"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </div>

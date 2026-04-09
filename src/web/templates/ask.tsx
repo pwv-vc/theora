@@ -1,75 +1,111 @@
 /** @jsxImportSource hono/jsx */
+import { TagLink, TagPicker } from './ui.js'
 
-export function AskPage() {
+interface AskPageProps {
+  tags: string[]
+  selectedTags: string[]
+}
+
+export function AskPage({ tags, selectedTags }: AskPageProps) {
+  const searchHref = selectedTags.length > 0
+    ? `/search?${selectedTags.map(tag => `tag=${encodeURIComponent(tag)}`).join('&')}`
+    : '/search'
+
   return (
-    <div>
-      <div class="mb-6">
-        <h1 class="text-xl font-bold text-zinc-100 mb-1">Ask</h1>
-        <p class="text-zinc-500 text-sm">Ask a question against the compiled wiki.</p>
-      </div>
-
-      <div class="mb-6">
-        <div class="flex gap-3">
-          <input
-            id="question-input"
-            type="text"
-            placeholder="What are the key themes in this research?"
-            class="flex-1 bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 px-4 py-2.5 rounded-lg text-sm focus:border-red-600 focus:outline-none transition-colors"
-            onkeydown="if(event.key==='Enter')askQuestion()"
-          />
-          <button
-            onclick="askQuestion()"
-            id="ask-btn"
-            class="bg-red-700 hover:bg-red-600 disabled:bg-zinc-800 disabled:text-zinc-600 text-white text-sm px-5 py-2.5 rounded-lg transition-colors font-medium"
-          >
-            Ask
-          </button>
+    <div class="page-stack">
+      <section class="page-stack">
+        <div class="space-y-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="console-chip console-chip-active">Ask</span>
+            <span class="console-chip">question first</span>
+          </div>
+          <p class="max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
+            Ask the knowledge base directly. Tags are optional scope, and search stays close when you want to inspect sources first.
+          </p>
         </div>
-        <div class="flex items-center gap-2 mt-2">
-          <label class="text-zinc-600 text-xs">Tag filter:</label>
-          <input
-            id="tag-filter"
-            type="text"
-            placeholder="optional tag"
-            class="bg-zinc-900 border border-zinc-800 text-zinc-400 placeholder-zinc-700 px-2 py-1 rounded text-xs focus:border-zinc-600 focus:outline-none w-32"
-          />
-        </div>
-      </div>
 
-      <div id="status" class="hidden mb-4">
-        <div class="flex items-center gap-2 text-zinc-500 text-xs">
-          <span id="status-dot" class="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-          <span id="status-text">Thinking...</span>
-        </div>
-      </div>
+        <section class="search-panel space-y-5">
+          <div class="space-y-3">
+            <label for="question-input" class="console-muted">Question</label>
+            <textarea
+              id="question-input"
+              placeholder="What changed across these sources, what concepts repeat, and what should I investigate next?"
+              class="console-input min-h-36 resize-y"
+            />
+          </div>
 
-      <div id="answer-wrapper" class="hidden">
-        <div class="border-t border-zinc-800 pt-6">
-          <div class="flex items-center justify-between mb-4">
-            <div class="text-zinc-600 text-xs uppercase tracking-wider">Answer</div>
+          <div class="flex flex-wrap gap-3">
             <button
-              onclick="clearAnswer()"
-              class="text-zinc-700 hover:text-zinc-500 text-xs transition-colors"
+              onclick="askQuestion()"
+              id="ask-btn"
+              class="console-button"
             >
-              clear
+              Ask
+            </button>
+            <a href={searchHref} class="console-button-secondary">Search</a>
+            <button
+              type="button"
+              onclick="clearAnswer()"
+              class="console-chip hover:text-[var(--text-primary)]"
+            >
+              Clear
             </button>
           </div>
-          <pre
-            id="answer"
-            class="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap font-mono"
+
+          <TagPicker
+            allTags={tags}
+            selectedTags={selectedTags}
+            pickerId="ask-tag-picker"
+            label="Context"
+            emptyLabel="No tags are available yet"
           />
+
+          {selectedTags.length > 0 && (
+            <div class="inline-pivots">
+              <span class="console-muted">Scoped to</span>
+              <div class="flex flex-wrap gap-2">
+                {selectedTags.map(tag => (
+                  <TagLink key={tag} tag={tag} href={searchHref} active />
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      </section>
+
+      <div id="status" class="hidden console-card">
+        <div class="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
+          <span id="status-dot" class="inline-block h-2 w-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+          <span id="status-text">Thinking…</span>
         </div>
       </div>
+
+      <section id="answer-wrapper" class="hidden console-card">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <div class="space-y-1">
+            <div class="console-muted">Answer</div>
+            <a href={searchHref} class="text-sm text-[var(--accent-secondary)]">Browse related sources</a>
+          </div>
+        </div>
+        <pre
+          id="answer"
+          class="overflow-x-auto whitespace-pre-wrap font-[var(--font-mono)] text-sm leading-7 text-[var(--text-secondary)]"
+        />
+      </section>
 
       <script dangerouslySetInnerHTML={{ __html: `
         let currentSource = null;
+
+        function getSelectedTags() {
+          return Array.from(document.querySelectorAll('#ask-tag-picker input[name="tag"]:checked')).map((input) => input.value);
+        }
 
         function askQuestion() {
           const input = document.getElementById('question-input');
           const question = input.value.trim();
           if (!question) return;
 
-          const tag = document.getElementById('tag-filter').value.trim();
+          const tags = getSelectedTags();
           const answerEl = document.getElementById('answer');
           const wrapper = document.getElementById('answer-wrapper');
           const status = document.getElementById('status');
@@ -84,36 +120,35 @@ export function AskPage() {
           answerEl.textContent = '';
           wrapper.classList.add('hidden');
           status.classList.remove('hidden');
-          statusText.textContent = 'Thinking...';
+          statusText.textContent = 'Thinking…';
           btn.disabled = true;
 
-          let url = '/ask/stream?q=' + encodeURIComponent(question);
-          if (tag) url += '&tag=' + encodeURIComponent(tag);
+          const params = new URLSearchParams();
+          params.set('q', question);
+          tags.forEach((tag) => params.append('tag', tag));
 
-          const source = new EventSource(url);
+          const source = new EventSource('/ask/stream?' + params.toString());
           currentSource = source;
 
-          source.onmessage = (e) => {
+          source.onmessage = (event) => {
             wrapper.classList.remove('hidden');
-            answerEl.textContent += e.data;
-            statusText.textContent = 'Streaming...';
+            answerEl.textContent += event.data;
+            statusText.textContent = 'Streaming…';
           };
 
-          source.addEventListener('done', (e) => {
+          source.addEventListener('done', () => {
             source.close();
             currentSource = null;
             status.classList.add('hidden');
             btn.disabled = false;
           });
 
-          source.addEventListener('error', (e) => {
+          source.addEventListener('error', (event) => {
             source.close();
             currentSource = null;
             status.classList.add('hidden');
             btn.disabled = false;
-            if (e.data) {
-              answerEl.textContent += '\\n\\nError: ' + e.data;
-            }
+            if (event.data) answerEl.textContent += '\\n\\nError: ' + event.data;
           });
 
           source.onerror = () => {
@@ -133,6 +168,7 @@ export function AskPage() {
           document.getElementById('answer-wrapper').classList.add('hidden');
           document.getElementById('status').classList.add('hidden');
           document.getElementById('ask-btn').disabled = false;
+          document.getElementById('question-input').focus();
         }
       ` }} />
     </div>
