@@ -1,5 +1,7 @@
 # Theora
 
+<img width="1536" height="1024" alt="theora-card" src="https://github.com/user-attachments/assets/7586a5ee-e673-478c-8c6a-13f9a2fb1579" />
+
 > *"She's the one who actually knows how everything works."*
 
 LLM-powered knowledge base that turns raw research into a living wiki.
