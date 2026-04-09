@@ -5,6 +5,7 @@ export default defineConfig({
   format: ['esm'],
   target: 'node20',
   clean: true,
+  banner: { js: '#!/usr/bin/env node' },
   esbuildOptions(options) {
     options.jsx = 'automatic'
     options.jsxImportSource = 'hono/jsx'
