@@ -9,7 +9,10 @@ export async function findRelevantArticles(
   if (articles.length <= 10) return articles
 
   const articleList = articles
-    .map((a, i) => `${i}: ${a.title} (${a.relativePath})`)
+    .map((a, i) => {
+      const tags = a.tags.length ? ` [${a.tags.join(', ')}]` : ''
+      return `${i}: ${a.title}${tags} (${a.relativePath})`
+    })
     .join('\n')
 
   const response = await llm(

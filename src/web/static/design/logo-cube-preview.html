@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Theora Cube Icon Variations</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #050508;
+      color: #e8e8ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      padding: 40px;
+      line-height: 1.6;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent, transparent 2px,
+        rgba(255,0,144,0.03) 2px, rgba(255,0,144,0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    h1 {
+      color: #ff00aa;
+      text-shadow: 0 0 6px rgba(255,0,144,0.5), 0 0 14px rgba(255,0,144,0.3);
+      font-size: 1.4rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: #585890;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 48px;
+    }
+
+    .section-label {
+      color: #585890;
+      font-size: 0.68rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border-bottom: 1px solid #1e1e3c;
+      padding-bottom: 8px;
+      margin-bottom: 28px;
+    }
+
+    section { margin-bottom: 56px; }
+
+    /* 3-column comparison grid */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .card {
+      background: #0a0a14;
+      border: 1px solid #1e1e3c;
+      border-radius: 8px;
+      padding: 24px 20px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .card:hover {
+      border-color: #ff00aa;
+      box-shadow: 0 0 0 1px #ff00aa, 0 0 20px rgba(255,0,144,0.12);
+    }
+
+    .card-title {
+      color: #ff00aa;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .card-desc {
+      color: #585890;
+      font-size: 0.65rem;
+      margin-bottom: 6px;
+    }
+
+    .card-colors {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+
+    .swatch-label {
+      color: #585890;
+      font-size: 0.6rem;
+    }
+
+    .icon-center {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .size-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .size-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .size-label {
+      color: #585890;
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+    }
+
+    /* Lockup */
+    .lockup {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .lockup-text {
+      color: #ff00aa;
+      text-shadow: 0 0 6px rgba(255,0,144,0.5), 0 0 14px rgba(255,0,144,0.3);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+    }
+
+    .lockup-row {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Favicon bar */
+    .favicon-bar {
+      background: #141428;
+      border: 1px solid #1e1e3c;
+      border-radius: 6px;
+      padding: 7px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.72rem;
+      color: #a8a8d8;
+      width: fit-content;
+    }
+
+    /* Light bg test */
+    .bg-light {
+      background: #f8f8ff;
+      padding: 20px 24px;
+      border-radius: 8px;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .bg-light .lockup-text {
+      color: #cc0077;
+      text-shadow: none;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #1e1e3c;
+      margin: 48px 0;
+    }
+
+    .note {
+      color: #585890;
+      font-size: 0.65rem;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>theora — cube icon variations</h1>
+  <p class="subtitle">3 proportions · 3 colors each · fixed inner edges · no bisecting lines</p>
+
+  <!-- MAIN COMPARISON -->
+  <section>
+    <div class="section-label">Comparison · 128px</div>
+    <div class="grid-3">
+
+      <div class="card">
+        <div class="card-title">Standard</div>
+        <div class="card-desc">Equal sections · regular hexagon</div>
+        <div class="card-colors">
+          <div class="swatch" style="background:#00bbff"></div><span class="swatch-label">top</span>
+          <div class="swatch" style="background:#ff00aa; margin-left:6px"></div><span class="swatch-label">left</span>
+          <div class="swatch" style="background:#00ff00; margin-left:6px"></div><span class="swatch-label">right</span>
+        </div>
+        <div class="icon-center">
+          <img src="icon-cube-standard.svg" width="128" height="128" alt="Standard"/>
+        </div>
+        <div class="size-row">
+          <div class="size-item">
+            <img src="icon-cube-standard.svg" width="64" height="64" alt=""/>
+            <span class="size-label">64</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube-standard.svg" width="32" height="32" alt=""/>
+            <span class="size-label">32</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube-standard.svg" width="16" height="16" alt=""/>
+            <span class="size-label">16</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Tall</div>
+        <div class="card-desc">Taller sides · compressed top</div>
+        <div class="card-colors">
+          <div class="swatch" style="background:#ff00aa"></div><span class="swatch-label">top</span>
+          <div class="swatch" style="background:#00ff00; margin-left:6px"></div><span class="swatch-label">left</span>
+          <div class="swatch" style="background:#00bbff; margin-left:6px"></div><span class="swatch-label">right</span>
+        </div>
+        <div class="icon-center">
+          <img src="icon-cube-tall.svg" width="128" height="128" alt="Tall"/>
+        </div>
+        <div class="size-row">
+          <div class="size-item">
+            <img src="icon-cube-tall.svg" width="64" height="64" alt=""/>
+            <span class="size-label">64</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube-tall.svg" width="32" height="32" alt=""/>
+            <span class="size-label">32</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube-tall.svg" width="16" height="16" alt=""/>
+            <span class="size-label">16</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Wide</div>
+        <div class="card-desc">Wider top · shorter sides</div>
+        <div class="card-colors">
+          <div class="swatch" style="background:#00ff00"></div><span class="swatch-label">top</span>
+          <div class="swatch" style="background:#00bbff; margin-left:6px"></div><span class="swatch-label">left</span>
+          <div class="swatch" style="background:#ff00aa; margin-left:6px"></div><span class="swatch-label">right</span>
+        </div>
+        <div class="icon-center">
+          <img src="icon-cube-wide.svg" width="128" height="128" alt="Wide"/>
+        </div>
+        <div class="size-row">
+          <div class="size-item">
+            <img src="icon-cube-wide.svg" width="64" height="64" alt=""/>
+            <span class="size-label">64</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube-wide.svg" width="32" height="32" alt=""/>
+            <span class="size-label">32</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube-wide.svg" width="16" height="16" alt=""/>
+            <span class="size-label">16</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- LARGE DETAIL -->
+  <section>
+    <div class="section-label">Detail · 256px</div>
+    <div style="display:flex; gap:40px; flex-wrap:wrap; align-items:flex-start;">
+      <div class="size-item">
+        <img src="icon-cube-standard.svg" width="256" height="256" alt=""/>
+        <span class="size-label" style="margin-top:8px">Standard</span>
+      </div>
+      <div class="size-item">
+        <img src="icon-cube-tall.svg" width="256" height="256" alt=""/>
+        <span class="size-label" style="margin-top:8px">Tall</span>
+      </div>
+      <div class="size-item">
+        <img src="icon-cube-wide.svg" width="256" height="256" alt=""/>
+        <span class="size-label" style="margin-top:8px">Wide</span>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- LOGO LOCKUPS -->
+  <section>
+    <div class="section-label">Logo lockup · icon + "theora"</div>
+    <div style="display:flex; gap:32px; flex-wrap:wrap;">
+
+      <div class="card" style="flex:1; min-width:200px;">
+        <div class="card-title" style="margin-bottom:16px">Standard</div>
+        <div class="lockup-row">
+          <div class="lockup">
+            <img src="icon-cube-standard.svg" width="40" height="40" alt=""/>
+            <span class="lockup-text" style="font-size:2rem">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube-standard.svg" width="28" height="28" alt=""/>
+            <span class="lockup-text" style="font-size:1.4rem">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube-standard.svg" width="20" height="20" alt=""/>
+            <span class="lockup-text" style="font-size:1rem">theora</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1; min-width:200px;">
+        <div class="card-title" style="margin-bottom:16px">Tall</div>
+        <div class="lockup-row">
+          <div class="lockup">
+            <img src="icon-cube-tall.svg" width="40" height="40" alt=""/>
+            <span class="lockup-text" style="font-size:2rem">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube-tall.svg" width="28" height="28" alt=""/>
+            <span class="lockup-text" style="font-size:1.4rem">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube-tall.svg" width="20" height="20" alt=""/>
+            <span class="lockup-text" style="font-size:1rem">theora</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1; min-width:200px;">
+        <div class="card-title" style="margin-bottom:16px">Wide</div>
+        <div class="lockup-row">
+          <div class="lockup">
+            <img src="icon-cube-wide.svg" width="40" height="40" alt=""/>
+            <span class="lockup-text" style="font-size:2rem">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube-wide.svg" width="28" height="28" alt=""/>
+            <span class="lockup-text" style="font-size:1.4rem">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube-wide.svg" width="20" height="20" alt=""/>
+            <span class="lockup-text" style="font-size:1rem">theora</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- FAVICON SIMULATION -->
+  <section>
+    <div class="section-label">Favicon simulation · browser tab · 16px</div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div class="favicon-bar">
+        <img src="icon-cube-standard.svg" width="16" height="16" alt=""/>
+        <span>theora — Standard</span>
+      </div>
+      <div class="favicon-bar">
+        <img src="icon-cube-tall.svg" width="16" height="16" alt=""/>
+        <span>theora — Tall</span>
+      </div>
+      <div class="favicon-bar">
+        <img src="icon-cube-wide.svg" width="16" height="16" alt=""/>
+        <span>theora — Wide</span>
+      </div>
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- LIGHT THEME TEST -->
+  <section>
+    <div class="section-label">Broadcast (light) theme test</div>
+    <div style="display:flex; gap:24px; flex-wrap:wrap;">
+      <div class="bg-light">
+        <div style="color:#8080a0;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px">Standard</div>
+        <div class="lockup">
+          <img src="icon-cube-standard.svg" width="32" height="32" alt=""/>
+          <span class="lockup-text" style="font-size:1.4rem;color:#cc0077;text-shadow:none">theora</span>
+        </div>
+      </div>
+      <div class="bg-light">
+        <div style="color:#8080a0;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px">Tall</div>
+        <div class="lockup">
+          <img src="icon-cube-tall.svg" width="32" height="32" alt=""/>
+          <span class="lockup-text" style="font-size:1.4rem;color:#cc0077;text-shadow:none">theora</span>
+        </div>
+      </div>
+      <div class="bg-light">
+        <div style="color:#8080a0;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px">Wide</div>
+        <div class="lockup">
+          <img src="icon-cube-wide.svg" width="32" height="32" alt=""/>
+          <span class="lockup-text" style="font-size:1.4rem;color:#cc0077;text-shadow:none">theora</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

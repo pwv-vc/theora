@@ -1,0 +1,38 @@
+<!--
+  Room Corner — Clean (no middle icon)
+  Square icon. Vanishing point at (32,40).
+  Left wall:  polygon (0,0)→(32,0)→(32,40)→(0,64)   — magenta horizontal stripes
+  Right wall: polygon (32,0)→(64,0)→(64,64)→(32,40)  — green horizontal stripes
+  Floor:      triangle (32,40)→(0,64)→(64,64)          — yellow horizontal stripes
+  All stripes are perfectly horizontal — perspective comes from the region shapes.
+-->
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="lw-c"><polygon points="0,0 32,0 32,40 0,64"/></clipPath>
+    <clipPath id="rw-c"><polygon points="32,0 64,0 64,64 32,40"/></clipPath>
+    <clipPath id="fl-c"><polygon points="32,40 0,64 64,64"/></clipPath>
+
+    <pattern id="mag-c" patternUnits="userSpaceOnUse" width="64" height="10">
+      <rect width="64" height="6" fill="#ff00aa"/>
+      <rect y="6" width="64" height="4" fill="#050508"/>
+    </pattern>
+    <pattern id="grn-c" patternUnits="userSpaceOnUse" width="64" height="10">
+      <rect width="64" height="6" fill="#00ff00"/>
+      <rect y="6" width="64" height="4" fill="#050508"/>
+    </pattern>
+    <pattern id="yel-c" patternUnits="userSpaceOnUse" width="64" height="7">
+      <rect width="64" height="4" fill="#ffdd00"/>
+      <rect y="4" width="64" height="3" fill="#050508"/>
+    </pattern>
+  </defs>
+
+  <rect width="64" height="64" fill="#050508"/>
+  <rect width="64" height="64" fill="url(#mag-c)" clip-path="url(#lw-c)"/>
+  <rect width="64" height="64" fill="url(#grn-c)" clip-path="url(#rw-c)"/>
+  <rect width="64" height="64" fill="url(#yel-c)" clip-path="url(#fl-c)"/>
+
+  <!-- Corner ridge lines -->
+  <line x1="32" y1="0"  x2="32" y2="40" stroke="#050508" stroke-width="2"/>
+  <line x1="0"  y1="64" x2="32" y2="40" stroke="#050508" stroke-width="1.5"/>
+  <line x1="64" y1="64" x2="32" y2="40" stroke="#050508" stroke-width="1.5"/>
+</svg>

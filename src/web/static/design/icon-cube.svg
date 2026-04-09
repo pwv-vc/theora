@@ -1,0 +1,67 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!--
+      Isometric cube hexagon vertices:
+        Top:          (32, 2)
+        Top-right:    (58, 17)
+        Bottom-right: (58, 47)
+        Bottom:       (32, 62)
+        Bottom-left:  (6, 47)
+        Top-left:     (6, 17)
+        Center:       (32, 32)
+
+      Faces:
+        TOP:   (32,2)  → (58,17) → (32,32) → (6,17)
+        LEFT:  (6,17)  → (32,32) → (32,62) → (6,47)
+        RIGHT: (58,17) → (58,47) → (32,62) → (32,32)
+    -->
+    <clipPath id="top-face-a3">
+      <polygon points="32,2 58,17 32,32 6,17"/>
+    </clipPath>
+    <clipPath id="left-face-a3">
+      <polygon points="6,17 32,32 32,62 6,47"/>
+    </clipPath>
+    <clipPath id="right-face-a3">
+      <polygon points="58,17 58,47 32,62 32,32"/>
+    </clipPath>
+
+    <!-- Cyan horizontal lines: top face -->
+    <pattern id="cyn-horiz-a3" patternUnits="userSpaceOnUse" width="8" height="7">
+      <rect width="8" height="4" fill="#00bbff"/>
+      <rect y="4" width="8" height="3" fill="#050508"/>
+    </pattern>
+    <!-- Magenta diagonal lines: left face (╲) -->
+    <pattern id="mag-diag-a3" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(45 0 0)">
+      <rect width="6" height="10" fill="#ff00aa"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+    <!-- Green diagonal lines: right face (╱) -->
+    <pattern id="grn-diag-a3" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(-45 0 0)">
+      <rect width="6" height="10" fill="#00ff00"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+  </defs>
+
+  <!-- Black background (hexagon) -->
+  <polygon points="32,2 58,17 58,47 32,62 6,47 6,17" fill="#050508"/>
+
+  <!-- Top face: cyan horizontal lines -->
+  <rect width="64" height="64" fill="url(#cyn-horiz-a3)" clip-path="url(#top-face-a3)"/>
+  <!-- Left face: magenta diagonal lines -->
+  <rect width="64" height="64" fill="url(#mag-diag-a3)" clip-path="url(#left-face-a3)"/>
+  <!-- Right face: green diagonal lines -->
+  <rect width="64" height="64" fill="url(#grn-diag-a3)" clip-path="url(#right-face-a3)"/>
+
+  <!-- Outer hexagon border -->
+  <polygon points="32,2 58,17 58,47 32,62 6,47 6,17"
+           fill="none" stroke="#050508" stroke-width="2"/>
+  <!-- Inner edges from center to alternating vertices -->
+  <line x1="32" y1="2"  x2="32" y2="32" stroke="#050508" stroke-width="1.5"/>
+  <line x1="58" y1="17" x2="32" y2="32" stroke="#050508" stroke-width="1.5"/>
+  <line x1="6"  y1="17" x2="32" y2="32" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="62" x2="32" y2="32" stroke="#050508" stroke-width="1.5"/>
+  <line x1="58" y1="47" x2="32" y2="32" stroke="#050508" stroke-width="1.5"/>
+  <line x1="6"  y1="47" x2="32" y2="32" stroke="#050508" stroke-width="1.5"/>
+</svg>

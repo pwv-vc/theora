@@ -166,6 +166,23 @@ export function getAllTags(): string[] {
   return [...tagSet].sort()
 }
 
+export interface TagWithCount {
+  tag: string
+  count: number
+}
+
+export function getAllTagsWithCounts(): TagWithCount[] {
+  const counts = new Map<string, number>()
+  for (const article of listWikiArticles()) {
+    for (const tag of article.tags) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1)
+    }
+  }
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+}
+
 // --- Raw Files ---
 
 export function listRawFiles(): string[] {
@@ -231,6 +248,20 @@ export function normalizeLinks(text: string, articles: WikiArticle[]): string {
     const slug = linkText.toLowerCase().replace(/\s+/g, '-')
     const article = bySlug.get(slug)
     if (article) return `[${article.title}](${article.relativePath})`
+    return `**${linkText}**`
+  })
+}
+
+export function normalizeLinksForWeb(text: string, articles: WikiArticle[]): string {
+  const bySlug = new Map(articles.map(a => [basename(a.path, '.md'), a]))
+
+  return text.replace(/\[\[([^\]]+)\]\]/g, (match, linkText: string) => {
+    const slug = linkText.toLowerCase().replace(/\s+/g, '-')
+    const article = bySlug.get(slug)
+    if (article) {
+      const webPath = '/' + article.relativePath.replace(/\.md$/, '')
+      return `[${article.title}](${webPath})`
+    }
     return `**${linkText}**`
   })
 }

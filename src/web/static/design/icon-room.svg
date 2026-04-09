@@ -1,0 +1,67 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Vanishing point at (32, 38) — slightly below center for floor room -->
+    <!-- Left wall: top-left + top-right → vanishing point, left side -->
+    <clipPath id="left-wall-a2">
+      <polygon points="0,0 32,38 0,64"/>
+    </clipPath>
+    <!-- Right wall -->
+    <clipPath id="right-wall-a2">
+      <polygon points="64,0 64,64 32,38"/>
+    </clipPath>
+    <!-- Ceiling/back: top strip between the two wall diagonals -->
+    <clipPath id="ceiling-a2">
+      <polygon points="0,0 64,0 32,38"/>
+    </clipPath>
+    <!-- Floor: bottom triangle -->
+    <clipPath id="floor-a2">
+      <polygon points="0,64 32,38 64,64"/>
+    </clipPath>
+
+    <!-- Magenta diagonal lines (left wall, going ╲) -->
+    <pattern id="mag-diag-a2" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(45 0 0)">
+      <rect width="6" height="10" fill="#ff00aa"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+    <!-- Green diagonal lines (right wall, going ╱) -->
+    <pattern id="grn-diag-a2" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(-45 0 0)">
+      <rect width="6" height="10" fill="#00ff00"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+    <!-- Cyan diagonal lines (ceiling/back wall) -->
+    <pattern id="cyn-diag-a2" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(30 0 0)">
+      <rect width="6" height="10" fill="#00bbff"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+    <!-- Yellow horizontal lines (floor) -->
+    <pattern id="yel-horiz-a2" patternUnits="userSpaceOnUse" width="10" height="10">
+      <rect width="10" height="6" fill="#ffdd00"/>
+      <rect y="6" width="10" height="4" fill="#050508"/>
+    </pattern>
+  </defs>
+
+  <!-- Black background -->
+  <rect width="64" height="64" fill="#050508"/>
+
+  <!-- Ceiling: cyan -->
+  <rect width="64" height="64" fill="url(#cyn-diag-a2)" clip-path="url(#ceiling-a2)"/>
+  <!-- Left wall: magenta -->
+  <rect width="64" height="64" fill="url(#mag-diag-a2)" clip-path="url(#left-wall-a2)"/>
+  <!-- Right wall: green -->
+  <rect width="64" height="64" fill="url(#grn-diag-a2)" clip-path="url(#right-wall-a2)"/>
+  <!-- Floor: yellow -->
+  <rect width="64" height="64" fill="url(#yel-horiz-a2)" clip-path="url(#floor-a2)"/>
+
+  <!-- Ridge lines converging to vanishing point -->
+  <line x1="0"  y1="0"  x2="32" y2="38" stroke="#050508" stroke-width="2"/>
+  <line x1="64" y1="0"  x2="32" y2="38" stroke="#050508" stroke-width="2"/>
+  <line x1="0"  y1="64" x2="32" y2="38" stroke="#050508" stroke-width="2"/>
+  <line x1="64" y1="64" x2="32" y2="38" stroke="#050508" stroke-width="2"/>
+  <!-- Vertical center ridge (top edge of room) -->
+  <line x1="32" y1="0"  x2="32" y2="38" stroke="#050508" stroke-width="1.5"/>
+  <!-- Horizontal floor/wall boundary -->
+  <line x1="0"  y1="64" x2="64" y2="64" stroke="#050508" stroke-width="1"/>
+</svg>

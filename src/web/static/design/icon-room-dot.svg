@@ -1,0 +1,37 @@
+<!--
+  Room Corner — White dot at vanishing point
+  Same geometry as clean. Small white circle at (32,40) draws the eye
+  to the corner — the "oracle" focal point.
+-->
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="lw-d"><polygon points="0,0 32,0 32,40 0,64"/></clipPath>
+    <clipPath id="rw-d"><polygon points="32,0 64,0 64,64 32,40"/></clipPath>
+    <clipPath id="fl-d"><polygon points="32,40 0,64 64,64"/></clipPath>
+
+    <pattern id="mag-d" patternUnits="userSpaceOnUse" width="64" height="10">
+      <rect width="64" height="6" fill="#ff00aa"/>
+      <rect y="6" width="64" height="4" fill="#050508"/>
+    </pattern>
+    <pattern id="grn-d" patternUnits="userSpaceOnUse" width="64" height="10">
+      <rect width="64" height="6" fill="#00ff00"/>
+      <rect y="6" width="64" height="4" fill="#050508"/>
+    </pattern>
+    <pattern id="yel-d" patternUnits="userSpaceOnUse" width="64" height="7">
+      <rect width="64" height="4" fill="#ffdd00"/>
+      <rect y="4" width="64" height="3" fill="#050508"/>
+    </pattern>
+  </defs>
+
+  <rect width="64" height="64" fill="#050508"/>
+  <rect width="64" height="64" fill="url(#mag-d)" clip-path="url(#lw-d)"/>
+  <rect width="64" height="64" fill="url(#grn-d)" clip-path="url(#rw-d)"/>
+  <rect width="64" height="64" fill="url(#yel-d)" clip-path="url(#fl-d)"/>
+
+  <line x1="32" y1="0"  x2="32" y2="40" stroke="#050508" stroke-width="2"/>
+  <line x1="0"  y1="64" x2="32" y2="40" stroke="#050508" stroke-width="1.5"/>
+  <line x1="64" y1="64" x2="32" y2="40" stroke="#050508" stroke-width="1.5"/>
+
+  <!-- White dot at vanishing point -->
+  <circle cx="32" cy="40" r="3" fill="#ffffff"/>
+</svg>

@@ -34,7 +34,7 @@ export const initCommand = new Command('init')
       mkdirSync(dir, { recursive: true })
     }
 
-    const config: KbConfig = { name, created: new Date().toISOString(), provider, model, compileConcurrency: parseInt(options.concurrency, 10) }
+    const config: KbConfig = { name, created: new Date().toISOString(), provider, model, compileConcurrency: parseInt(options.concurrency, 10), conceptSummaryChars: 3000, conceptMin: 5, conceptMax: 10 }
     writeFileSync(paths.configFile, JSON.stringify(config, null, 2) + '\n')
 
     if (!existsSync(paths.theme)) {

@@ -1,0 +1,49 @@
+<!--
+  Cube Wide + Full-Width Yellow Bar Stand
+  Cube shifted up. A solid yellow bar spans the full icon width at the
+  bottom — like a TV on a wide plinth. Fills out the square.
+
+  Cube: (32,2) top, center (32,28), bottom (32,46)
+  Stand: full-width rect, y=52 to y=62
+-->
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="top-sb">
+      <polygon points="32,2 56,14 32,28 8,14"/>
+    </clipPath>
+    <clipPath id="left-sb">
+      <polygon points="8,14 32,28 32,46 8,32"/>
+    </clipPath>
+    <clipPath id="right-sb">
+      <polygon points="56,14 56,32 32,46 32,28"/>
+    </clipPath>
+    <pattern id="top-p-sb" patternUnits="userSpaceOnUse" width="8" height="7">
+      <rect width="8" height="4" fill="#00ff00"/>
+      <rect y="4" width="8" height="3" fill="#050508"/>
+    </pattern>
+    <pattern id="left-p-sb" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(45 0 0)">
+      <rect width="6" height="10" fill="#00bbff"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+    <pattern id="right-p-sb" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(-45 0 0)">
+      <rect width="6" height="10" fill="#ff00aa"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+  </defs>
+
+  <!-- Full-width yellow bar stand -->
+  <rect x="2" y="52" width="60" height="10" rx="2" fill="#ffdd00"/>
+
+  <!-- Cube -->
+  <polygon points="32,2 56,14 56,32 32,46 8,32 8,14" fill="#050508"/>
+  <rect width="64" height="64" fill="url(#top-p-sb)"   clip-path="url(#top-sb)"/>
+  <rect width="64" height="64" fill="url(#left-p-sb)"  clip-path="url(#left-sb)"/>
+  <rect width="64" height="64" fill="url(#right-p-sb)" clip-path="url(#right-sb)"/>
+  <polygon points="32,2 56,14 56,32 32,46 8,32 8,14"
+           fill="none" stroke="#050508" stroke-width="2"/>
+  <line x1="32" y1="28" x2="56" y2="14" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="28" x2="8"  y2="14" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="28" x2="32" y2="46" stroke="#050508" stroke-width="1.5"/>
+</svg>

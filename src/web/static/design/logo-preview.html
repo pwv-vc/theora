@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Theora Logo Preview</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #050508;
+      color: #e8e8ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      padding: 40px;
+      line-height: 1.6;
+    }
+
+    /* CRT scanlines */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent, transparent 2px,
+        rgba(255,0,144,0.03) 2px, rgba(255,0,144,0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    h1 {
+      color: #ff00aa;
+      text-shadow: 0 0 6px rgba(255,0,144,0.5), 0 0 14px rgba(255,0,144,0.3);
+      font-size: 1.5rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #585890;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 48px;
+    }
+
+    .section {
+      margin-bottom: 56px;
+    }
+
+    .section-label {
+      color: #585890;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border-bottom: 1px solid #1e1e3c;
+      padding-bottom: 8px;
+      margin-bottom: 24px;
+    }
+
+    .concept-title {
+      color: #a8a8d8;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .concept-desc {
+      color: #585890;
+      font-size: 0.7rem;
+      margin-bottom: 16px;
+    }
+
+    /* Size row */
+    .size-row {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+
+    .size-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .size-label {
+      color: #585890;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+    }
+
+    /* Logo lockup (icon + text) */
+    .lockup {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .lockup-text {
+      color: #ff00aa;
+      text-shadow: 0 0 6px rgba(255,0,144,0.5), 0 0 14px rgba(255,0,144,0.3);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+    }
+
+    .lockup-text.sm  { font-size: 0.875rem; }
+    .lockup-text.md  { font-size: 1.25rem; }
+    .lockup-text.lg  { font-size: 1.75rem; }
+    .lockup-text.xl  { font-size: 2.5rem; }
+
+    /* Dark/light bg toggle */
+    .bg-variants {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+
+    .bg-dark {
+      background: #050508;
+      padding: 20px 28px;
+      border: 1px solid #1e1e3c;
+      border-radius: 8px;
+    }
+
+    .bg-light {
+      background: #f8f8ff;
+      padding: 20px 28px;
+      border: 1px solid #d0d0e8;
+      border-radius: 8px;
+    }
+
+    .bg-light .lockup-text {
+      color: #cc0077;
+      text-shadow: none;
+    }
+
+    /* Favicon simulation */
+    .favicon-bar {
+      background: #141428;
+      border: 1px solid #1e1e3c;
+      border-radius: 6px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: #a8a8d8;
+      width: fit-content;
+    }
+
+    .favicon-bar .tab-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #ff00aa;
+      opacity: 0.6;
+    }
+
+    /* Comparison grid */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .compare-card {
+      background: #0a0a14;
+      border: 1px solid #1e1e3c;
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    .compare-card:hover {
+      border-color: #ff00aa;
+      box-shadow: 0 0 0 1px #ff00aa, 0 0 16px rgba(255,0,144,0.15);
+    }
+
+    .compare-card h3 {
+      color: #ff00aa;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .compare-card p {
+      color: #585890;
+      font-size: 0.65rem;
+      margin-bottom: 20px;
+    }
+
+    .compare-icon-center {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .compare-sizes {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #1e1e3c;
+      margin: 48px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>theora — logo icon concepts</h1>
+  <p class="subtitle">Three variants · Max Headroom aesthetic · 80s broadcast</p>
+
+  <!-- COMPARISON GRID -->
+  <div class="section">
+    <div class="section-label">Side-by-side comparison · 128px</div>
+    <div class="compare-grid">
+
+      <div class="compare-card">
+        <h3>Signal</h3>
+        <p>Horizontal stripes · diamond · all channels</p>
+        <div class="compare-icon-center">
+          <img src="icon-signal.svg" width="128" height="128" alt="Signal"/>
+        </div>
+        <div class="compare-sizes">
+          <div class="size-item">
+            <img src="icon-signal.svg" width="64" height="64" alt=""/>
+            <span class="size-label">64</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-signal.svg" width="32" height="32" alt=""/>
+            <span class="size-label">32</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-signal.svg" width="16" height="16" alt=""/>
+            <span class="size-label">16</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="compare-card">
+        <h3>Room</h3>
+        <p>Inside corner · broadcast room · Max Headroom direct</p>
+        <div class="compare-icon-center">
+          <img src="icon-room.svg" width="128" height="128" alt="Room"/>
+        </div>
+        <div class="compare-sizes">
+          <div class="size-item">
+            <img src="icon-room.svg" width="64" height="64" alt=""/>
+            <span class="size-label">64</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-room.svg" width="32" height="32" alt=""/>
+            <span class="size-label">32</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-room.svg" width="16" height="16" alt=""/>
+            <span class="size-label">16</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="compare-card">
+        <h3>Cube</h3>
+        <p>Isometric · outside corner · knowledge structure</p>
+        <div class="compare-icon-center">
+          <img src="icon-cube.svg" width="128" height="128" alt="Cube"/>
+        </div>
+        <div class="compare-sizes">
+          <div class="size-item">
+            <img src="icon-cube.svg" width="64" height="64" alt=""/>
+            <span class="size-label">64</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube.svg" width="32" height="32" alt=""/>
+            <span class="size-label">32</span>
+          </div>
+          <div class="size-item">
+            <img src="icon-cube.svg" width="16" height="16" alt=""/>
+            <span class="size-label">16</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- LOGO LOCKUPS -->
+  <div class="section">
+    <div class="section-label">Logo lockup · icon + "theora" text</div>
+
+    <div class="bg-variants">
+      <!-- Dark bg -->
+      <div class="bg-dark">
+        <div style="margin-bottom:20px">
+          <div class="size-label" style="margin-bottom:12px">Signal</div>
+          <div class="lockup" style="margin-bottom:12px">
+            <img src="icon-signal.svg" width="40" height="40" alt=""/>
+            <span class="lockup-text xl">theora</span>
+          </div>
+          <div class="lockup" style="margin-bottom:12px">
+            <img src="icon-signal.svg" width="28" height="28" alt=""/>
+            <span class="lockup-text lg">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-signal.svg" width="20" height="20" alt=""/>
+            <span class="lockup-text md">theora</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-dark">
+        <div style="margin-bottom:20px">
+          <div class="size-label" style="margin-bottom:12px">Room</div>
+          <div class="lockup" style="margin-bottom:12px">
+            <img src="icon-room.svg" width="40" height="40" alt=""/>
+            <span class="lockup-text xl">theora</span>
+          </div>
+          <div class="lockup" style="margin-bottom:12px">
+            <img src="icon-room.svg" width="28" height="28" alt=""/>
+            <span class="lockup-text lg">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-room.svg" width="20" height="20" alt=""/>
+            <span class="lockup-text md">theora</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-dark">
+        <div style="margin-bottom:20px">
+          <div class="size-label" style="margin-bottom:12px">Cube</div>
+          <div class="lockup" style="margin-bottom:12px">
+            <img src="icon-cube.svg" width="40" height="40" alt=""/>
+            <span class="lockup-text xl">theora</span>
+          </div>
+          <div class="lockup" style="margin-bottom:12px">
+            <img src="icon-cube.svg" width="28" height="28" alt=""/>
+            <span class="lockup-text lg">theora</span>
+          </div>
+          <div class="lockup">
+            <img src="icon-cube.svg" width="20" height="20" alt=""/>
+            <span class="lockup-text md">theora</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Light bg -->
+    <div class="bg-variants">
+      <div class="bg-light">
+        <div class="size-label" style="color:#8080a0;margin-bottom:12px">Signal · broadcast (light) theme</div>
+        <div class="lockup" style="margin-bottom:10px">
+          <img src="icon-signal.svg" width="32" height="32" alt=""/>
+          <span class="lockup-text lg" style="color:#cc0077;text-shadow:none">theora</span>
+        </div>
+        <div class="lockup">
+          <img src="icon-signal.svg" width="20" height="20" alt=""/>
+          <span class="lockup-text md" style="color:#cc0077;text-shadow:none">theora</span>
+        </div>
+      </div>
+      <div class="bg-light">
+        <div class="size-label" style="color:#8080a0;margin-bottom:12px">Room · broadcast (light) theme</div>
+        <div class="lockup" style="margin-bottom:10px">
+          <img src="icon-room.svg" width="32" height="32" alt=""/>
+          <span class="lockup-text lg" style="color:#cc0077;text-shadow:none">theora</span>
+        </div>
+        <div class="lockup">
+          <img src="icon-room.svg" width="20" height="20" alt=""/>
+          <span class="lockup-text md" style="color:#cc0077;text-shadow:none">theora</span>
+        </div>
+      </div>
+      <div class="bg-light">
+        <div class="size-label" style="color:#8080a0;margin-bottom:12px">Cube · broadcast (light) theme</div>
+        <div class="lockup" style="margin-bottom:10px">
+          <img src="icon-cube.svg" width="32" height="32" alt=""/>
+          <span class="lockup-text lg" style="color:#cc0077;text-shadow:none">theora</span>
+        </div>
+        <div class="lockup">
+          <img src="icon-cube.svg" width="20" height="20" alt=""/>
+          <span class="lockup-text md" style="color:#cc0077;text-shadow:none">theora</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- FAVICON SIMULATION -->
+  <div class="section">
+    <div class="section-label">Favicon simulation · browser tab</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div class="favicon-bar">
+        <img src="icon-signal.svg" width="16" height="16" alt=""/>
+        <span>theora — Signal</span>
+      </div>
+      <div class="favicon-bar">
+        <img src="icon-room.svg" width="16" height="16" alt=""/>
+        <span>theora — Room</span>
+      </div>
+      <div class="favicon-bar">
+        <img src="icon-cube.svg" width="16" height="16" alt=""/>
+        <span>theora — Cube</span>
+      </div>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- LARGE SHOWCASE -->
+  <div class="section">
+    <div class="section-label">Large · 256px · detail view</div>
+    <div style="display:flex; gap:40px; flex-wrap:wrap; align-items:flex-start;">
+      <div class="size-item">
+        <img src="icon-signal.svg" width="256" height="256" alt="Signal large"/>
+        <span class="size-label">Signal</span>
+      </div>
+      <div class="size-item">
+        <img src="icon-room.svg" width="256" height="256" alt="Room large"/>
+        <span class="size-label">Room</span>
+      </div>
+      <div class="size-item">
+        <img src="icon-cube.svg" width="256" height="256" alt="Cube large"/>
+        <span class="size-label">Cube</span>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

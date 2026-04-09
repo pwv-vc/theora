@@ -1,8 +1,7 @@
 import { Command } from 'commander'
-import { rmSync, existsSync } from 'node:fs'
 import pc from 'picocolors'
-import { requireKbRoot, kbPaths } from '../lib/paths.js'
-import { compileSources, extractConcepts, rebuildIndex } from '../lib/compiler.js'
+import { requireKbRoot } from '../lib/paths.js'
+import { runCompile } from '../lib/compile.js'
 
 export const compileCommand = new Command('compile')
   .description('Compile raw sources into the wiki')
@@ -13,38 +12,18 @@ export const compileCommand = new Command('compile')
   .option('--concurrency <n>', 'parallel LLM calls during compile (overrides config)')
   .action(async (options: { sourcesOnly?: boolean; conceptsOnly?: boolean; reindex?: boolean; force?: boolean; concurrency?: string }) => {
     const root = requireKbRoot()
-    const paths = kbPaths(root)
     const concurrency = options.concurrency ? parseInt(options.concurrency, 10) : undefined
 
-    if (options.reindex) {
-      await rebuildIndex(root)
-      return
-    }
+    await runCompile(root, {
+      force: options.force,
+      sourcesOnly: options.sourcesOnly,
+      conceptsOnly: options.conceptsOnly,
+      reindex: options.reindex,
+      concurrency,
+    })
 
-    if (options.conceptsOnly) {
-      if (existsSync(paths.wikiConcepts)) rmSync(paths.wikiConcepts, { recursive: true, force: true })
-      console.log(pc.gray('Cleared existing concepts — regenerating from compiled sources'))
-      await extractConcepts(root, concurrency)
-      await rebuildIndex(root)
+    if (!options.reindex) {
       console.log()
       console.log(`${pc.green('Compilation complete.')} Run ${pc.cyan('theora ask <question>')} to query the wiki.`)
-      return
     }
-
-    if (options.force) {
-      if (existsSync(paths.wikiSources)) rmSync(paths.wikiSources, { recursive: true, force: true })
-      if (existsSync(paths.wikiConcepts)) rmSync(paths.wikiConcepts, { recursive: true, force: true })
-      console.log(pc.gray('Cleared existing wiki articles — recompiling from scratch'))
-    }
-
-    await compileSources(root, concurrency)
-
-    if (!options.sourcesOnly) {
-      await extractConcepts(root, concurrency)
-    }
-
-    await rebuildIndex(root)
-
-    console.log()
-    console.log(`${pc.green('Compilation complete.')} Run ${pc.cyan('theora ask <question>')} to query the wiki.`)
   })

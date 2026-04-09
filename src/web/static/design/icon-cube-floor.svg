@@ -1,0 +1,78 @@
+<!--
+  Cube + Perspective Yellow Floor
+  Wide cube shifted up. Magenta left, green right, cyan top.
+  Yellow floor below: a triangle (32,46)→(2,62)→(62,62) filled with
+  individually-drawn horizontal lines that increase in both spacing
+  and stroke-width as they descend — hand-calculated perspective.
+
+  Floor triangle edges:
+    left:  x = 32 - 30*(y-46)/16
+    right: x = 32 + 30*(y-46)/16
+
+  Lines (y, left-x, right-x, stroke-width):
+    47.0  →  30.1,  33.9  → 0.8
+    48.5  →  27.3,  36.7  → 1.0
+    50.5  →  23.6,  40.4  → 1.5
+    53.0  →  18.9,  45.1  → 2.0
+    56.0  →  13.3,  50.8  → 2.5
+    59.5  →   6.7,  57.3  → 3.0
+    62.0  →   2.0,  62.0  → 3.5
+-->
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="top-cf">
+      <polygon points="32,2 56,14 32,28 8,14"/>
+    </clipPath>
+    <clipPath id="left-cf">
+      <polygon points="8,14 32,28 32,46 8,32"/>
+    </clipPath>
+    <clipPath id="right-cf">
+      <polygon points="56,14 56,32 32,46 32,28"/>
+    </clipPath>
+    <!-- Cyan horizontal lines: top face -->
+    <pattern id="top-p-cf" patternUnits="userSpaceOnUse" width="8" height="7">
+      <rect width="8" height="4" fill="#00bbff"/>
+      <rect y="4" width="8" height="3" fill="#050508"/>
+    </pattern>
+    <!-- Magenta diagonal ╲: left face -->
+    <pattern id="left-p-cf" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(45 0 0)">
+      <rect width="6" height="10" fill="#ff00aa"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+    <!-- Green diagonal ╱: right face -->
+    <pattern id="right-p-cf" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(-45 0 0)">
+      <rect width="6" height="10" fill="#00ff00"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+  </defs>
+
+  <!-- Floor: black triangle background -->
+  <polygon points="32,46 2,62 62,62" fill="#050508"/>
+
+  <!-- Perspective yellow lines — spacing and weight increase with depth -->
+  <line x1="30.1" y1="47"   x2="33.9" y2="47"   stroke="#ffdd00" stroke-width="0.8"/>
+  <line x1="27.3" y1="48.5" x2="36.7" y2="48.5" stroke="#ffdd00" stroke-width="1.0"/>
+  <line x1="23.6" y1="50.5" x2="40.4" y2="50.5" stroke="#ffdd00" stroke-width="1.5"/>
+  <line x1="18.9" y1="53"   x2="45.1" y2="53"   stroke="#ffdd00" stroke-width="2.0"/>
+  <line x1="13.3" y1="56"   x2="50.8" y2="56"   stroke="#ffdd00" stroke-width="2.5"/>
+  <line x1="6.7"  y1="59.5" x2="57.3" y2="59.5" stroke="#ffdd00" stroke-width="3.0"/>
+  <line x1="2"    y1="62"   x2="62"   y2="62"   stroke="#ffdd00" stroke-width="3.5"/>
+
+  <!-- Cube: black hexagon background -->
+  <polygon points="32,2 56,14 56,32 32,46 8,32 8,14" fill="#050508"/>
+
+  <!-- Face fills -->
+  <rect width="64" height="64" fill="url(#top-p-cf)"   clip-path="url(#top-cf)"/>
+  <rect width="64" height="64" fill="url(#left-p-cf)"  clip-path="url(#left-cf)"/>
+  <rect width="64" height="64" fill="url(#right-p-cf)" clip-path="url(#right-cf)"/>
+
+  <!-- Outer hexagon border -->
+  <polygon points="32,2 56,14 56,32 32,46 8,32 8,14"
+           fill="none" stroke="#050508" stroke-width="2"/>
+  <!-- 3 inner edges only -->
+  <line x1="32" y1="28" x2="56" y2="14" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="28" x2="8"  y2="14" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="28" x2="32" y2="46" stroke="#050508" stroke-width="1.5"/>
+</svg>

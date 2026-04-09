@@ -223,8 +223,10 @@ export async function extractConcepts(root: string, concurrency?: number, onProg
   const spinner = onProgress ? null : ora('Extracting concepts').start()
   onProgress?.('Extracting concepts...')
 
+  const { compileConcurrency: defaultConcurrency, conceptSummaryChars, conceptMin, conceptMax } = readConfig()
+
   const summaries = sourceArticles
-    .map(a => `### ${a.title}\n${a.content.slice(0, 2000)}`)
+    .map(a => `### ${a.title}\n${a.content.slice(0, conceptSummaryChars)}`)
     .join('\n\n')
 
   const conceptsRaw = await llm(
@@ -241,7 +243,7 @@ Return a JSON array of objects with:
 ${ONTOLOGY_TYPES.map(t => `  "${t}" (${ONTOLOGY_SCHEMA_URLS[t as OntologyType]})`).join('\n')}
   A concept can have multiple types (e.g. a person who is also an author: ["person", "creative-work"])
 
-Only return the JSON array, no other text. Identify 3-10 of the most important concepts.`,
+Only return the JSON array, no other text. Identify ${conceptMin}-${conceptMax} of the most important concepts.`,
     { system: 'You are a knowledge base organizer. Extract key concepts from source summaries. Return valid JSON only.', maxTokens: 4096 },
   )
 
@@ -271,8 +273,7 @@ Only return the JSON array, no other text. Identify 3-10 of the most important c
     ...sourceArticles.map(a => basename(a.path, '.md')),
   ].join(', ')
 
-  const { compileConcurrency } = readConfig()
-  const limit = pLimit(concurrency ?? compileConcurrency)
+  const limit = pLimit(concurrency ?? defaultConcurrency)
 
   let done = 0
   const inFlight = new Set<string>()

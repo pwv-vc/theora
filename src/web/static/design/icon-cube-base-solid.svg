@@ -1,0 +1,69 @@
+<!--
+  Cube Wide + Solid Yellow Base
+  Cube shifted up to make room for base. 64×64 viewBox (square).
+
+  Cube geometry (wide proportions, shifted up):
+    center:    (32, 30)
+    top-right: (56, 16)  arm = (+24, -14)
+    top-left:  (8,  16)  arm = (-24, -14)
+    bottom:    (32, 48)  arm = (  0, +18)
+    top          = (32,  2)
+    bottom-right = (56, 34)
+    bottom-left  = (8,  34)
+
+  Base: solid yellow triangle — extends the cube's two bottom edges
+  outward, creating a ground plane below the bottom vertex.
+    (32,48) → (8,62) → (56,62)
+  (mirrors the angle of the cube's bottom-left and bottom-right edges)
+
+  Colors: top=green, left=cyan, right=magenta, base=yellow
+-->
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="top-bs">
+      <polygon points="32,2 56,16 32,30 8,16"/>
+    </clipPath>
+    <clipPath id="left-bs">
+      <polygon points="8,16 32,30 32,48 8,34"/>
+    </clipPath>
+    <clipPath id="right-bs">
+      <polygon points="56,16 56,34 32,48 32,30"/>
+    </clipPath>
+    <!-- Green horizontal lines: top face -->
+    <pattern id="top-p-bs" patternUnits="userSpaceOnUse" width="8" height="7">
+      <rect width="8" height="4" fill="#00ff00"/>
+      <rect y="4" width="8" height="3" fill="#050508"/>
+    </pattern>
+    <!-- Cyan diagonal ╲: left face -->
+    <pattern id="left-p-bs" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(45 0 0)">
+      <rect width="6" height="10" fill="#00bbff"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+    <!-- Magenta diagonal ╱: right face -->
+    <pattern id="right-p-bs" patternUnits="userSpaceOnUse" width="10" height="10"
+             patternTransform="rotate(-45 0 0)">
+      <rect width="6" height="10" fill="#ff00aa"/>
+      <rect x="6" width="4" height="10" fill="#050508"/>
+    </pattern>
+  </defs>
+
+  <!-- Yellow base triangle (drawn first, behind cube) -->
+  <polygon points="32,48 8,62 56,62" fill="#ffdd00"/>
+
+  <!-- Black hexagon background -->
+  <polygon points="32,2 56,16 56,34 32,48 8,34 8,16" fill="#050508"/>
+
+  <!-- Face fills -->
+  <rect width="64" height="64" fill="url(#top-p-bs)"   clip-path="url(#top-bs)"/>
+  <rect width="64" height="64" fill="url(#left-p-bs)"  clip-path="url(#left-bs)"/>
+  <rect width="64" height="64" fill="url(#right-p-bs)" clip-path="url(#right-bs)"/>
+
+  <!-- Outer hexagon border -->
+  <polygon points="32,2 56,16 56,34 32,48 8,34 8,16"
+           fill="none" stroke="#050508" stroke-width="2"/>
+  <!-- 3 inner edges only -->
+  <line x1="32" y1="30" x2="56" y2="16" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="30" x2="8"  y2="16" stroke="#050508" stroke-width="1.5"/>
+  <line x1="32" y1="30" x2="32" y2="48" stroke="#050508" stroke-width="1.5"/>
+</svg>
