@@ -1,11 +1,14 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiArticle, TagWithCount } from '../../lib/wiki.js'
-import { Card, EmptyState, Pill, SectionHeader, TagFilterBar } from './ui/index.js'
+import { Card, EmptyState, Pill, SectionHeader, TagFilterBar, WikiHeader } from './ui/index.js'
 
 interface ConceptsPageProps {
   concepts: WikiArticle[]
+  sources: WikiArticle[]
+  queries: WikiArticle[]
   tagsWithCounts: TagWithCount[]
   activeTag: string
+  config: Record<string, unknown>
 }
 
 function ConceptCard({ article }: { article: WikiArticle }) {
@@ -28,13 +31,14 @@ function ConceptCard({ article }: { article: WikiArticle }) {
   )
 }
 
-export function ConceptsPage({ concepts, tagsWithCounts, activeTag }: ConceptsPageProps) {
+export function ConceptsPage({ concepts, sources, queries, tagsWithCounts, activeTag, config }: ConceptsPageProps) {
+  const kbName = String(config.name ?? 'Knowledge Base')
+
   return (
     <div>
-      <div class="mb-8">
-        <h1 class="text-2xl font-bold text-zinc-100 mb-1">Concepts</h1>
-        <p class="text-zinc-500 text-sm">Key ideas extracted across all sources</p>
-      </div>
+      <WikiHeader kbName={kbName} sources={sources} concepts={concepts} queries={queries} activeSection="concepts" />
+
+      <SectionHeader title="Concepts" count={concepts.length} />
 
       {tagsWithCounts.length > 0 && (
         <div class="mb-8">
@@ -49,7 +53,6 @@ export function ConceptsPage({ concepts, tagsWithCounts, activeTag }: ConceptsPa
 
       {concepts.length > 0 ? (
         <section class="mb-10">
-          <SectionHeader title="Concepts" count={concepts.length} />
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {concepts.map(a => <ConceptCard key={a.path} article={a} />)}
           </div>

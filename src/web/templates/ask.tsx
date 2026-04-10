@@ -1,18 +1,20 @@
 /** @jsxImportSource hono/jsx */
 import type { TagWithCount } from '../../lib/wiki.js'
+import type { KbConfig } from '../../lib/config.js'
 import { GhostButton, Input, PageHeader, PrimaryButton, SectionLabel, StatusDot, TagSelectorBar } from './ui/index.js'
 
 interface AskPageProps {
   tagsWithCounts: TagWithCount[]
+  config: KbConfig
 }
 
-export function AskPage({ tagsWithCounts }: AskPageProps) {
+export function AskPage({ tagsWithCounts, config }: AskPageProps) {
   return (
     <div>
       <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js" integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+" crossorigin="anonymous" />
       <script src="https://cdn.jsdelivr.net/npm/dompurify@3.3.3/dist/purify.min.js" integrity="sha384-pcBjnGbkyKeOXaoFkmJiuR9E08/6gkmus6/Strimnxtl3uk0Hx23v345pWyC/MMr" crossorigin="anonymous" />
 
-      <PageHeader title="Ask" subtitle="Ask a question against the compiled wiki." />
+      <PageHeader title="Ask" subtitle={`Ask a question against the compiled ${config.name} wiki.`} />
 
       <div class="mb-6">
         <div class="flex gap-3 mb-4">

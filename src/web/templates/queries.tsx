@@ -1,11 +1,14 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiArticle, TagWithCount } from '../../lib/wiki.js'
-import { Card, EmptyState, Pill, SectionHeader, TagFilterBar } from './ui/index.js'
+import { Card, EmptyState, Pill, SectionHeader, TagFilterBar, WikiHeader } from './ui/index.js'
 
 interface QueriesPageProps {
   queries: WikiArticle[]
+  sources: WikiArticle[]
+  concepts: WikiArticle[]
   tagsWithCounts: TagWithCount[]
   activeTag: string
+  config: Record<string, unknown>
 }
 
 function QueryCard({ article }: { article: WikiArticle }) {
@@ -28,13 +31,14 @@ function QueryCard({ article }: { article: WikiArticle }) {
   )
 }
 
-export function QueriesPage({ queries, tagsWithCounts, activeTag }: QueriesPageProps) {
+export function QueriesPage({ queries, sources, concepts, tagsWithCounts, activeTag, config }: QueriesPageProps) {
+  const kbName = String(config.name ?? 'Knowledge Base')
+
   return (
     <div>
-      <div class="mb-8">
-        <h1 class="text-2xl font-bold text-zinc-100 mb-1">Queries</h1>
-        <p class="text-zinc-500 text-sm">Previous answers filed back into the wiki</p>
-      </div>
+      <WikiHeader kbName={kbName} sources={sources} concepts={concepts} queries={queries} activeSection="queries" />
+
+      <SectionHeader title="Queries" count={queries.length} />
 
       {tagsWithCounts.length > 0 && (
         <div class="mb-8">
@@ -49,7 +53,6 @@ export function QueriesPage({ queries, tagsWithCounts, activeTag }: QueriesPageP
 
       {queries.length > 0 ? (
         <section class="mb-10">
-          <SectionHeader title="Queries" count={queries.length} />
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {queries.map(a => <QueryCard key={a.path} article={a} />)}
           </div>

@@ -1,12 +1,14 @@
 /** @jsxImportSource hono/jsx */
 import type { SearchResult } from '../../lib/search.js'
 import type { TagWithCount } from '../../lib/wiki.js'
+import type { KbConfig } from '../../lib/config.js'
 import { Card, Input, PageHeader, Pill, TagFilterBar } from './ui/index.js'
 
 interface SearchPageProps {
   q: string
   tag: string
   tagsWithCounts: TagWithCount[]
+  config: KbConfig
 }
 
 interface SearchResultsProps {
@@ -15,13 +17,13 @@ interface SearchResultsProps {
   tag?: string
 }
 
-export function SearchPage({ q, tag, tagsWithCounts }: SearchPageProps) {
+export function SearchPage({ q, tag, tagsWithCounts, config }: SearchPageProps) {
   const clearHref = q ? `/search?q=${encodeURIComponent(q)}` : '/search'
   const extraParams = q ? `q=${encodeURIComponent(q)}` : undefined
 
   return (
     <div>
-      <PageHeader title="Search" />
+      <PageHeader title="Search" subtitle={`Search the compiled ${config.name} wiki.`} />
       <div class="mb-6">
         <div class="flex gap-3">
           <Input

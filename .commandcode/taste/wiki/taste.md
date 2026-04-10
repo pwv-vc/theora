@@ -16,3 +16,4 @@
 - In concept frontmatter, emit `related_sources` slugs as quoted Obsidian wiki links (e.g., `"[[post-umlaut-marketing]]"`) rather than bare strings — this makes them clickable in the Obsidian Properties panel and tracked as backlinks. Confidence: 0.85
 - Concept extraction source truncation limit should be a config option (default: 3,000 chars per source article). Confidence: 0.90
 - Concept extraction min/max concept count should be config options (default: min 5, max 10 concepts per compile run). Confidence: 0.90
+- Use all-caps section headers with item counts (e.g., "SOURCE (12)") for wiki page sections — apply this style consistently across wiki home, concepts, and queries pages. Confidence: 0.85

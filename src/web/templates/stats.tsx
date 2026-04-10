@@ -1,10 +1,12 @@
 import { jsx } from 'hono/jsx'
 import type { StatsSummary, LlmCallLog } from '../../lib/llm-stats.js'
+import type { KbConfig } from '../../lib/config.js'
 
 interface StatsPageProps {
   summary: StatsSummary
   days: number
   recentLogs: LlmCallLog[]
+  config: KbConfig
 }
 
 function formatDuration(ms: number): string {
@@ -40,7 +42,7 @@ function formatLogEntry(log: LlmCallLog) {
   )
 }
 
-export function StatsPage({ summary, days, recentLogs }: StatsPageProps) {
+export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps) {
   const actionEntries = Object.entries(summary.byAction).sort((a, b) => b[1].calls - a[1].calls)
   const modelEntries = Object.entries(summary.byModel).sort((a, b) => b[1].calls - a[1].calls)
   const actionPerModelEntries = Object.entries(summary.byActionPerModel).sort((a, b) => a[0].localeCompare(b[0]))
@@ -49,7 +51,10 @@ export function StatsPage({ summary, days, recentLogs }: StatsPageProps) {
   return (
     <div class="max-w-6xl mx-auto p-6">
       <div class="flex items-center justify-between mb-8">
-        <h1 class="text-3xl font-bold">LLM Usage Statistics</h1>
+        <div>
+          <h1 class="text-3xl font-bold">LLM Usage Statistics</h1>
+          <p class="text-zinc-500 text-sm mt-1">Usage and logs for the {config.name} wiki.</p>
+        </div>
         <div class="flex gap-2">
           <a href="/stats?days=7" class={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${days === 7 ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'bg-transparent text-zinc-400 border border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'}`}>7 days</a>
           <a href="/stats?days=30" class={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${days === 30 ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'bg-transparent text-zinc-400 border border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'}`}>30 days</a>

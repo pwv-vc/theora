@@ -1,5 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import type { TagWithCount } from "../../lib/wiki.js";
+import type { KbConfig } from "../../lib/config.js";
 import {
   Input,
   PageHeader,
@@ -16,14 +17,15 @@ const VALID_EXTS_ACCEPT =
 
 interface IngestPageProps {
   tagsWithCounts?: TagWithCount[];
+  config: KbConfig;
 }
 
-export function IngestPage({ tagsWithCounts = [] }: IngestPageProps) {
+export function IngestPage({ tagsWithCounts = [], config }: IngestPageProps) {
   return (
     <div>
       <PageHeader
         title="Ingest"
-        subtitle="Add source documents to the knowledge base."
+        subtitle={`Upload files into the ${config.name} wiki.`}
       />
 
       <Panel class="mb-6">

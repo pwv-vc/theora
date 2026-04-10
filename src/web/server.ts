@@ -149,7 +149,9 @@ export function startServer(port: number): void {
       articles = articles.filter(a => a.tags.some(t => t.toLowerCase() === activeTag.toLowerCase()))
     }
 
+    const sources = articles.filter(a => a.path.startsWith(paths.wikiSources))
     const concepts = articles.filter(a => a.path.startsWith(paths.wikiConcepts))
+    const queries = articles.filter(a => a.path.startsWith(paths.output))
     const tagsWithCounts = getAllTagsWithCounts()
 
     const configPath = join(root, '.theora', 'config.json')
@@ -161,7 +163,7 @@ export function startServer(port: number): void {
       Layout({
         title: `Concepts — ${config.name ?? 'Knowledge Base'}`,
         active: 'concepts',
-        children: ConceptsPage({ concepts, tagsWithCounts, activeTag }),
+        children: ConceptsPage({ concepts, sources, queries, tagsWithCounts, activeTag, config }),
       }).toString()
     )
   })
@@ -176,6 +178,8 @@ export function startServer(port: number): void {
       articles = articles.filter(a => a.tags.some(t => t.toLowerCase() === activeTag.toLowerCase()))
     }
 
+    const sources = articles.filter(a => a.path.startsWith(paths.wikiSources))
+    const concepts = articles.filter(a => a.path.startsWith(paths.wikiConcepts))
     const queries = articles.filter(a => a.path.startsWith(paths.output))
     const tagsWithCounts = getAllTagsWithCounts()
 
@@ -188,7 +192,7 @@ export function startServer(port: number): void {
       Layout({
         title: `Queries — ${config.name ?? 'Knowledge Base'}`,
         active: 'queries',
-        children: QueriesPage({ queries, tagsWithCounts, activeTag }),
+        children: QueriesPage({ queries, sources, concepts, tagsWithCounts, activeTag, config }),
       }).toString()
     )
   })
@@ -255,11 +259,16 @@ export function startServer(port: number): void {
     const tag = c.req.query('tag') ?? ''
     const tagsWithCounts = getAllTagsWithCounts()
 
+    const configPath = join(requireKbRoot(), '.theora', 'config.json')
+    const config = existsSync(configPath)
+      ? JSON.parse(readFileSync(configPath, 'utf-8'))
+      : { name: 'Knowledge Base' }
+
     return c.html(
       Layout({
         title: 'Search',
         active: 'search',
-        children: SearchPage({ q, tag, tagsWithCounts }),
+        children: SearchPage({ q, tag, tagsWithCounts, config }),
       }).toString()
     )
   })
@@ -278,11 +287,17 @@ export function startServer(port: number): void {
 
   app.get('/ask', (c) => {
     const tagsWithCounts = getAllTagsWithCounts()
+
+    const configPath = join(requireKbRoot(), '.theora', 'config.json')
+    const config = existsSync(configPath)
+      ? JSON.parse(readFileSync(configPath, 'utf-8'))
+      : { name: 'Knowledge Base' }
+
     return c.html(
       Layout({
         title: 'Ask',
         active: 'ask',
-        children: AskPage({ tagsWithCounts }),
+        children: AskPage({ tagsWithCounts, config }),
       }).toString()
     )
   })
@@ -314,11 +329,17 @@ export function startServer(port: number): void {
 
   app.get('/ingest', (c) => {
     const tagsWithCounts = getAllTagsWithCounts()
+
+    const configPath = join(requireKbRoot(), '.theora', 'config.json')
+    const config = existsSync(configPath)
+      ? JSON.parse(readFileSync(configPath, 'utf-8'))
+      : { name: 'Knowledge Base' }
+
     return c.html(
       Layout({
         title: 'Ingest',
         active: 'ingest',
-        children: IngestPage({ tagsWithCounts }),
+        children: IngestPage({ tagsWithCounts, config }),
       }).toString()
     )
   })
@@ -387,11 +408,17 @@ export function startServer(port: number): void {
   app.get('/compile', (c) => {
     const ingestedCount = parseInt(c.req.query('ingested') ?? '0', 10)
     const ingestedFiles = c.req.query('files') ?? ''
+
+    const configPath = join(requireKbRoot(), '.theora', 'config.json')
+    const config = existsSync(configPath)
+      ? JSON.parse(readFileSync(configPath, 'utf-8'))
+      : { name: 'Knowledge Base' }
+
     return c.html(
       Layout({
         title: 'Compile',
         active: 'compile',
-        children: CompilePage({ ingestedCount, ingestedFiles }),
+        children: CompilePage({ ingestedCount, ingestedFiles, config }),
       }).toString()
     )
   })
@@ -442,7 +469,7 @@ export function startServer(port: number): void {
       Layout({
         title: `Stats — ${config.name ?? 'Knowledge Base'}`,
         active: 'stats',
-        children: StatsPage({ summary, days, recentLogs }),
+        children: StatsPage({ summary, days, recentLogs, config }),
       }).toString()
     )
   })
@@ -485,3 +512,4 @@ export function startServer(port: number): void {
     console.log(`  http://localhost:${info.port}`)
   })
 }
+

@@ -1,6 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiArticle, TagWithCount } from '../../lib/wiki.js'
-import { Card, EmptyState, Pill, SectionHeader, StatCard, TagFilterBar } from './ui/index.js'
+import { Card, EmptyState, Pill, SectionHeader, StatCard, TagFilterBar, WikiHeader } from './ui/index.js'
 
 interface HomePageProps {
   sources: WikiArticle[]
@@ -63,16 +63,7 @@ export function HomePage({ sources, concepts, queries, tagsWithCounts, activeTag
 
   return (
     <div>
-      <div class="mb-8">
-        <h1 class="text-2xl font-bold text-zinc-100 mb-1">{kbName}</h1>
-        <p class="text-zinc-500 text-sm">
-          <a href="/" class="hover:text-zinc-300 transition-colors">{sources.length} sources</a>
-          {' · '}
-          <a href="/wiki/concepts" class="hover:text-zinc-300 transition-colors">{concepts.length} concepts</a>
-          {' · '}
-          <a href="/wiki/queries" class="hover:text-zinc-300 transition-colors">{queries.length} queries</a>
-        </p>
-      </div>
+      <WikiHeader kbName={kbName} sources={sources} concepts={concepts} queries={queries} activeSection="sources" />
 
       {stats && !activeTag && (
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
@@ -83,20 +74,20 @@ export function HomePage({ sources, concepts, queries, tagsWithCounts, activeTag
         </div>
       )}
 
-      {tagsWithCounts.length > 0 && (
-        <div class="mb-8">
-          <TagFilterBar
-            tagsWithCounts={tagsWithCounts}
-            activeTag={activeTag}
-            hrefBase="/"
-            clearHref="/"
-          />
-        </div>
-      )}
-
       {sources.length > 0 ? (
         <section class="mb-10">
           <SectionHeader title="Sources" count={sources.length} />
+
+          {tagsWithCounts.length > 0 && (
+            <div class="mb-8">
+              <TagFilterBar
+                tagsWithCounts={tagsWithCounts}
+                activeTag={activeTag}
+                hrefBase="/"
+                clearHref="/"
+              />
+            </div>
+          )}
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {sources.map(a => <ArticleCard key={a.path} article={a} />)}
           </div>

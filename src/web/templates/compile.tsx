@@ -1,17 +1,20 @@
 /** @jsxImportSource hono/jsx */
+/** @jsxImportSource hono/jsx */
+import type { KbConfig } from '../../lib/config.js'
 import { CheckboxField, LogPanel, PageHeader, Panel, PrimaryButton, SectionLabel, StatusDot } from './ui/index.js'
 
 interface CompilePageProps {
   ingestedCount?: number
   ingestedFiles?: string
+  config: KbConfig
 }
 
-export function CompilePage({ ingestedCount = 0, ingestedFiles = '' }: CompilePageProps = {}) {
+export function CompilePage({ ingestedCount = 0, ingestedFiles = '', config }: CompilePageProps) {
   const fileNames = ingestedFiles ? ingestedFiles.split(',').filter(Boolean) : []
 
   return (
     <div>
-      <PageHeader title="Compile" subtitle="Process raw sources into the wiki." />
+      <PageHeader title="Compile" subtitle={`Compile new found sources into the ${config.name} wiki and discover concepts.`} />
 
       {ingestedCount > 0 && (
         <div class="mb-6 bg-green-950 border border-green-800 rounded-lg p-4 no-scanline" style="position: relative; z-index: 10001;">
