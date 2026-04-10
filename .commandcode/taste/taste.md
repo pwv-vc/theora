@@ -26,6 +26,8 @@ See [cli/taste.md](cli/taste.md)
 - Support `--output chart` to generate matplotlib PNG charts: LLM generates a self-contained Python script with data inlined as literals (no pandas, no external files), execute it with python3, save both .png and .py to output/. Confidence: 0.70
 - Chart generation must support multiple series for line and bar charts (one series per company, topic, or concept when multiple are present); x-axis dates must be properly formatted using matplotlib date formatting (e.g., mdates). Confidence: 0.75
 
+# security
+See [security/taste.md](security/taste.md)
 # error-handling
 - Validate required configuration (API keys, env vars) early with clear, actionable error messages instead of letting downstream services return cryptic errors. Confidence: 0.70
 - Before executing optional runtime dependencies (e.g., Python modules like matplotlib), check if they are installed with a pre-flight check (e.g., `python3 -c "import matplotlib"`) and emit a clear install instruction (`pip3 install matplotlib`) rather than letting execution fail with a ModuleNotFoundError. Confidence: 0.85

@@ -1,6 +1,19 @@
 import { join, resolve } from 'node:path'
 import { existsSync } from 'node:fs'
 
+/**
+ * Join `base` and `untrusted` and verify the result stays inside `base`.
+ * Throws if the resolved path escapes the base directory.
+ */
+export function safeJoin(base: string, untrusted: string): string {
+  const resolvedBase = resolve(base)
+  const resolved = resolve(base, untrusted)
+  if (resolved !== resolvedBase && !resolved.startsWith(resolvedBase + '/')) {
+    throw new Error(`Path traversal detected: "${untrusted}" escapes base directory`)
+  }
+  return resolved
+}
+
 export function findKbRoot(from: string = process.cwd()): string | null {
   let dir = resolve(from)
   while (true) {

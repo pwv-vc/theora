@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, statSync, readdirSync } from 'node
 import { join, basename, resolve } from 'node:path'
 import pc from 'picocolors'
 import ora from 'ora'
-import { kbPaths, requireKbRoot } from '../lib/paths.js'
+import { kbPaths, requireKbRoot, safeJoin } from '../lib/paths.js'
 import { readManifest, writeManifest } from '../lib/manifest.js'
 import { VALID_EXTS, isUrl, isValidFile, fetchUrl } from '../lib/ingest.js'
 
@@ -26,7 +26,12 @@ export const ingestCommand = new Command('ingest')
     const root = requireKbRoot()
     const paths = kbPaths(root)
 
-    const destDir = options.tag ? join(paths.raw, options.tag) : paths.raw
+    if (options.tag && !/^[a-z0-9][a-z0-9-]*$/.test(options.tag)) {
+      console.error(pc.red(`Invalid tag "${options.tag}" — use lowercase letters, numbers, and hyphens only`))
+      process.exit(1)
+    }
+
+    const destDir = options.tag ? safeJoin(paths.raw, options.tag) : paths.raw
     mkdirSync(destDir, { recursive: true })
 
     const entries = readManifest()

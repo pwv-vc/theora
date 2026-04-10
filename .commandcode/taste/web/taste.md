@@ -1,4 +1,13 @@
 # web
+- Always add Hono `secureHeaders()` middleware as the first middleware in `src/web/server.ts` — sets CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, and Referrer-Policy in one call. Confidence: 0.85
+- Use `sanitize-html` (not isomorphic-dompurify) for server-side HTML sanitization after `marked.parse()` — wrap the output in `parseMarkdown()` before passing to templates. Confidence: 0.85
+- Load DOMPurify from CDN and wrap `marked.parse()` output with `DOMPurify.sanitize()` before assigning to `innerHTML` on the client side (ask page SSE handler). Confidence: 0.85
+- Use `textContent` per cell (not `row.innerHTML` with a template literal) when building table rows from dynamic data — prevents XSS from log fields or other server-sourced strings. Confidence: 0.85
+- Set mermaid `securityLevel: 'strict'` (not `'loose'`) — strict mode sandboxes diagram rendering in an iframe and prevents XSS via diagram content. Confidence: 0.90
+- Escape mermaid `token.text` (replace `<`, `>`, `&`, `"`) in the marked renderer before interpolating into the `<pre class="mermaid">` wrapper — mermaid reads `textContent` so entities are decoded correctly. Confidence: 0.85
+- Validate URL path params (`:slug`) against `/^[a-z0-9][a-z0-9-]*$/` before using them in `path.join()` — prevents path traversal via URL-encoded `../` sequences in wiki and output routes. Confidence: 0.90
+- Validate the `tag` POST body param against `/^[a-z0-9][a-z0-9-]*$/` and return 400 if invalid — prevents directory traversal via the tag-as-subdirectory pattern. Confidence: 0.90
+- Add SRI `integrity` + `crossorigin="anonymous"` attributes to all CDN `<script>` tags (htmx, mermaid, marked, DOMPurify) — prevents supply-chain attacks if a CDN is compromised. Confidence: 0.80
 - The web `ask` handler must share the same library code as the CLI `ask` command — extract shared logic (article separation, context building, filing answers) into shared lib functions so behavior stays consistent and changes propagate to both. Confidence: 0.85
 - All web handlers (ask, compile, search) must use the same shared lib code as their CLI counterparts — web and CLI should always behave identically; shared logic lives in src/lib/, not duplicated in src/web/ or src/commands/. Confidence: 0.90
 - The brand name is "theroa" — logo/favicon should use an SVG icon alongside the wordmark, inspired by the Max Headroom 80s aesthetic, evoking knowledge, coordination, and multi-source data (e.g., multi-colored converging lines). The icon should work per-theme and as a favicon. Confidence: 0.75
