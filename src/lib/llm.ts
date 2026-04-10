@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 import { readConfig } from './config.js'
 import { loadEnv } from './env.js'
 import { logLlmCall, estimateCost } from './llm-stats.js'
+import type { KbConfig } from './config.js'
 
 import type { Provider } from './types.js'
 
@@ -32,8 +33,15 @@ interface TokenUsageStats {
   outputTokens: number
 }
 
-function resolveProvider(options: LlmOptions): { provider: Provider; model: string } {
-  const config = readConfig()
+export interface OpenAiCompatibleClientConfig {
+  apiKey: string
+  baseURL: string
+}
+
+export function resolveProvider(
+  options: LlmOptions,
+  config: Pick<KbConfig, 'provider' | 'model' | 'models'> = readConfig(),
+): { provider: Provider; model: string } {
   const provider = options.provider ?? config.provider
 
   // Check for action-specific model first, then fall back to default
@@ -45,6 +53,31 @@ function resolveProvider(options: LlmOptions): { provider: Provider; model: stri
   model = options.model ?? model ?? config.model
 
   return { provider, model }
+}
+
+export function getOpenAiCompatibleClientConfig(
+  env: NodeJS.ProcessEnv = process.env,
+): OpenAiCompatibleClientConfig {
+  const rawBaseUrl = env.OPENAI_COMPATIBLE_BASE_URL?.trim()
+  if (!rawBaseUrl) {
+    throw new Error('OPENAI_COMPATIBLE_BASE_URL not set. Add it to .env in your knowledge base root.')
+  }
+
+  let baseURL: string
+  try {
+    const parsedUrl = new URL(rawBaseUrl)
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new Error('invalid protocol')
+    }
+    baseURL = parsedUrl.toString()
+  } catch {
+    throw new Error('OPENAI_COMPATIBLE_BASE_URL must be a valid http(s) URL, for example http://localhost:11434/v1')
+  }
+
+  return {
+    apiKey: env.OPENAI_COMPATIBLE_API_KEY?.trim() ?? '',
+    baseURL,
+  }
 }
 
 function estimateTextTokens(text: string): number {
@@ -99,19 +132,16 @@ export function normalizeOpenAiUsage(
 
 const openAiClients: Partial<Record<OpenAiFamilyProvider, OpenAI>> = {}
 
-function getOpenAI(provider: OpenAiFamilyProvider = 'openai'): OpenAI {
+export function resetOpenAiClientCache(): void {
+  delete openAiClients.openai
+  delete openAiClients['openai-compatible']
+}
+
+export function getOpenAI(provider: OpenAiFamilyProvider = 'openai'): OpenAI {
   if (!openAiClients[provider]) {
     loadEnv()
     if (provider === 'openai-compatible') {
-      const compatibleBaseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL?.trim()
-      if (!compatibleBaseUrl) {
-        throw new Error('OPENAI_COMPATIBLE_BASE_URL not set. Add it to .env in your knowledge base root.')
-      }
-      const compatibleApiKey = process.env.OPENAI_COMPATIBLE_API_KEY?.trim() || 'not-needed'
-      openAiClients[provider] = new OpenAI({
-        apiKey: compatibleApiKey,
-        baseURL: compatibleBaseUrl,
-      })
+      openAiClients[provider] = new OpenAI(getOpenAiCompatibleClientConfig())
       return openAiClients[provider]
     }
 

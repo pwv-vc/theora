@@ -64,7 +64,7 @@ OPENAI_API_KEY=
 
 # OpenAI-compatible
 # OPENAI_COMPATIBLE_BASE_URL=http://localhost:11434/v1
-# OPENAI_COMPATIBLE_API_KEY=
+# OPENAI_COMPATIBLE_API_KEY=   # optional for local servers
 
 # Anthropic
 # ANTHROPIC_API_KEY=

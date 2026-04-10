@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { kbPaths, requireKbRoot } from './paths.js'
-import type { Provider } from './types.js'
+import { DEFAULT_MODELS, type Provider } from './types.js'
 
 export interface ModelConfig {
   default?: string
@@ -26,7 +26,7 @@ export interface KbConfig {
   conceptMax: number
 }
 
-export const DEFAULT_ACTION_MODELS: ModelConfig = {
+const OPENAI_ACTION_MODELS: ModelConfig = {
   default: 'gpt-4o',
   compile: 'gpt-4o-mini',
   vision: 'gpt-4o',
@@ -38,12 +38,38 @@ export const DEFAULT_ACTION_MODELS: ModelConfig = {
   lint: 'gpt-4o-mini',
 }
 
+function createSingleModelActionConfig(model: string): ModelConfig {
+  return {
+    default: model,
+    compile: model,
+    vision: model,
+    concepts: model,
+    ask: model,
+    slides: model,
+    chart: model,
+    lint: model,
+    rank: model,
+  }
+}
+
+export function getDefaultActionModels(
+  provider: Provider,
+  model: string = DEFAULT_MODELS[provider],
+): ModelConfig {
+  if (provider === 'openai') {
+    return { ...OPENAI_ACTION_MODELS }
+  }
+  return createSingleModelActionConfig(model)
+}
+
+export const DEFAULT_ACTION_MODELS: ModelConfig = getDefaultActionModels('openai')
+
 const DEFAULT_CONFIG: KbConfig = {
   name: 'knowledge-base',
   created: new Date().toISOString(),
   provider: 'openai',
   model: 'gpt-4o',
-  models: DEFAULT_ACTION_MODELS,
+  models: getDefaultActionModels('openai'),
   compileConcurrency: 3,
   conceptSummaryChars: 3000,
   conceptMin: 5,
@@ -57,8 +83,9 @@ export function readConfig(): KbConfig {
     return DEFAULT_CONFIG
   }
   const raw = JSON.parse(readFileSync(paths.configFile, 'utf-8'))
-  // Merge models separately to preserve defaults for unspecified actions
-  const mergedModels = { ...DEFAULT_ACTION_MODELS, ...raw.models }
+  const provider = (raw.provider as Provider | undefined) ?? DEFAULT_CONFIG.provider
+  const model = typeof raw.model === 'string' && raw.model.trim() ? raw.model : DEFAULT_MODELS[provider]
+  const mergedModels = { ...getDefaultActionModels(provider, model), ...raw.models }
   return { ...DEFAULT_CONFIG, ...raw, models: mergedModels }
 }
 

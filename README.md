@@ -438,7 +438,7 @@ Theora supports multiple LLM providers. OpenAI is the default.
 | Provider | Default Model | API Key Variable |
 |----------|--------------|-----------------|
 | `openai` | `gpt-4o` | `OPENAI_API_KEY` |
-| `openai-compatible` | `gpt-4o` | `OPENAI_COMPATIBLE_API_KEY` |
+| `openai-compatible` | `llama3.1:8b` | `OPENAI_COMPATIBLE_API_KEY` |
 | `anthropic` | `claude-sonnet-4-20250514` | `ANTHROPIC_API_KEY` |
 
 Set the provider at init time:
@@ -450,7 +450,7 @@ theora init my-research --provider openai-compatible --model llama3.1:8b
 theora init my-research --concurrency 5
 ```
 
-For `openai-compatible`, set `OPENAI_COMPATIBLE_BASE_URL` to your server's `/v1` endpoint. `OPENAI_COMPATIBLE_API_KEY` is optional and defaults to `not-needed` for local servers that do not require authentication.
+For `openai-compatible`, set `OPENAI_COMPATIBLE_BASE_URL` to your server's `/v1` endpoint. `OPENAI_COMPATIBLE_API_KEY` is optional and defaults to an empty value for local servers that do not require authentication.
 
 Or edit the KB-local `.theora/config.json` directly:
 

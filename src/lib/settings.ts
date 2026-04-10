@@ -19,13 +19,21 @@ export interface SettingsInfo {
   globalEnvPath: string
 }
 
+function debugFileAccessIssue(path: string, error: unknown): void {
+  if (process.env.THEORA_DEBUG !== '1') return
+
+  const detail = error instanceof Error ? error.message : String(error)
+  console.warn(`[settings] cannot access ${path}: ${detail}`)
+}
+
 function isReadableFile(path: string): boolean {
   if (!existsSync(path)) return false
 
   try {
     accessSync(path, constants.R_OK)
     return true
-  } catch {
+  } catch (error) {
+    debugFileAccessIssue(path, error)
     return false
   }
 }

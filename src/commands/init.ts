@@ -9,7 +9,7 @@ import { DEFAULT_THEME } from '../lib/theme.js'
 import type { KbConfig } from '../lib/config.js'
 import type { Provider } from '../lib/types.js'
 import { DEFAULT_MODELS } from '../lib/types.js'
-import { DEFAULT_ACTION_MODELS } from '../lib/config.js'
+import { getDefaultActionModels } from '../lib/config.js'
 import { createGlobalEnv, globalEnvExists, getGlobalEnvPath } from '../lib/env.js'
 
 export const initCommand = new Command('init')
@@ -36,7 +36,17 @@ export const initCommand = new Command('init')
       mkdirSync(dir, { recursive: true })
     }
 
-    const config: KbConfig = { name, created: new Date().toISOString(), provider, model, models: DEFAULT_ACTION_MODELS, compileConcurrency: parseInt(options.concurrency, 10), conceptSummaryChars: 3000, conceptMin: 5, conceptMax: 10 }
+    const config: KbConfig = {
+      name,
+      created: new Date().toISOString(),
+      provider,
+      model,
+      models: getDefaultActionModels(provider, model),
+      compileConcurrency: parseInt(options.concurrency, 10),
+      conceptSummaryChars: 3000,
+      conceptMin: 5,
+      conceptMax: 10,
+    }
     writeFileSync(paths.configFile, JSON.stringify(config, null, 2) + '\n')
 
     if (!existsSync(paths.theme)) {
@@ -51,7 +61,7 @@ OPENAI_API_KEY=
 
 # OpenAI-compatible
 # OPENAI_COMPATIBLE_BASE_URL=http://localhost:11434/v1
-# OPENAI_COMPATIBLE_API_KEY=
+# OPENAI_COMPATIBLE_API_KEY=   # optional for local servers
 
 # Anthropic
 # ANTHROPIC_API_KEY=
