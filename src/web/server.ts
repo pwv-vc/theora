@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, rmSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, rmSync, mkdirSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { Hono } from 'hono'
@@ -115,11 +115,14 @@ export function startServer(port: number): void {
     const root = requireKbRoot()
     const paths = kbPaths(root)
     const rawPath = c.req.param('filepath') ?? ''
-    if (!rawPath) return c.notFound()
 
     try {
       const filePath = safeJoin(paths.raw, rawPath)
       if (!existsSync(filePath)) return c.notFound()
+
+      // Check if path is actually a file (not a directory)
+      const stats = statSync(filePath)
+      if (!stats.isFile()) return c.notFound()
 
       // Determine content type based on extension
       const ext = filePath.toLowerCase().split('.').pop() || ''
@@ -133,12 +136,40 @@ export function startServer(port: number): void {
         'pdf': 'application/pdf',
         'txt': 'text/plain',
         'md': 'text/markdown',
+        'json': 'application/json',
+        'mp3': 'audio/mpeg',
+        'mp4': 'video/mp4',
+        'webm': 'video/webm',
+        'ogg': 'audio/ogg',
+        'wav': 'audio/wav',
       }
       const contentType = contentTypes[ext] || 'application/octet-stream'
 
+      // Generate ETag based on file modification time and size
+      const etag = `"${stats.mtime.getTime().toString(16)}-${stats.size.toString(16)}"`
+
+      // Check If-None-Match header for conditional requests
+      const ifNoneMatch = c.req.header('If-None-Match')
+      if (ifNoneMatch === etag) {
+        return c.body(null, 304)
+      }
+
       const fileBuffer = readFileSync(filePath)
-      return c.body(fileBuffer, 200, { 'Content-Type': contentType })
-    } catch {
+      return c.body(fileBuffer, 200, {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=3600',
+        'ETag': etag,
+      })
+    } catch (err) {
+      // Distinguish between different error types
+      if (err instanceof Error) {
+        if (err.message.includes('ENOENT')) {
+          return c.notFound()
+        }
+        if (err.message.includes('EACCES') || err.message.includes('EPERM')) {
+          return c.json({ error: 'Access denied' }, 403)
+        }
+      }
       return c.notFound()
     }
   })
