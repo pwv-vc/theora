@@ -50,3 +50,4 @@
 - Avoid hover-based dropdown menus for navigation — they are hard to control and make submenu items difficult to select. Prefer click-based menus or other Tailwind UI navigation patterns that don't rely on hover persistence. Confidence: 0.80
 - When implementing SSE (Server-Sent Events) endpoints, reference existing working SSE implementations in the codebase (e.g., compile, ask stream handlers) to ensure correct implementation patterns. Confidence: 0.75
 - Store SVG UI icons in a dedicated `ui/icons/` directory with each icon as its own file — one icon per file for modular organization and easy imports. Confidence: 0.85
+- When picking colors for UI elements, use theme-based CSS custom properties (e.g., `var(--color-accent)`) rather than hardcoded Tailwind colors — colors should adapt to the active theme. Confidence: 0.80
