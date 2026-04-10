@@ -1,4 +1,5 @@
 # web
+- Use Hono param patterns like `:filepath{.+}` instead of `*` wildcards for capturing multi-segment paths — `c.req.param('*')` returns empty for routes like `/raw/*`. Confidence: 0.75
 - Always add Hono `secureHeaders()` middleware as the first middleware in `src/web/server.ts` — sets CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, and Referrer-Policy in one call. Confidence: 0.85
 - Use `sanitize-html` (not isomorphic-dompurify) for server-side HTML sanitization after `marked.parse()` — wrap the output in `parseMarkdown()` before passing to templates. Confidence: 0.85
 - Load DOMPurify from CDN and wrap `marked.parse()` output with `DOMPurify.sanitize()` before assigning to `innerHTML` on the client side (ask page SSE handler). Confidence: 0.85

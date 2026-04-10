@@ -74,7 +74,7 @@ async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, 
   const meta: ArticleMeta = {
     title: titleFromFilename(file),
     type: 'source',
-    sourceFile: basename(file),
+    sourceFile: relative(paths.raw, file),
     sourceType: 'text',
     tags: mergeTags(ingestTag, tags),
   }
@@ -103,7 +103,7 @@ async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, i
   const meta: ArticleMeta = {
     title: titleFromFilename(file),
     type: 'source',
-    sourceFile: basename(file),
+    sourceFile: relative(paths.raw, file),
     sourceType: 'pdf',
     tags: mergeTags(ingestTag, tags),
   }
@@ -132,7 +132,7 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
   const meta: ArticleMeta = {
     title: titleFromFilename(file),
     type: 'source',
-    sourceFile: basename(file),
+    sourceFile: relative(paths.raw, file),
     sourceType: 'image',
     tags: mergeTags(ingestTag, tags),
   }
