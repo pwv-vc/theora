@@ -27,9 +27,9 @@ const ALLOWED_PYTHON_IMPORTS = new Set([
 const DISALLOWED_PATTERNS = /\b(?:subprocess|os\.system|os\.popen|os\.exec|__import__|exec\s*\(|eval\s*\(|compile\s*\(|importlib|ctypes|socket|urllib|requests|httpx|aiohttp|ftplib|smtplib|telnetlib|xmlrpc|pickle|shelve|shutil\.rmtree|pathlib\.Path\.unlink)\b/
 
 export function validateChartCode(code: string): void {
-  const importLines = code.match(/^(?:import|from)\s+\S+/gm) ?? []
+  const importLines = code.match(/^\s*(?:import|from)\s+\S+/gm) ?? []
   for (const line of importLines) {
-    const match = line.match(/^(?:import|from)\s+(\S+)/)
+    const match = line.match(/(?:import|from)\s+(\S+)/)
     if (!match) continue
     const topLevel = match[1].split('.')[0]
     const full = match[1]
@@ -73,7 +73,7 @@ export async function generateChart(
   )
 
   const rawCode = extractPythonCode(raw)
-  const code = rawCode.replace(pngFilename, pngPath)
+  const code = rawCode.replaceAll(pngFilename, pngPath)
 
   try {
     validateChartCode(code)

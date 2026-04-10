@@ -30,7 +30,7 @@ export function Layout({ title, active, children }: LayoutProps) {
         <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theora-theme')||'broadcast';document.documentElement.setAttribute('data-theme',t);})();` }} />
         <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous" defer />
         <script type="module" dangerouslySetInnerHTML={{ __html: `
-          import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+          import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.14.0/dist/mermaid.esm.min.mjs';
           const theme = document.documentElement.getAttribute('data-theme');
           mermaid.initialize({
             startOnLoad: true,

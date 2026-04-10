@@ -87,7 +87,7 @@ export async function fetchUrl(url: string, destDir: string): Promise<{ name: st
 
   const contentType = response.headers.get('content-type') ?? 'text/html'
   const name = filenameFromUrl(url, contentType)
-  const destPath = join(destDir, name)
+  const destPath = safeJoin(destDir, name)
 
   const mimeBase = contentType.split(';')[0].trim()
   const isImage = mimeBase.startsWith('image/')

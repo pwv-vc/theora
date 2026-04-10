@@ -1,5 +1,13 @@
 import { basename, extname } from 'node:path'
 
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 export function slugify(text: string): string {
   return text
     .toLowerCase()

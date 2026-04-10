@@ -7,6 +7,29 @@ import { streamSSE } from 'hono/streaming'
 import { secureHeaders } from 'hono/secure-headers'
 import { marked, Renderer } from 'marked'
 import sanitizeHtml from 'sanitize-html'
+import { requireKbRoot, kbPaths, safeJoin } from '../lib/paths.js'
+import { listWikiArticles, readWikiIndex, getAllTagsWithCounts } from '../lib/wiki.js'
+import { findRelevantArticles, buildContext } from '../lib/query.js'
+import { llmStream } from '../lib/llm.js'
+import { searchArticles } from '../lib/search.js'
+import { runCompile } from '../lib/compile.js'
+import { MD_SYSTEM, buildMdUserPrompt } from '../lib/prompts/index.js'
+import { normalizeLinksForWeb } from '../lib/wiki.js'
+import { streamAsk } from '../lib/ask.js'
+import { readManifest, writeManifest } from '../lib/manifest.js'
+import { ingestWebFile, ingestWebUrl } from '../lib/ingest.js'
+import { escapeHtml } from '../lib/utils.js'
+import { Layout } from './templates/layout.js'
+import { HomePage } from './templates/home.js'
+import { ArticlePage } from './templates/article.js'
+import { SearchPage, SearchResults } from './templates/search.js'
+import { AskPage } from './templates/ask.js'
+import { CompilePage } from './templates/compile.js'
+import { ConceptsPage } from './templates/concepts.js'
+import { QueriesPage } from './templates/queries.js'
+import { IngestPage } from './templates/ingest.js'
+import { StatsPage } from './templates/stats.js'
+import { readLlmLogs, summarizeStats } from '../lib/llm-stats.js'
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: [
@@ -27,14 +50,6 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   disallowedTagsMode: 'discard',
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
 function parseMarkdown(content: string): string {
   const renderer = new Renderer()
   const originalCode = renderer.code.bind(renderer)
@@ -47,28 +62,6 @@ function parseMarkdown(content: string): string {
   const raw = marked.parse(content, { renderer }) as string
   return sanitizeHtml(raw, SANITIZE_OPTIONS)
 }
-import { requireKbRoot, kbPaths, safeJoin } from '../lib/paths.js'
-import { listWikiArticles, readWikiIndex, getAllTagsWithCounts } from '../lib/wiki.js'
-import { findRelevantArticles, buildContext } from '../lib/query.js'
-import { llmStream } from '../lib/llm.js'
-import { searchArticles } from '../lib/search.js'
-import { runCompile } from '../lib/compile.js'
-import { MD_SYSTEM, buildMdUserPrompt } from '../lib/prompts/index.js'
-import { normalizeLinksForWeb } from '../lib/wiki.js'
-import { streamAsk } from '../lib/ask.js'
-import { readManifest, writeManifest } from '../lib/manifest.js'
-import { ingestWebFile, ingestWebUrl } from '../lib/ingest.js'
-import { Layout } from './templates/layout.js'
-import { HomePage } from './templates/home.js'
-import { ArticlePage } from './templates/article.js'
-import { SearchPage, SearchResults } from './templates/search.js'
-import { AskPage } from './templates/ask.js'
-import { CompilePage } from './templates/compile.js'
-import { ConceptsPage } from './templates/concepts.js'
-import { QueriesPage } from './templates/queries.js'
-import { IngestPage } from './templates/ingest.js'
-import { StatsPage } from './templates/stats.js'
-import { readLlmLogs, summarizeStats } from '../lib/llm-stats.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
