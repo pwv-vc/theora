@@ -72,6 +72,12 @@ settingsRoutes.get('/', (c) => {
                     <span class="text-zinc-500 text-sm">Default Model</span>
                     <p class="font-mono text-sm text-zinc-300">{info.kbConfig.model}</p>
                   </div>
+                  {info.kbConfig.provider === 'openai-compatible' && info.kbConfig.localModelPricing && (
+                    <div>
+                      <span class="text-zinc-500 text-sm">Local Pricing</span>
+                      <p class="text-zinc-300">{info.kbConfig.localModelPricing.mode}</p>
+                    </div>
+                  )}
                 </>
               )}
             </div>

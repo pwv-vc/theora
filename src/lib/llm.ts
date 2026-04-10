@@ -3,8 +3,11 @@ import OpenAI from 'openai'
 import { readConfig } from './config.js'
 import { loadEnv } from './env.js'
 import { logLlmCall, estimateCost } from './llm-stats.js'
+import type { KbConfig, LocalModelPricingConfig } from './config.js'
 
 import type { Provider } from './types.js'
+
+type OpenAiFamilyProvider = Extract<Provider, 'openai' | 'openai-compatible'>
 
 export type LlmAction =
   | 'compile'
@@ -25,8 +28,20 @@ export interface LlmOptions {
   meta?: string | null
 }
 
-function resolveProvider(options: LlmOptions): { provider: Provider; model: string } {
-  const config = readConfig()
+interface TokenUsageStats {
+  inputTokens: number
+  outputTokens: number
+}
+
+export interface OpenAiCompatibleClientConfig {
+  apiKey: string
+  baseURL: string
+}
+
+export function resolveProvider(
+  options: LlmOptions,
+  config: Pick<KbConfig, 'provider' | 'model' | 'models'> = readConfig(),
+): { provider: Provider; model: string } {
   const provider = options.provider ?? config.provider
 
   // Check for action-specific model first, then fall back to default
@@ -40,23 +55,123 @@ function resolveProvider(options: LlmOptions): { provider: Provider; model: stri
   return { provider, model }
 }
 
+export function getOpenAiCompatibleClientConfig(
+  env: NodeJS.ProcessEnv = process.env,
+): OpenAiCompatibleClientConfig {
+  const rawBaseUrl = env.OPENAI_COMPATIBLE_BASE_URL?.trim()
+  if (!rawBaseUrl) {
+    throw new Error('OPENAI_COMPATIBLE_BASE_URL not set. Add it to .env in your knowledge base root.')
+  }
+
+
+  // Prevent path traversal attacks before URL parsing (new URL() normalizes paths)
+  if (rawBaseUrl.includes('..')) {
+    throw new Error('OPENAI_COMPATIBLE_BASE_URL must be a valid http(s) URL, for example http://localhost:11434/v1')
+  }
+  let baseURL: string
+  try {
+    const parsedUrl = new URL(rawBaseUrl)
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new Error('invalid protocol')
+    }
+  
+    baseURL = parsedUrl.toString()
+  } catch {
+    throw new Error('OPENAI_COMPATIBLE_BASE_URL must be a valid http(s) URL, for example http://localhost:11434/v1')
+  }
+
+  return {
+    apiKey: env.OPENAI_COMPATIBLE_API_KEY?.trim() ?? '',
+    baseURL,
+  }
+}
+
+/** Fallback token estimation when usage data is unavailable from the API.
+ * Uses a rough heuristic of 4 characters per token. */
+function estimateTextTokens(text: string): number {
+  return Math.ceil(text.length / 4)
+}
+
+function extractTextContent(content: unknown): string {
+  if (typeof content === 'string') return content
+  if (!Array.isArray(content)) return ''
+
+  return content
+    .map((part) => {
+      if (!part || typeof part !== 'object') return ''
+      if ('type' in part && part.type === 'text' && 'text' in part && typeof part.text === 'string') {
+        return part.text
+      }
+      return ''
+    })
+    .join('')
+}
+
+function readUsageNumber(
+  usage: Record<string, unknown> | null | undefined,
+  fieldNames: string[],
+): number | undefined {
+  if (!usage) return undefined
+
+  for (const fieldName of fieldNames) {
+    const value = usage[fieldName]
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value
+    }
+  }
+
+  return undefined
+}
+
+export function normalizeOpenAiUsage(
+  usage: Record<string, unknown> | null | undefined,
+  inputText: string,
+  outputText: string,
+): TokenUsageStats {
+  const inputTokens = readUsageNumber(usage, ['prompt_tokens', 'input_tokens', 'prompt_eval_count'])
+    ?? estimateTextTokens(inputText)
+  const outputTokens = readUsageNumber(usage, ['completion_tokens', 'output_tokens', 'eval_count'])
+    ?? estimateTextTokens(outputText)
+
+  return { inputTokens, outputTokens }
+}
+
 // --- OpenAI ---
 
-let openaiClient: OpenAI | null = null
+const openAiClients: Partial<Record<OpenAiFamilyProvider, OpenAI>> = {}
 
-function getOpenAI(): OpenAI {
-  if (!openaiClient) {
+export function resetOpenAiClientCache(): void {
+  delete openAiClients.openai
+  delete openAiClients['openai-compatible']
+}
+
+export function getOpenAI(provider: OpenAiFamilyProvider = 'openai'): OpenAI {
+  if (!openAiClients[provider]) {
     loadEnv()
+    if (provider === 'openai-compatible') {
+      openAiClients[provider] = new OpenAI(getOpenAiCompatibleClientConfig())
+      return openAiClients[provider]
+    }
+
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY not set. Add it to .env in your knowledge base root.')
     }
-    openaiClient = new OpenAI()
+    openAiClients[provider] = new OpenAI()
   }
-  return openaiClient
+  return openAiClients[provider]
 }
 
-async function openaiComplete(prompt: string, system: string, model: string, maxTokens: number, action: string = 'unknown', meta?: string | null): Promise<string> {
-  const client = getOpenAI()
+async function openaiComplete(
+  prompt: string,
+  system: string,
+  model: string,
+  maxTokens: number,
+  provider: OpenAiFamilyProvider = 'openai',
+  action: string = 'unknown',
+  meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
+): Promise<string> {
+  const client = getOpenAI(provider)
   const startTime = Date.now()
   const response = await client.chat.completions.create({
     model,
@@ -68,23 +183,27 @@ async function openaiComplete(prompt: string, system: string, model: string, max
   })
   const durationMs = Date.now() - startTime
 
-  const usage = response.usage
-  const inputTokens = usage?.prompt_tokens ?? 0
-  const outputTokens = usage?.completion_tokens ?? 0
+  const outputText = extractTextContent(response.choices[0]?.message?.content)
+  const { inputTokens, outputTokens } = normalizeOpenAiUsage(
+    response.usage as Record<string, unknown> | undefined,
+    `${system}\n${prompt}`,
+    outputText,
+  )
+  const reportedModel = response.model ?? model
 
   logLlmCall({
     timestamp: new Date().toISOString(),
     action,
     meta,
-    provider: 'openai',
-    model,
+    provider,
+    model: reportedModel,
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens),
+    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, provider, localModelPricing, durationMs),
   })
 
-  return response.choices[0]?.message?.content ?? ''
+  return outputText
 }
 
 async function openaiStream(
@@ -92,11 +211,13 @@ async function openaiStream(
   system: string,
   model: string,
   maxTokens: number,
+  provider: OpenAiFamilyProvider = 'openai',
   onText: (text: string) => void,
   action: string = 'unknown',
   meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
 ): Promise<string> {
-  const client = getOpenAI()
+  const client = getOpenAI(provider)
   const startTime = Date.now()
   const stream = await client.chat.completions.create({
     model,
@@ -126,12 +247,12 @@ async function openaiStream(
     timestamp: new Date().toISOString(),
     action,
     meta,
-    provider: 'openai',
+    provider,
     model,
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens),
+    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, provider, localModelPricing, durationMs),
   })
 
   return full
@@ -152,7 +273,15 @@ function getAnthropic(): Anthropic {
   return anthropicClient
 }
 
-async function anthropicComplete(prompt: string, system: string, model: string, maxTokens: number, action: string = 'unknown', meta?: string | null): Promise<string> {
+async function anthropicComplete(
+  prompt: string,
+  system: string,
+  model: string,
+  maxTokens: number,
+  action: string = 'unknown',
+  meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
+): Promise<string> {
   const client = getAnthropic()
   const startTime = Date.now()
   const response = await client.messages.create({
@@ -164,19 +293,20 @@ async function anthropicComplete(prompt: string, system: string, model: string, 
   const durationMs = Date.now() - startTime
 
   const usage = response.usage
-  const inputTokens = usage?.input_tokens ?? 0
-  const outputTokens = usage?.output_tokens ?? 0
+  const inputTokens = usage?.input_tokens ?? estimateTextTokens(`${system}\n${prompt}`)
+  const outputTokens = usage?.output_tokens ?? estimateTextTokens(blockText(response.content[0]))
+  const reportedModel = response.model ?? model
 
   logLlmCall({
     timestamp: new Date().toISOString(),
     action,
     meta,
     provider: 'anthropic',
-    model,
+    model: reportedModel,
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens),
+    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs),
   })
 
   const block = response.content[0]
@@ -194,6 +324,7 @@ async function anthropicStream(
   onText: (text: string) => void,
   action: string = 'unknown',
   meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
 ): Promise<string> {
   const client = getAnthropic()
   const startTime = Date.now()
@@ -226,7 +357,7 @@ async function anthropicStream(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens),
+    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs),
   })
 
   return full
@@ -245,10 +376,12 @@ async function openaiVision(
   system: string,
   model: string,
   maxTokens: number,
+  provider: OpenAiFamilyProvider = 'openai',
   action: string = 'vision',
   meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
 ): Promise<string> {
-  const client = getOpenAI()
+  const client = getOpenAI(provider)
   const startTime = Date.now()
   const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
     ...images.map((img): OpenAI.Chat.Completions.ChatCompletionContentPart => ({
@@ -268,23 +401,27 @@ async function openaiVision(
   })
   const durationMs = Date.now() - startTime
 
-  const usage = response.usage
-  const inputTokens = usage?.prompt_tokens ?? 0
-  const outputTokens = usage?.completion_tokens ?? 0
+  const outputText = extractTextContent(response.choices[0]?.message?.content)
+  const { inputTokens, outputTokens } = normalizeOpenAiUsage(
+    response.usage as Record<string, unknown> | undefined,
+    `${system}\n${prompt}`,
+    outputText,
+  )
+  const reportedModel = response.model ?? model
 
   logLlmCall({
     timestamp: new Date().toISOString(),
     action,
     meta,
-    provider: 'openai',
-    model,
+    provider,
+    model: reportedModel,
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens),
+    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, provider, localModelPricing, durationMs),
   })
 
-  return response.choices[0]?.message?.content ?? ''
+  return outputText
 }
 
 async function anthropicVision(
@@ -295,6 +432,7 @@ async function anthropicVision(
   maxTokens: number,
   action: string = 'vision',
   meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
 ): Promise<string> {
   const client = getAnthropic()
   const startTime = Date.now()
@@ -327,7 +465,7 @@ async function anthropicVision(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens),
+    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs),
   })
 
   const block = response.content[0]
@@ -337,6 +475,10 @@ async function anthropicVision(
   return block.text
 }
 
+function blockText(block: Anthropic.Messages.ContentBlock): string {
+  return block.type === 'text' ? block.text : ''
+}
+
 // --- Public API ---
 
 export async function llmVision(
@@ -344,29 +486,33 @@ export async function llmVision(
   images: ImageInput[],
   options: LlmOptions = {},
 ): Promise<string> {
-  const { provider, model } = resolveProvider(options)
+  const config = readConfig()
+  const { provider, model } = resolveProvider(options, config)
   const system = options.system ?? 'You are a knowledge base assistant.'
   const maxTokens = options.maxTokens ?? 4096
   const action = options.action ?? 'vision'
   const meta = options.meta
+  const localModelPricing = config.localModelPricing
 
   if (provider === 'anthropic') {
-    return anthropicVision(prompt, images, system, model, maxTokens, action, meta)
+    return anthropicVision(prompt, images, system, model, maxTokens, action, meta, localModelPricing)
   }
-  return openaiVision(prompt, images, system, model, maxTokens, action, meta)
+  return openaiVision(prompt, images, system, model, maxTokens, provider, action, meta, localModelPricing)
 }
 
 export async function llm(prompt: string, options: LlmOptions = {}): Promise<string> {
-  const { provider, model } = resolveProvider(options)
+  const config = readConfig()
+  const { provider, model } = resolveProvider(options, config)
   const system = options.system ?? 'You are a knowledge base assistant.'
   const maxTokens = options.maxTokens ?? 8192
   const action = options.action ?? 'unknown'
   const meta = options.meta
+  const localModelPricing = config.localModelPricing
 
   if (provider === 'anthropic') {
-    return anthropicComplete(prompt, system, model, maxTokens, action, meta)
+    return anthropicComplete(prompt, system, model, maxTokens, action, meta, localModelPricing)
   }
-  return openaiComplete(prompt, system, model, maxTokens, action, meta)
+  return openaiComplete(prompt, system, model, maxTokens, provider, action, meta, localModelPricing)
 }
 
 export async function llmStream(
@@ -374,14 +520,16 @@ export async function llmStream(
   options: LlmOptions = {},
   onText: (text: string) => void,
 ): Promise<string> {
-  const { provider, model } = resolveProvider(options)
+  const config = readConfig()
+  const { provider, model } = resolveProvider(options, config)
   const system = options.system ?? 'You are a knowledge base assistant.'
   const maxTokens = options.maxTokens ?? 8192
   const action = options.action ?? 'unknown'
   const meta = options.meta
+  const localModelPricing = config.localModelPricing
 
   if (provider === 'anthropic') {
-    return anthropicStream(prompt, system, model, maxTokens, onText, action, meta)
+    return anthropicStream(prompt, system, model, maxTokens, onText, action, meta, localModelPricing)
   }
-  return openaiStream(prompt, system, model, maxTokens, onText, action, meta)
+  return openaiStream(prompt, system, model, maxTokens, provider, onText, action, meta, localModelPricing)
 }

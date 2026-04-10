@@ -1,35 +1,38 @@
 import dotenv from 'dotenv'
 import { join } from 'node:path'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync, accessSync, constants } from 'node:fs'
 import { homedir } from 'node:os'
 import { findKbRoot } from './paths.js'
 
 let loaded = false
 
+function loadReadableEnvFile(path: string): void {
+  if (!existsSync(path)) return
+
+  try {
+    accessSync(path, constants.R_OK)
+  } catch {
+    return
+  }
+
+  dotenv.config({ path, quiet: true })
+}
+
 export function loadEnv(): void {
   if (loaded) return
   loaded = true
 
-  const root = findKbRoot()
-  if (root) {
-    const envPath = join(root, '.env')
-    if (existsSync(envPath)) {
-      dotenv.config({ path: envPath, quiet: true })
-      return  // KB .env takes priority, don't load others
-    }
-  }
+  const globalEnv = join(homedir(), '.theora', '.env')
+  loadReadableEnvFile(globalEnv)
 
   const cwd = process.cwd()
   const cwdEnv = join(cwd, '.env')
-  if (existsSync(cwdEnv)) {
-    dotenv.config({ path: cwdEnv, quiet: true })
-    return  // CWD .env takes priority over global
-  }
+  loadReadableEnvFile(cwdEnv)
 
-  // Fall back to global .env
-  const globalEnv = join(homedir(), '.theora', '.env')
-  if (existsSync(globalEnv)) {
-    dotenv.config({ path: globalEnv, quiet: true })
+  const root = findKbRoot()
+  if (root) {
+    const kbEnvPath = join(root, '.env')
+    loadReadableEnvFile(kbEnvPath)
   }
 }
 
@@ -58,6 +61,10 @@ export function createGlobalEnv(): string {
 
 # OpenAI (default)
 OPENAI_API_KEY=
+
+# OpenAI-compatible
+# OPENAI_COMPATIBLE_BASE_URL=http://localhost:11434/v1
+# OPENAI_COMPATIBLE_API_KEY=   # optional for local servers
 
 # Anthropic
 # ANTHROPIC_API_KEY=

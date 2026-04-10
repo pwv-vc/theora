@@ -2,6 +2,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import pc from 'picocolors'
 import { kbPaths, findKbRoot } from './paths.js'
+import type { LocalModelPricingConfig } from './config.js'
 
 // Cost per million tokens for supported models
 const COST_PER_MILLION: Record<string, { input: number; output: number }> = {
@@ -15,8 +16,62 @@ const COST_PER_MILLION: Record<string, { input: number; output: number }> = {
 
 const DEFAULT_COST = { input: 3, output: 15 }
 
-export function estimateCost(model: string, inputTokens: number, outputTokens: number): number {
-  const rates = COST_PER_MILLION[model] ?? DEFAULT_COST
+type UsageBucket = {
+  calls: number
+  inputTokens: number
+  outputTokens: number
+  costUsd: number
+  durationMs: number
+}
+
+function createUsageBucket(): UsageBucket {
+  return { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, durationMs: 0 }
+}
+
+function createCallCostBucket(): { calls: number; costUsd: number } {
+  return { calls: 0, costUsd: 0 }
+}
+
+function estimateDurationBasedLocalCost(
+  durationMs: number,
+  localModelPricing: LocalModelPricingConfig | undefined,
+): number {
+  if (!localModelPricing || localModelPricing.mode === 'zero') {
+    return 0
+  }
+
+  const electricityUsdPerHour =
+    (localModelPricing.powerWatts / 1000) * localModelPricing.electricityUsdPerKwh
+  const totalHourlyCostUsd = electricityUsdPerHour + localModelPricing.hardwareUsdPerHour
+  return (durationMs / 3_600_000) * totalHourlyCostUsd
+}
+
+function getDefaultCostRates(
+  provider: string,
+): { input: number; output: number } | null {
+  if (provider === 'openai-compatible') return null
+  return DEFAULT_COST
+}
+
+export function formatProviderModel(provider: string, model: string): string {
+  return `${provider} / ${model}`
+}
+
+export function estimateCost(
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  provider: string = 'openai',
+  localModelPricing?: LocalModelPricingConfig,
+  durationMs: number = 0,
+): number {
+  const rates = COST_PER_MILLION[model] ?? getDefaultCostRates(provider)
+  if (!rates) {
+    if (provider === 'openai-compatible') {
+      return estimateDurationBasedLocalCost(durationMs, localModelPricing)
+    }
+    return 0
+  }
   return (inputTokens * rates.input + outputTokens * rates.output) / 1_000_000
 }
 
@@ -38,31 +93,11 @@ export interface StatsSummary {
   totalOutputTokens: number
   totalCostUsd: number
   totalDurationMs: number
-  byAction: Record<string, {
-    calls: number
-    inputTokens: number
-    outputTokens: number
-    costUsd: number
-    durationMs: number
-  }>
-  byModel: Record<string, {
-    calls: number
-    inputTokens: number
-    outputTokens: number
-    costUsd: number
-    durationMs: number
-  }>
-  byActionPerModel: Record<string, Record<string, {
-    calls: number
-    inputTokens: number
-    outputTokens: number
-    costUsd: number
-    durationMs: number
-  }>>
-  byDay: Record<string, {
-    calls: number
-    costUsd: number
-  }>
+  byAction: Record<string, UsageBucket>
+  byProvider: Record<string, UsageBucket>
+  byModel: Record<string, UsageBucket>
+  byActionPerModel: Record<string, Record<string, UsageBucket>>
+  byDay: Record<string, { calls: number; costUsd: number }>
 }
 
 function getLogPath(): string | null {
@@ -107,6 +142,7 @@ export function summarizeStats(logs: LlmCallLog[]): StatsSummary {
     totalCostUsd: 0,
     totalDurationMs: 0,
     byAction: {},
+    byProvider: {},
     byModel: {},
     byActionPerModel: {},
     byDay: {},
@@ -119,9 +155,8 @@ export function summarizeStats(logs: LlmCallLog[]): StatsSummary {
     summary.totalCostUsd += log.estimatedCostUsd
     summary.totalDurationMs += log.durationMs
 
-    // By action
     if (!summary.byAction[log.action]) {
-      summary.byAction[log.action] = { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, durationMs: 0 }
+      summary.byAction[log.action] = createUsageBucket()
     }
     summary.byAction[log.action].calls++
     summary.byAction[log.action].inputTokens += log.inputTokens
@@ -129,33 +164,40 @@ export function summarizeStats(logs: LlmCallLog[]): StatsSummary {
     summary.byAction[log.action].costUsd += log.estimatedCostUsd
     summary.byAction[log.action].durationMs += log.durationMs
 
-    // By model
-    if (!summary.byModel[log.model]) {
-      summary.byModel[log.model] = { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, durationMs: 0 }
+    if (!summary.byProvider[log.provider]) {
+      summary.byProvider[log.provider] = createUsageBucket()
     }
-    summary.byModel[log.model].calls++
-    summary.byModel[log.model].inputTokens += log.inputTokens
-    summary.byModel[log.model].outputTokens += log.outputTokens
-    summary.byModel[log.model].costUsd += log.estimatedCostUsd
-    summary.byModel[log.model].durationMs += log.durationMs
+    summary.byProvider[log.provider].calls++
+    summary.byProvider[log.provider].inputTokens += log.inputTokens
+    summary.byProvider[log.provider].outputTokens += log.outputTokens
+    summary.byProvider[log.provider].costUsd += log.estimatedCostUsd
+    summary.byProvider[log.provider].durationMs += log.durationMs
 
-    // By action per model
+    const providerModel = formatProviderModel(log.provider, log.model)
+    if (!summary.byModel[providerModel]) {
+      summary.byModel[providerModel] = createUsageBucket()
+    }
+    summary.byModel[providerModel].calls++
+    summary.byModel[providerModel].inputTokens += log.inputTokens
+    summary.byModel[providerModel].outputTokens += log.outputTokens
+    summary.byModel[providerModel].costUsd += log.estimatedCostUsd
+    summary.byModel[providerModel].durationMs += log.durationMs
+
     if (!summary.byActionPerModel[log.action]) {
       summary.byActionPerModel[log.action] = {}
     }
-    if (!summary.byActionPerModel[log.action][log.model]) {
-      summary.byActionPerModel[log.action][log.model] = { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, durationMs: 0 }
+    if (!summary.byActionPerModel[log.action][providerModel]) {
+      summary.byActionPerModel[log.action][providerModel] = createUsageBucket()
     }
-    summary.byActionPerModel[log.action][log.model].calls++
-    summary.byActionPerModel[log.action][log.model].inputTokens += log.inputTokens
-    summary.byActionPerModel[log.action][log.model].outputTokens += log.outputTokens
-    summary.byActionPerModel[log.action][log.model].costUsd += log.estimatedCostUsd
-    summary.byActionPerModel[log.action][log.model].durationMs += log.durationMs
+    summary.byActionPerModel[log.action][providerModel].calls++
+    summary.byActionPerModel[log.action][providerModel].inputTokens += log.inputTokens
+    summary.byActionPerModel[log.action][providerModel].outputTokens += log.outputTokens
+    summary.byActionPerModel[log.action][providerModel].costUsd += log.estimatedCostUsd
+    summary.byActionPerModel[log.action][providerModel].durationMs += log.durationMs
 
-    // By day
     const day = log.timestamp.slice(0, 10) // YYYY-MM-DD
     if (!summary.byDay[day]) {
-      summary.byDay[day] = { calls: 0, costUsd: 0 }
+      summary.byDay[day] = createCallCostBucket()
     }
     summary.byDay[day].calls++
     summary.byDay[day].costUsd += log.estimatedCostUsd
@@ -196,24 +238,30 @@ export function printStatsSummary(summary: StatsSummary): void {
     }
   }
 
-  if (Object.keys(summary.byModel).length > 0) {
-    console.log(`\n${pc.bold('By Model')}`)
-    for (const [model, stats] of Object.entries(summary.byModel).sort((a, b) => b[1].calls - a[1].calls)) {
-      console.log(`  ${model.padEnd(30)} ${String(stats.calls).padStart(4)} calls  ${formatCost(stats.costUsd).padStart(8)}`)
+  if (Object.keys(summary.byProvider).length > 0) {
+    console.log(`\n${pc.bold('By Provider')}`)
+    for (const [provider, stats] of Object.entries(summary.byProvider).sort((a, b) => b[1].calls - a[1].calls)) {
+      console.log(`  ${provider.padEnd(20)} ${String(stats.calls).padStart(4)} calls  ${formatCost(stats.costUsd).padStart(8)}  ${formatTokens(stats.inputTokens + stats.outputTokens).padStart(8)} tokens`)
     }
   }
 
-  // By Action per Model
+  if (Object.keys(summary.byModel).length > 0) {
+    console.log(`\n${pc.bold('By Provider / Model')}`)
+    for (const [model, stats] of Object.entries(summary.byModel).sort((a, b) => b[1].calls - a[1].calls)) {
+      console.log(`  ${model.padEnd(44)} ${String(stats.calls).padStart(4)} calls  ${formatCost(stats.costUsd).padStart(8)}`)
+    }
+  }
+
   const actionPerModelKeys = Object.keys(summary.byActionPerModel)
   if (actionPerModelKeys.length > 0) {
-    console.log(`\n${pc.bold('By Action per Model')}`)
+    console.log(`\n${pc.bold('By Action per Provider / Model')}`)
     for (const action of actionPerModelKeys.sort()) {
       const models = summary.byActionPerModel[action]
       const modelEntries = Object.entries(models).sort((a, b) => b[1].calls - a[1].calls)
       if (modelEntries.length > 0) {
         console.log(`  ${pc.cyan(action)}:`)
         for (const [model, stats] of modelEntries) {
-          console.log(`    ${model.padEnd(28)} ${String(stats.calls).padStart(4)} calls  ${formatCost(stats.costUsd).padStart(8)}  ${formatTokens(stats.inputTokens + stats.outputTokens).padStart(8)} tokens`)
+          console.log(`    ${model.padEnd(42)} ${String(stats.calls).padStart(4)} calls  ${formatCost(stats.costUsd).padStart(8)}  ${formatTokens(stats.inputTokens + stats.outputTokens).padStart(8)} tokens`)
         }
       }
     }

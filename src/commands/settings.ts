@@ -17,6 +17,9 @@ export const settingsCommand = new Command('settings')
         console.log(`  Name: ${info.kbConfig.name}`)
         console.log(`  Provider: ${info.kbConfig.provider}`)
         console.log(`  Default Model: ${info.kbConfig.model}`)
+        if (info.kbConfig.provider === 'openai-compatible' && info.kbConfig.localModelPricing) {
+          console.log(`  Local Pricing: ${info.kbConfig.localModelPricing.mode}`)
+        }
       }
     } else {
       console.log(pc.yellow('Not in a knowledge base directory'))
