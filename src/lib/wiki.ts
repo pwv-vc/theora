@@ -255,7 +255,7 @@ export function normalizeLinks(text: string, articles: WikiArticle[]): string {
 export function normalizeLinksForWeb(text: string, articles: WikiArticle[]): string {
   const bySlug = new Map(articles.map(a => [basename(a.path, '.md'), a]))
 
-  return text.replace(/\[\[([^\]]+)\]\]/g, (match, linkText: string) => {
+  let result = text.replace(/\[\[([^\]]+)\]\]/g, (match, linkText: string) => {
     const slug = linkText.toLowerCase().replace(/\s+/g, '-')
     const article = bySlug.get(slug)
     if (article) {
@@ -264,4 +264,12 @@ export function normalizeLinksForWeb(text: string, articles: WikiArticle[]): str
     }
     return `**${linkText}**`
   })
+
+  // Transform relative image paths from ../../raw/... to /raw/...
+  // This makes images work in the web interface while keeping Obsidian compatibility
+  result = result.replace(/!\[([^\]]*)\]\((\.\.\/)+raw\/([^)]+)\)/g, (match, altText: string, _dots: string, rawPath: string) => {
+    return `![${altText}](/raw/${rawPath})`
+  })
+
+  return result
 }

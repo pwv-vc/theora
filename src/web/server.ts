@@ -110,6 +110,39 @@ export function startServer(port: number): void {
     return c.text(svg, 200, { 'Content-Type': 'image/svg+xml; charset=utf-8' })
   })
 
+  // Serve raw files (images, PDFs, etc.) from the raw/ directory
+  app.get('/raw/:filepath{.+}', (c) => {
+    const root = requireKbRoot()
+    const paths = kbPaths(root)
+    const rawPath = c.req.param('filepath') ?? ''
+    if (!rawPath) return c.notFound()
+
+    try {
+      const filePath = safeJoin(paths.raw, rawPath)
+      if (!existsSync(filePath)) return c.notFound()
+
+      // Determine content type based on extension
+      const ext = filePath.toLowerCase().split('.').pop() || ''
+      const contentTypes: Record<string, string> = {
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+        'svg': 'image/svg+xml',
+        'pdf': 'application/pdf',
+        'txt': 'text/plain',
+        'md': 'text/markdown',
+      }
+      const contentType = contentTypes[ext] || 'application/octet-stream'
+
+      const fileBuffer = readFileSync(filePath)
+      return c.body(fileBuffer, 200, { 'Content-Type': contentType })
+    } catch {
+      return c.notFound()
+    }
+  })
+
   app.get('/', (c) => {
     const root = requireKbRoot()
     const paths = kbPaths(root)

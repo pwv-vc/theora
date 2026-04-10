@@ -43,7 +43,17 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
             </div>
           )}
           {dateCompiled && <span class="text-zinc-600 text-xs">{dateCompiled}</span>}
-          {sourceFile && <span class="text-zinc-600 text-xs">from {sourceFile}</span>}
+          {sourceFile && (
+            <a
+              href={`/raw/${sourceFile}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-zinc-600 hover:text-zinc-400 text-xs transition-colors"
+              title="View raw source file"
+            >
+              from {sourceFile}
+            </a>
+          )}
         </div>
       </div>
 
