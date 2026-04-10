@@ -15,7 +15,7 @@
 - Implement Tailwind CSS light/dark mode themes with a user-accessible mode picker toggle in the UI; place the light theme first in the picker and make it the default. Confidence: 0.75
 - Keep rounded corners (rounded-lg, rounded, etc.) on inputs, cards, and small UI elements — user likes them. Only avoid rounded corners on the main page/layout container edges (e.g., bottom-left and bottom-right of the viewport frame) which looked like a CRT screen bezel. Confidence: 0.85
 - CRT scanlines should be very subtle across all themes — use low-opacity semi-transparent colors (e.g., 0.03–0.05 range); light (broadcast) theme scanlines should be even more toned down than dark themes. User explicitly asked to make all scanlines more subtle. Confidence: 0.85
-- Suppress CRT scanlines in the sticky nav/header — the header should use a solid theme-based background color with no scanline overlay. Confidence: 0.75
+- Suppress CRT scanlines in the sticky nav/header and footer — both should use solid theme-based background colors with no scanline overlay. Confidence: 0.80
 - Suppress CRT scanlines on form elements (inputs, textareas, selects, buttons) — use z-index or isolation to prevent the body::after scanline overlay from rendering over interactive form controls. Confidence: 0.80
 - Ask answer results must be displayed in a card UI component with rendered markdown (not raw markdown text). Confidence: 0.85
 - Render Mermaid diagrams in concepts, sources, and answers pages — these sections may contain Mermaid code blocks that must be rendered as diagrams, not displayed as raw code. Confidence: 0.80
@@ -37,3 +37,5 @@
 - The wide cube variant (from logo-cube-preview.html) is the chosen logo and favicon for the project — use it as both the page logo icon and the `<link rel="icon">` favicon in HTML pages. Confidence: 0.75
 - Store logo/icon design exploration files (preview HTML pages, variant SVGs) in a dedicated `design/` directory rather than directly in `src/web/static/` — keep the static directory clean for production assets only. Confidence: 0.75
 - When a logo icon is finalized, add it as a favicon to all HTML pages using `<link rel="icon" type="image/svg+xml" href="...">`. Confidence: 0.80
+- Avoid hover-based dropdown menus for navigation — they are hard to control and make submenu items difficult to select. Prefer click-based menus or other Tailwind UI navigation patterns that don't rely on hover persistence. Confidence: 0.80
+- When implementing SSE (Server-Sent Events) endpoints, reference existing working SSE implementations in the codebase (e.g., compile, ask stream handlers) to ensure correct implementation patterns. Confidence: 0.75

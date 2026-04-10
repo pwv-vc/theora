@@ -15,12 +15,11 @@ import { slugify, titleFromFilename } from './utils.js'
 import { readConfig } from './config.js'
 import {
   COMPILE_SYSTEM,
-  CONCEPT_SYSTEM,
   buildSourcePrompt,
   buildPdfPrompt,
   buildImagePrompt,
-  buildConceptPrompt,
-} from './prompts.js'
+} from './prompts/compile.js'
+import { CONCEPT_SYSTEM, buildConceptPrompt } from './prompts/concept.js'
 
 // --- File classification ---
 
@@ -125,7 +124,7 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
   const raw = await llmVision(
     buildImagePrompt(basename(file), imageRef, ingestTag),
     [{ base64, mediaType }],
-    { system: 'You are a knowledge base compiler analyzing images. Describe what you see in detail and extract all useful information.', maxTokens: 4096 },
+    { system: 'You are a knowledge base compiler analyzing images. Describe what you see in detail and extract all useful information.', maxTokens: 4096, action: 'vision' },
   )
   const { body, tags } = sanitizeLlmOutput(raw)
 
@@ -244,7 +243,7 @@ ${ONTOLOGY_TYPES.map(t => `  "${t}" (${ONTOLOGY_SCHEMA_URLS[t as OntologyType]})
   A concept can have multiple types (e.g. a person who is also an author: ["person", "creative-work"])
 
 Only return the JSON array, no other text. Identify ${conceptMin}-${conceptMax} of the most important concepts.`,
-    { system: 'You are a knowledge base organizer. Extract key concepts from source summaries. Return valid JSON only.', maxTokens: 4096 },
+    { system: 'You are a knowledge base organizer. Extract key concepts from source summaries. Return valid JSON only.', maxTokens: 4096, action: 'concepts' },
   )
 
   let concepts: Array<{ slug: string; title: string; description: string; related_sources: string[]; ontology?: string[] }>
@@ -302,7 +301,7 @@ Only return the JSON array, no other text. Identify ${conceptMin}-${conceptMax} 
 
         const raw = await llm(
           buildConceptPrompt(concept.title, concept.description, relatedContent, validTargets),
-          { system: CONCEPT_SYSTEM, maxTokens: 4096 },
+          { system: CONCEPT_SYSTEM, maxTokens: 4096, action: 'concepts' },
         )
         const { body, tags } = sanitizeLlmOutput(raw)
 
@@ -374,7 +373,7 @@ export async function rebuildIndex(root: string, onProgress?: (msg: string) => v
     const allContent = articles.map(a => `${a.title}: ${a.content.slice(0, 500)}`).join('\n')
     const rawSummary = await llm(
       `Write a 2-3 sentence summary of this knowledge base based on its articles:\n\n${allContent.slice(0, 10000)}`,
-      { system: 'Write a brief, informative summary. No markdown formatting, just plain text.', maxTokens: 256 },
+      { system: 'Write a brief, informative summary. No markdown formatting, just plain text.', maxTokens: 256, action: 'compile' },
     )
     briefSummary = normalizeLinks(rawSummary, articles)
   }
@@ -404,3 +403,4 @@ ${queries.length > 0 ? `\n## Previous Queries (${queries.length})\n\n${queries.m
   if (spinner) spinner.succeed('Index rebuilt')
   else onProgress?.('✓ Index rebuilt')
 }
+

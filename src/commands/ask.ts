@@ -5,7 +5,7 @@ import { kbPaths, requireKbRoot } from '../lib/paths.js'
 import { generateChart } from '../lib/chart.js'
 import { saveSlides } from '../lib/slides.js'
 import { streamAsk, buildAskContext } from '../lib/ask.js'
-import { SLIDES_SYSTEM, buildSlidesUserPrompt } from '../lib/prompts.js'
+import { SLIDES_SYSTEM, buildSlidesUserPrompt } from '../lib/prompts/index.js'
 import { llmStream } from '../lib/llm.js'
 
 type OutputFormat = 'md' | 'slides' | 'chart'
@@ -52,7 +52,7 @@ export const askCommand = new Command('ask')
     console.log()
     const rawAnswer = await llmStream(
       buildSlidesUserPrompt(question, index, context),
-      { system: SLIDES_SYSTEM, maxTokens: 8192 },
+      { system: SLIDES_SYSTEM, maxTokens: 8192, action: 'slides' },
       (text) => process.stdout.write(text),
     )
     console.log('\n')

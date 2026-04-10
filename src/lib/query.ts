@@ -25,6 +25,7 @@ Return a JSON array of the indices (numbers) of the most relevant articles to an
     {
       system: 'You are a search relevance ranker. Return only a JSON array of numbers.',
       maxTokens: 256,
+      action: 'rank',
     },
   )
 

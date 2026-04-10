@@ -23,7 +23,7 @@ import { findRelevantArticles, buildContext } from '../lib/query.js'
 import { llmStream } from '../lib/llm.js'
 import { searchArticles } from '../lib/search.js'
 import { runCompile } from '../lib/compile.js'
-import { MD_SYSTEM, buildMdUserPrompt } from '../lib/prompts.js'
+import { MD_SYSTEM, buildMdUserPrompt } from '../lib/prompts/index.js'
 import { normalizeLinksForWeb } from '../lib/wiki.js'
 import { streamAsk } from '../lib/ask.js'
 import { readManifest, writeManifest } from '../lib/manifest.js'
@@ -37,6 +37,8 @@ import { CompilePage } from './templates/compile.js'
 import { ConceptsPage } from './templates/concepts.js'
 import { QueriesPage } from './templates/queries.js'
 import { IngestPage } from './templates/ingest.js'
+import { StatsPage } from './templates/stats.js'
+import { readLlmLogs, summarizeStats } from '../lib/llm-stats.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -363,6 +365,67 @@ export function startServer(port: number): void {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         await stream.writeSSE({ event: 'error', data: msg })
+      }
+    })
+  })
+
+  app.get('/stats', (c) => {
+    const logs = readLlmLogs()
+    const days = parseInt(c.req.query('days') ?? '30', 10)
+
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - days)
+
+    const filteredLogs = logs.filter(log => new Date(log.timestamp) >= cutoff)
+    const summary = summarizeStats(filteredLogs)
+
+    const configPath = join(requireKbRoot(), '.theora', 'config.json')
+    const config = existsSync(configPath)
+      ? JSON.parse(readFileSync(configPath, 'utf-8'))
+      : { name: 'Knowledge Base' }
+
+    // Get last 10 logs for initial display
+    const recentLogs = logs.slice(-10)
+
+    return c.html(
+      Layout({
+        title: `Stats — ${config.name ?? 'Knowledge Base'}`,
+        active: 'stats',
+        children: StatsPage({ summary, days, recentLogs }),
+      }).toString()
+    )
+  })
+
+  app.get('/api/logs/stream', (c) => {
+    return streamSSE(c, async (stream) => {
+      let lastCount = readLlmLogs().length
+      let aborted = false
+
+      // Handle abort signal
+      c.req.raw.signal?.addEventListener('abort', () => {
+        aborted = true
+      })
+
+      // Send initial heartbeat to establish connection
+      await stream.writeSSE({ data: JSON.stringify({ type: 'connected' }) })
+
+      while (!aborted) {
+        try {
+          const logs = readLlmLogs()
+          if (logs.length > lastCount) {
+            const newEntries = logs.slice(lastCount)
+            for (const log of newEntries) {
+              await stream.writeSSE({ data: JSON.stringify(log) })
+            }
+            lastCount = logs.length
+          }
+        } catch (e) {
+          // Client disconnected or error
+          break
+        }
+
+        // Wait before next check
+        await new Promise(resolve => setTimeout(resolve, 1000))
       }
     })
   })

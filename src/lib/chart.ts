@@ -5,7 +5,7 @@ import pc from 'picocolors'
 import ora from 'ora'
 import { llm } from './llm.js'
 import { findPython } from './deps.js'
-import { buildChartPrompt, CHART_SYSTEM } from './prompts.js'
+import { buildChartPrompt, CHART_SYSTEM } from './prompts/index.js'
 import { slugifyShort } from './utils.js'
 import type { KbPaths } from './paths.js'
 
@@ -40,7 +40,7 @@ export async function generateChart(
 
   const raw = await llm(
     buildChartPrompt(question, index, context, pngPath),
-    { system: CHART_SYSTEM, maxTokens: 4096 },
+    { system: CHART_SYSTEM, maxTokens: 4096, action: 'chart' },
   )
 
   const code = extractPythonCode(raw)

@@ -9,6 +9,7 @@ See [cli/taste.md](cli/taste.md)
 - Default to OpenAI as the LLM provider when building LLM-powered tools. Confidence: 0.65
 - Store API keys in .env files rather than expecting environment variables to be set globally. Confidence: 0.70
 - Support multiple LLM providers (e.g., OpenAI and Anthropic) with a provider abstraction layer. Confidence: 0.65
+- Define per-action model defaults optimized for each action's requirements and cost — use cheaper models (e.g., gpt-4o-mini) for simple tasks and reserve expensive models (e.g., gpt-4o) for complex reasoning. Confidence: 0.80
 
 # naming
 - Name CLI options and flags after what the user gets (the output), not the underlying technology (e.g., --output slides not --output marp). Confidence: 0.70
@@ -43,7 +44,4 @@ See [wiki/taste.md](wiki/taste.md)
 # web
 See [web/taste.md](web/taste.md)
 # documentation
-- Write thorough README docs that explain not just how to use features, but why they're useful and when to use them. Confidence: 0.75
-- Always update the README after implementing each new feature or feature update — include what the feature does, how to use it, and a usage example. User explicitly stated "always" and consistently requests this after every addition. Confidence: 0.95
-- Add Mermaid diagrams to the README to explain system flows, data pipelines, and how components interact — use diagrams to show how information moves through the system (e.g., ingest → compile → wiki → ask loop). Confidence: 0.70
-- In Mermaid diagrams, do not use `\n` for line breaks inside node labels — it renders as literal text ("]n"). Use actual newlines or avoid multi-line labels. Confidence: 0.80
+See [documentation/taste.md](documentation/taste.md)

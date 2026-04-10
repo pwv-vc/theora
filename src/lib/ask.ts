@@ -5,7 +5,7 @@ import { llmStream } from './llm.js'
 import { listWikiArticles, readWikiIndex, normalizeLinks } from './wiki.js'
 import { findRelevantArticles, buildContext } from './query.js'
 import { slugifyShort } from './utils.js'
-import { MD_SYSTEM, buildMdUserPrompt } from './prompts.js'
+import { MD_SYSTEM, buildMdUserPrompt } from './prompts/index.js'
 
 export interface AskOptions {
   tag?: string
@@ -54,7 +54,7 @@ export async function streamAsk(question: string, options: AskOptions): Promise<
 
   const rawAnswer = await llmStream(
     buildMdUserPrompt(question, index, context),
-    { system: MD_SYSTEM, maxTokens: 8192 },
+    { system: MD_SYSTEM, maxTokens: 8192, action: 'ask' },
     options.onChunk,
   )
 

@@ -207,6 +207,7 @@ Be specific and actionable.`,
         {
           system: 'You are a knowledge base quality analyst. Provide specific, actionable suggestions for improving the wiki.',
           maxTokens: 2048,
+          action: 'lint',
         },
       )
 

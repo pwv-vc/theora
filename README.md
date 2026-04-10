@@ -350,6 +350,42 @@ theora lint
 theora lint --suggest    # LLM suggests improvements and new articles
 ```
 
+### Stats
+
+Show LLM usage statistics — track API calls, tokens, costs, and performance over time:
+
+```bash
+theora stats               # Show stats for last 30 days
+theora stats --days 7      # Show stats for last 7 days
+theora stats --json        # Output as JSON for scripting
+```
+
+The stats command tracks every LLM call made by Theora, including:
+
+- **Total calls, tokens, and estimated cost** — cumulative usage across all operations
+- **Breakdown by action** — see costs for compile, ask, search, etc.
+- **Breakdown by model** — compare usage across different LLM models
+- **Daily activity** — track usage patterns over the last 7 days
+
+Stats are stored per-knowledge-base in `.theora/llm-log.jsonl` and persist across sessions.
+
+#### How Stats Collection Works
+
+Every LLM call in Theora is automatically logged with detailed telemetry:
+
+1. **Automatic Logging** — Each call to the LLM (compile, ask, search, etc.) records:
+   - Timestamp and action type
+   - Provider and model used
+   - Input/output token counts
+   - Duration (ms)
+   - Estimated cost in USD
+
+2. **Cost Estimation** — The system uses per-model pricing rates (OpenAI, Anthropic) to calculate estimated costs based on actual token usage.
+
+3. **Log Storage** — Stats are appended to `.theora/llm-log.jsonl` as newline-delimited JSON, making them easy to parse and durable across sessions.
+
+4. **Aggregation** — The `stats` command reads all log entries, filters by date range, and aggregates into summary statistics grouped by action, model, and day.
+
 ---
 
 ## LLM Providers
@@ -388,6 +424,34 @@ Or edit `.kb/config.json` directly:
 | `conceptSummaryChars` | `3000` | Characters of each source article passed to the concept identification pass — higher values give the LLM more context but increase token usage |
 | `conceptMin` | `5` | Minimum number of concepts to extract per compile run |
 | `conceptMax` | `10` | Maximum number of concepts to extract per compile run |
+
+### Per-Action Model Defaults
+
+Each action uses a model optimized for its task. Cheaper models (`gpt-4o-mini`) are used for simpler tasks; full `gpt-4o` is reserved for quality-critical outputs.
+
+| Action | Default Model | Task |
+|--------|---------------|------|
+| `compile` | `gpt-4o-mini` | Summarize text/PDF sources |
+| `vision` | `gpt-4o` | Analyze images (needs vision capabilities) |
+| `concepts` | `gpt-4o-mini` | Extract concept articles |
+| `ask` | `gpt-4o` | Answer questions (quality matters) |
+| `rank` | `gpt-4o-mini` | Rank article relevance (simple task) |
+| `chart` | `gpt-4o` | Generate chart Python code |
+| `slides` | `gpt-4o` | Generate slide decks |
+| `lint` | `gpt-4o-mini` | Suggest improvements |
+
+Override any action in your `.theora/config.json`:
+
+```json
+{
+  "models": {
+    "compile": "gpt-4o",
+    "ask": "gpt-4o-mini"
+  }
+}
+```
+
+Unspecified actions keep their defaults.
 
 All API keys live in `.env` at the knowledge base root. This file is gitignored by default.
 
