@@ -81,6 +81,12 @@ describe('openai-compatible config', () => {
     })).toThrow('OPENAI_COMPATIBLE_BASE_URL must be a valid http(s) URL')
   })
 
+  it('rejects base urls with path traversal', () => {
+    expect(() => getOpenAiCompatibleClientConfig({
+      OPENAI_COMPATIBLE_BASE_URL: 'http://localhost:11434/v1/../etc/passwd',
+    })).toThrow('OPENAI_COMPATIBLE_BASE_URL must be a valid http(s) URL')
+  })
+
   it('caches clients per provider without collisions', () => {
     process.env.OPENAI_API_KEY = 'test-openai-key'
     process.env.OPENAI_COMPATIBLE_BASE_URL = 'http://localhost:11434/v1'

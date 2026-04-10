@@ -63,12 +63,18 @@ export function getOpenAiCompatibleClientConfig(
     throw new Error('OPENAI_COMPATIBLE_BASE_URL not set. Add it to .env in your knowledge base root.')
   }
 
+
+  // Prevent path traversal attacks before URL parsing (new URL() normalizes paths)
+  if (rawBaseUrl.includes('..')) {
+    throw new Error('OPENAI_COMPATIBLE_BASE_URL must be a valid http(s) URL, for example http://localhost:11434/v1')
+  }
   let baseURL: string
   try {
     const parsedUrl = new URL(rawBaseUrl)
     if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
       throw new Error('invalid protocol')
     }
+  
     baseURL = parsedUrl.toString()
   } catch {
     throw new Error('OPENAI_COMPATIBLE_BASE_URL must be a valid http(s) URL, for example http://localhost:11434/v1')
@@ -80,6 +86,8 @@ export function getOpenAiCompatibleClientConfig(
   }
 }
 
+/** Fallback token estimation when usage data is unavailable from the API.
+ * Uses a rough heuristic of 4 characters per token. */
 function estimateTextTokens(text: string): number {
   return Math.ceil(text.length / 4)
 }
