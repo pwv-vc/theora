@@ -35,6 +35,7 @@ function formatLogEntry(log: LlmCallLog) {
       <td class="py-2 font-mono text-xs text-zinc-300">{time}</td>
       <td class="py-2 capitalize text-zinc-300">{log.action}</td>
       <td class="py-2 text-zinc-400 text-xs">{log.meta ?? ''}</td>
+      <td class="py-2 text-zinc-400 text-xs">{log.provider}</td>
       <td class="py-2 font-mono text-xs text-zinc-300">{log.model}</td>
       <td class="text-right py-2 text-zinc-300">{log.inputTokens}+{log.outputTokens}</td>
       <td class="text-right py-2 text-zinc-300">{formatCost(log.estimatedCostUsd)}</td>
@@ -45,6 +46,7 @@ function formatLogEntry(log: LlmCallLog) {
 
 export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps) {
   const actionEntries = Object.entries(summary.byAction).sort((a, b) => b[1].calls - a[1].calls)
+  const providerEntries = Object.entries(summary.byProvider).sort((a, b) => b[1].calls - a[1].calls)
   const modelEntries = Object.entries(summary.byModel).sort((a, b) => b[1].calls - a[1].calls)
   const actionPerModelEntries = Object.entries(summary.byActionPerModel).sort((a, b) => a[0].localeCompare(b[0]))
   const dayEntries = Object.entries(summary.byDay).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 14)
@@ -107,24 +109,26 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
           </div>
         )}
 
-        {/* By Model */}
-        {modelEntries.length > 0 && (
+        {/* By Provider */}
+        {providerEntries.length > 0 && (
           <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-6 no-scanline relative z-[10001]">
-            <h2 class="text-lg font-semibold mb-4 text-zinc-100">By Model</h2>
+            <h2 class="text-lg font-semibold mb-4 text-zinc-100">By Provider</h2>
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-zinc-800">
-                  <th class="text-left py-2 text-zinc-400 font-medium">Model</th>
+                  <th class="text-left py-2 text-zinc-400 font-medium">Provider</th>
                   <th class="text-right py-2 text-zinc-400 font-medium">Calls</th>
                   <th class="text-right py-2 text-zinc-400 font-medium">Cost</th>
+                  <th class="text-right py-2 text-zinc-400 font-medium">Tokens</th>
                 </tr>
               </thead>
               <tbody>
-                {modelEntries.map(([model, stats]) => (
-                  <tr key={model} class="border-b last:border-0 border-zinc-800">
-                    <td class="py-2 font-mono text-xs text-zinc-300">{model}</td>
+                {providerEntries.map(([provider, stats]) => (
+                  <tr key={provider} class="border-b last:border-0 border-zinc-800">
+                    <td class="py-2 text-zinc-300">{provider}</td>
                     <td class="text-right py-2 text-zinc-300">{stats.calls}</td>
                     <td class="text-right py-2 text-zinc-300">{formatCost(stats.costUsd)}</td>
+                    <td class="text-right py-2 text-zinc-300">{formatTokens(stats.inputTokens + stats.outputTokens)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -133,10 +137,35 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
         )}
       </div>
 
-      {/* By Action per Model */}
+      {/* By Provider / Model */}
+      {modelEntries.length > 0 && (
+        <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mt-6 no-scanline relative z-[10001]">
+          <h2 class="text-lg font-semibold mb-4 text-zinc-100">By Provider / Model</h2>
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-zinc-800">
+                <th class="text-left py-2 text-zinc-400 font-medium">Provider / Model</th>
+                <th class="text-right py-2 text-zinc-400 font-medium">Calls</th>
+                <th class="text-right py-2 text-zinc-400 font-medium">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {modelEntries.map(([model, stats]) => (
+                <tr key={model} class="border-b last:border-0 border-zinc-800">
+                  <td class="py-2 font-mono text-xs text-zinc-300">{model}</td>
+                  <td class="text-right py-2 text-zinc-300">{stats.calls}</td>
+                  <td class="text-right py-2 text-zinc-300">{formatCost(stats.costUsd)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* By Action per Provider / Model */}
       {actionPerModelEntries.length > 0 && (
         <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mt-6 no-scanline relative z-[10001]">
-          <h2 class="text-lg font-semibold mb-4 text-zinc-100">By Action per Model</h2>
+          <h2 class="text-lg font-semibold mb-4 text-zinc-100">By Action per Provider / Model</h2>
           <div class="space-y-4">
             {actionPerModelEntries.map(([action, models]) => {
               const modelEntries = Object.entries(models).sort((a, b) => b[1].calls - a[1].calls)
@@ -146,7 +175,7 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
                   <table class="w-full text-sm">
                     <thead>
                       <tr class="border-b border-zinc-800">
-                        <th class="text-left py-1 text-zinc-400 font-medium">Model</th>
+                        <th class="text-left py-1 text-zinc-400 font-medium">Provider / Model</th>
                         <th class="text-right py-1 text-zinc-400 font-medium">Calls</th>
                         <th class="text-right py-1 text-zinc-400 font-medium">Cost</th>
                         <th class="text-right py-1 text-zinc-400 font-medium">Tokens</th>
@@ -213,6 +242,7 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
                 <th class="text-left py-2 text-zinc-400 font-medium">Time</th>
                 <th class="text-left py-2 text-zinc-400 font-medium">Action</th>
                 <th class="text-left py-2 text-zinc-400 font-medium">Meta</th>
+                <th class="text-left py-2 text-zinc-400 font-medium">Provider</th>
                 <th class="text-left py-2 text-zinc-400 font-medium">Model</th>
                 <th class="text-right py-2 text-zinc-400 font-medium">Tokens</th>
                 <th class="text-right py-2 text-zinc-400 font-medium">Cost</th>
@@ -244,6 +274,7 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
                 { text: time, cls: 'py-2 font-mono text-xs text-zinc-300' },
                 { text: String(log.action), cls: 'py-2 capitalize text-zinc-300' },
                 { text: log.meta ?? '', cls: 'py-2 text-zinc-400 text-xs' },
+                { text: String(log.provider), cls: 'py-2 text-zinc-400 text-xs' },
                 { text: String(log.model), cls: 'py-2 font-mono text-xs text-zinc-300' },
                 { text: String(log.inputTokens) + '+' + String(log.outputTokens), cls: 'text-right py-2 text-zinc-300' },
                 { text: formatCost(log.estimatedCostUsd), cls: 'text-right py-2 text-zinc-300' },

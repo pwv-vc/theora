@@ -27,6 +27,11 @@ export interface LlmOptions {
   meta?: string | null
 }
 
+interface TokenUsageStats {
+  inputTokens: number
+  outputTokens: number
+}
+
 function resolveProvider(options: LlmOptions): { provider: Provider; model: string } {
   const config = readConfig()
   const provider = options.provider ?? config.provider
@@ -40,6 +45,54 @@ function resolveProvider(options: LlmOptions): { provider: Provider; model: stri
   model = options.model ?? model ?? config.model
 
   return { provider, model }
+}
+
+function estimateTextTokens(text: string): number {
+  return Math.ceil(text.length / 4)
+}
+
+function extractTextContent(content: unknown): string {
+  if (typeof content === 'string') return content
+  if (!Array.isArray(content)) return ''
+
+  return content
+    .map((part) => {
+      if (!part || typeof part !== 'object') return ''
+      if ('type' in part && part.type === 'text' && 'text' in part && typeof part.text === 'string') {
+        return part.text
+      }
+      return ''
+    })
+    .join('')
+}
+
+function readUsageNumber(
+  usage: Record<string, unknown> | null | undefined,
+  fieldNames: string[],
+): number | undefined {
+  if (!usage) return undefined
+
+  for (const fieldName of fieldNames) {
+    const value = usage[fieldName]
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value
+    }
+  }
+
+  return undefined
+}
+
+export function normalizeOpenAiUsage(
+  usage: Record<string, unknown> | null | undefined,
+  inputText: string,
+  outputText: string,
+): TokenUsageStats {
+  const inputTokens = readUsageNumber(usage, ['prompt_tokens', 'input_tokens', 'prompt_eval_count'])
+    ?? estimateTextTokens(inputText)
+  const outputTokens = readUsageNumber(usage, ['completion_tokens', 'output_tokens', 'eval_count'])
+    ?? estimateTextTokens(outputText)
+
+  return { inputTokens, outputTokens }
 }
 
 // --- OpenAI ---
@@ -91,23 +144,27 @@ async function openaiComplete(
   })
   const durationMs = Date.now() - startTime
 
-  const usage = response.usage
-  const inputTokens = usage?.prompt_tokens ?? 0
-  const outputTokens = usage?.completion_tokens ?? 0
+  const outputText = extractTextContent(response.choices[0]?.message?.content)
+  const { inputTokens, outputTokens } = normalizeOpenAiUsage(
+    response.usage as Record<string, unknown> | undefined,
+    `${system}\n${prompt}`,
+    outputText,
+  )
+  const reportedModel = response.model ?? model
 
   logLlmCall({
     timestamp: new Date().toISOString(),
     action,
     meta,
     provider,
-    model,
+    model: reportedModel,
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens),
+    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, provider),
   })
 
-  return response.choices[0]?.message?.content ?? ''
+  return outputText
 }
 
 async function openaiStream(
@@ -155,7 +212,7 @@ async function openaiStream(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens),
+    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, provider),
   })
 
   return full
@@ -188,19 +245,20 @@ async function anthropicComplete(prompt: string, system: string, model: string, 
   const durationMs = Date.now() - startTime
 
   const usage = response.usage
-  const inputTokens = usage?.input_tokens ?? 0
-  const outputTokens = usage?.output_tokens ?? 0
+  const inputTokens = usage?.input_tokens ?? estimateTextTokens(`${system}\n${prompt}`)
+  const outputTokens = usage?.output_tokens ?? estimateTextTokens(blockText(response.content[0]))
+  const reportedModel = response.model ?? model
 
   logLlmCall({
     timestamp: new Date().toISOString(),
     action,
     meta,
     provider: 'anthropic',
-    model,
+    model: reportedModel,
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens),
+    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, 'anthropic'),
   })
 
   const block = response.content[0]
@@ -250,7 +308,7 @@ async function anthropicStream(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens),
+    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, 'anthropic'),
   })
 
   return full
@@ -293,23 +351,27 @@ async function openaiVision(
   })
   const durationMs = Date.now() - startTime
 
-  const usage = response.usage
-  const inputTokens = usage?.prompt_tokens ?? 0
-  const outputTokens = usage?.completion_tokens ?? 0
+  const outputText = extractTextContent(response.choices[0]?.message?.content)
+  const { inputTokens, outputTokens } = normalizeOpenAiUsage(
+    response.usage as Record<string, unknown> | undefined,
+    `${system}\n${prompt}`,
+    outputText,
+  )
+  const reportedModel = response.model ?? model
 
   logLlmCall({
     timestamp: new Date().toISOString(),
     action,
     meta,
     provider,
-    model,
+    model: reportedModel,
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens),
+    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, provider),
   })
 
-  return response.choices[0]?.message?.content ?? ''
+  return outputText
 }
 
 async function anthropicVision(
@@ -352,7 +414,7 @@ async function anthropicVision(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens),
+    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, 'anthropic'),
   })
 
   const block = response.content[0]
@@ -360,6 +422,10 @@ async function anthropicVision(
     throw new Error('Unexpected response type from Anthropic')
   }
   return block.text
+}
+
+function blockText(block: Anthropic.Messages.ContentBlock): string {
+  return block.type === 'text' ? block.text : ''
 }
 
 // --- Public API ---

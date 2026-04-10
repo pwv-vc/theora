@@ -50,24 +50,30 @@ export const statsCommand = new Command('stats')
       }
     }
 
-    if (Object.keys(summary.byModel).length > 0) {
-      console.log(`\n${pc.bold('By Model')}`)
-      for (const [model, stats] of Object.entries(summary.byModel).sort((a, b) => b[1].calls - a[1].calls)) {
-        console.log(`  ${model.padEnd(30)} ${String(stats.calls).padStart(4)} calls  ${formatCost(stats.costUsd).padStart(8)}`)
+    if (Object.keys(summary.byProvider).length > 0) {
+      console.log(`\n${pc.bold('By Provider')}`)
+      for (const [provider, stats] of Object.entries(summary.byProvider).sort((a, b) => b[1].calls - a[1].calls)) {
+        console.log(`  ${provider.padEnd(20)} ${String(stats.calls).padStart(4)} calls  ${formatCost(stats.costUsd).padStart(8)}  ${formatTokens(stats.inputTokens + stats.outputTokens).padStart(8)} tokens`)
       }
     }
 
-    // By Action per Model
+    if (Object.keys(summary.byModel).length > 0) {
+      console.log(`\n${pc.bold('By Provider / Model')}`)
+      for (const [model, stats] of Object.entries(summary.byModel).sort((a, b) => b[1].calls - a[1].calls)) {
+        console.log(`  ${model.padEnd(44)} ${String(stats.calls).padStart(4)} calls  ${formatCost(stats.costUsd).padStart(8)}`)
+      }
+    }
+
     const actionPerModelKeys = Object.keys(summary.byActionPerModel)
     if (actionPerModelKeys.length > 0) {
-      console.log(`\n${pc.bold('By Action per Model')}`)
+      console.log(`\n${pc.bold('By Action per Provider / Model')}`)
       for (const action of actionPerModelKeys.sort()) {
         const models = summary.byActionPerModel[action]
         const modelEntries = Object.entries(models).sort((a, b) => b[1].calls - a[1].calls)
         if (modelEntries.length > 0) {
           console.log(`  ${pc.cyan(action)}:`)
           for (const [model, stats] of modelEntries) {
-            console.log(`    ${model.padEnd(28)} ${String(stats.calls).padStart(4)} calls  ${formatCost(stats.costUsd).padStart(8)}  ${formatTokens(stats.inputTokens + stats.outputTokens).padStart(8)} tokens`)
+            console.log(`    ${model.padEnd(42)} ${String(stats.calls).padStart(4)} calls  ${formatCost(stats.costUsd).padStart(8)}  ${formatTokens(stats.inputTokens + stats.outputTokens).padStart(8)} tokens`)
           }
         }
       }
