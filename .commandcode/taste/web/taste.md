@@ -52,3 +52,4 @@
 - Store SVG UI icons in a dedicated `ui/icons/` directory with each icon as its own file — one icon per file for modular organization and easy imports. Confidence: 0.85
 - When picking colors for UI elements, use theme-based CSS custom properties (e.g., `var(--color-accent)`) rather than hardcoded Tailwind colors — colors should adapt to the active theme. Confidence: 0.80
 - Footer layout order (top to bottom): Pages section first, then "Built with CommandCode" + GitHub link row, then PWV logo "Powered by PWV" with copyright underneath. Confidence: 0.75
+- Extract complex inline UI sections (e.g., mobile menus) into separate component files rather than embedding large blocks in layout files. Confidence: 0.80

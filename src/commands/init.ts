@@ -10,6 +10,7 @@ import type { KbConfig } from '../lib/config.js'
 import type { Provider } from '../lib/types.js'
 import { DEFAULT_MODELS } from '../lib/types.js'
 import { DEFAULT_ACTION_MODELS } from '../lib/config.js'
+import { createGlobalEnv, globalEnvExists, getGlobalEnvPath } from '../lib/env.js'
 
 export const initCommand = new Command('init')
   .description('Initialize a new knowledge base')
@@ -43,10 +44,37 @@ export const initCommand = new Command('init')
     }
 
     if (!existsSync(join(cwd, '.env'))) {
-      writeFileSync(join(cwd, '.env'), `# theora — LLM API Keys\n\n# OpenAI (default)\nOPENAI_API_KEY=\n\n# Anthropic\n# ANTHROPIC_API_KEY=\n`)
+      writeFileSync(join(cwd, '.env'), `# theora — LLM API Keys
+
+# OpenAI (default)
+OPENAI_API_KEY=
+
+# Anthropic
+# ANTHROPIC_API_KEY=
+`)
     }
 
-    writeFileSync(paths.wikiIndex, `# ${name}\n\n> Auto-maintained index. Do not edit manually.\n\n## Sources\n\n_No sources ingested yet. Run \`theora ingest <file>\` to add documents._\n\n## Concepts\n\n_No concepts compiled yet. Run \`theora compile\` after ingesting sources._\n`)
+    // Check/create global .env
+    let globalEnvMessage = ''
+    if (!globalEnvExists()) {
+      const globalEnvPath = createGlobalEnv()
+      globalEnvMessage = `\nCreated global .env at ${pc.cyan(globalEnvPath)}`
+    } else {
+      globalEnvMessage = `\nUsing global .env at ${pc.cyan(getGlobalEnvPath())}`
+    }
+
+    writeFileSync(paths.wikiIndex, `# ${name}
+
+> Auto-maintained index. Do not edit manually.
+
+## Sources
+
+_No sources ingested yet. Run \`theora ingest <file>\` to add documents._
+
+## Concepts
+
+_No concepts compiled yet. Run \`theora compile\` after ingesting sources._
+`)
 
     spinner.succeed('Knowledge base initialized')
 
@@ -54,8 +82,9 @@ export const initCommand = new Command('init')
     console.log(`  ${pc.gray('raw/')}        Source documents`)
     console.log(`  ${pc.gray('wiki/')}       Compiled wiki`)
     console.log(`  ${pc.gray('output/')}     Answers, slides, charts`)
-    console.log(`  ${pc.gray('.env')}        API keys`)
+    console.log(`  ${pc.gray('.env')}        API keys (KB-specific)`)
     console.log(`  ${pc.gray('.theora/')}    Config and theme`)
+    console.log(globalEnvMessage)
     console.log()
     console.log(`  Provider: ${pc.white(provider)}  Model: ${pc.white(model)}`)
     console.log()
@@ -64,4 +93,5 @@ export const initCommand = new Command('init')
 
     console.log()
     console.log(`Next: add your API key to ${pc.cyan('.env')}, then ${pc.cyan('theora ingest <file>')}`)
+    console.log(pc.gray('       (or use the global .env at ~/.theora/.env for all KBs)'))
   })

@@ -2,7 +2,7 @@
 import type { Child } from 'hono/jsx'
 
 interface HeaderProps {
-  active: 'home' | 'concepts' | 'queries' | 'search' | 'ask' | 'compile' | 'ingest' | 'stats'
+  active: 'home' | 'concepts' | 'queries' | 'search' | 'ask' | 'compile' | 'ingest' | 'stats' | 'settings'
 }
 
 const wikiKeys = new Set(['home', 'concepts', 'queries'])
@@ -13,6 +13,7 @@ const navLinks = [
   { href: '/ingest', label: 'ingest', key: 'ingest' },
   { href: '/compile', label: 'compile', key: 'compile' },
   { href: '/stats', label: 'stats', key: 'stats' },
+  { href: '/settings', label: 'settings', key: 'settings' },
 ]
 
 const wikiSubLinks = [
@@ -28,17 +29,110 @@ const themes = [
   { id: 'neon',      color: '#00bbff', title: 'NEON — electric cyan' },
 ]
 
+interface MobileMenuProps {
+  active: string
+}
+
+function MobileMenu({ active }: MobileMenuProps) {
+  return (
+    <div
+      data-mobile-menu
+      class="fixed inset-0 bg-zinc-950/95 backdrop-blur-sm z-[19999] opacity-0 invisible transition-all duration-200 sm:hidden"
+    >
+      <div class="flex flex-col h-full px-4 py-4">
+        {/* Mobile menu header */}
+        <div class="flex items-center justify-between mb-8">
+          <a href="/" class="flex items-center gap-2" onclick="closeMobileMenu()">
+            <img src="/static/logo.svg" width="28" height="28" alt="theora logo" />
+            <span class="text-red-500 font-bold text-sm tracking-widest uppercase glow">theora</span>
+          </a>
+          <button
+            type="button"
+            data-mobile-menu-close
+            class="p-2 -mr-2 text-zinc-400 hover:text-zinc-100 transition-colors"
+            aria-label="Close menu"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Mobile navigation */}
+        <nav class="flex flex-col gap-2 mb-8">
+          <div class="text-zinc-500 text-xs uppercase tracking-wider mb-2">Wiki</div>
+          {wikiSubLinks.map(link => (
+            <a
+              key={link.key}
+              href={link.href}
+              class={active === link.key ? 'text-zinc-100 py-2 text-sm' : 'text-zinc-400 hover:text-zinc-100 py-2 text-sm transition-colors'}
+              onclick="closeMobileMenu()"
+            >
+              {link.label}
+            </a>
+          ))}
+          <div class="text-zinc-500 text-xs uppercase tracking-wider mt-4 mb-2">Actions</div>
+          {navLinks.map(link => (
+            <a
+              key={link.key}
+              href={link.href}
+              class={active === link.key ? 'text-zinc-100 py-2 text-sm' : 'text-zinc-400 hover:text-zinc-100 py-2 text-sm transition-colors'}
+              onclick="closeMobileMenu()"
+            >
+              {link.label}
+            </a>
+          ))}
+        </nav>
+
+        {/* Mobile theme picker */}
+        <div class="mt-auto">
+          <div class="text-zinc-500 text-xs uppercase tracking-wider mb-3">Theme</div>
+          <div class="flex flex-wrap gap-3">
+            {themes.map(theme => (
+              <button
+                key={theme.id}
+                data-theme-id={theme.id}
+                title={theme.title}
+                onclick={`setTheme('${theme.id}'); closeMobileMenu();`}
+                class="theme-swatch w-8 h-8 rounded-full cursor-pointer hover:scale-110 focus:outline-none flex items-center justify-center"
+                style={`background-color: ${theme.color}`}
+              >
+                <span class="sr-only">{theme.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function Header({ active }: HeaderProps) {
   const isWikiActive = wikiKeys.has(active)
 
   return (
     <header class="border-b border-zinc-800 bg-zinc-950 sticky top-0 z-[20000]">
-      <div class="max-w-5xl mx-auto px-6 py-3 flex items-center gap-8">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4 sm:gap-8">
         <a href="/" class="flex items-center gap-2 shrink-0">
           <img src="/static/logo.svg" width="28" height="28" alt="theora logo" />
-          <span class="text-red-500 font-bold text-sm tracking-widest uppercase glow">theora</span>
+          <span class="text-red-500 font-bold text-sm tracking-widest uppercase glow hidden sm:inline">theora</span>
         </a>
-        <nav class="flex gap-6 items-center">
+
+        {/* Mobile menu button */}
+        <button
+          type="button"
+          data-mobile-menu-trigger
+          class="sm:hidden ml-auto p-2 -mr-2 text-zinc-400 hover:text-zinc-100 transition-colors"
+          aria-label="Open menu"
+          aria-expanded="false"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        {/* Desktop navigation */}
+        <nav class="hidden sm:flex gap-6 items-center">
           {/* Wiki dropdown - improved with click and hover support */}
           <div class="relative" data-dropdown="wiki">
             <button
@@ -94,8 +188,9 @@ export function Header({ active }: HeaderProps) {
             </a>
           ))}
         </nav>
-        <div class="ml-auto flex items-center gap-2.5">
-          <span class="text-zinc-600 text-xs tracking-widest uppercase hidden sm:inline">theme</span>
+        {/* Desktop theme picker */}
+        <div class="hidden sm:flex ml-auto items-center gap-2.5">
+          <span class="text-zinc-600 text-xs tracking-widest uppercase">theme</span>
           <div class="flex items-center gap-1.5">
             {themes.map(theme => (
               <button
@@ -110,6 +205,8 @@ export function Header({ active }: HeaderProps) {
           </div>
         </div>
       </div>
+
+      <MobileMenu active={active} />
     </header>
   )
 }
