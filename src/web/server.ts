@@ -29,6 +29,7 @@ import { ConceptsPage } from './templates/concepts.js'
 import { QueriesPage } from './templates/queries.js'
 import { IngestPage } from './templates/ingest.js'
 import { StatsPage } from './templates/stats.js'
+import { AboutPage } from './templates/about.js'
 import { readLlmLogs, summarizeStats } from '../lib/llm-stats.js'
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
@@ -506,6 +507,21 @@ export function startServer(port: number): void {
         await new Promise(resolve => setTimeout(resolve, 1000))
       }
     })
+  })
+
+  app.get('/about', (c) => {
+    const configPath = join(requireKbRoot(), '.theora', 'config.json')
+    const config = existsSync(configPath)
+      ? JSON.parse(readFileSync(configPath, 'utf-8'))
+      : { name: 'Knowledge Base' }
+
+    return c.html(
+      Layout({
+        title: `About — ${config.name ?? 'Knowledge Base'}`,
+        active: 'home',
+        children: AboutPage({ config }),
+      }).toString()
+    )
   })
 
   serve({ fetch: app.fetch, port }, (info) => {

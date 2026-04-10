@@ -51,3 +51,4 @@
 - When implementing SSE (Server-Sent Events) endpoints, reference existing working SSE implementations in the codebase (e.g., compile, ask stream handlers) to ensure correct implementation patterns. Confidence: 0.75
 - Store SVG UI icons in a dedicated `ui/icons/` directory with each icon as its own file — one icon per file for modular organization and easy imports. Confidence: 0.85
 - When picking colors for UI elements, use theme-based CSS custom properties (e.g., `var(--color-accent)`) rather than hardcoded Tailwind colors — colors should adapt to the active theme. Confidence: 0.80
+- Footer layout order (top to bottom): Pages section first, then "Built with CommandCode" + GitHub link row, then PWV logo "Powered by PWV" with copyright underneath. Confidence: 0.75
