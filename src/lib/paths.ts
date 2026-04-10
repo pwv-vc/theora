@@ -1,5 +1,6 @@
 import { join, resolve } from 'node:path'
 import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
 
 /**
  * Join `base` and `untrusted` and verify the result stays inside `base`.
@@ -14,10 +15,14 @@ export function safeJoin(base: string, untrusted: string): string {
   return resolved
 }
 
+export function isKbRoot(dir: string): boolean {
+  return existsSync(join(dir, '.theora', 'config.json'))
+}
+
 export function findKbRoot(from: string = process.cwd()): string | null {
   let dir = resolve(from)
   while (true) {
-    if (existsSync(join(dir, '.theora'))) {
+    if (isKbRoot(dir)) {
       return dir
     }
     const parent = resolve(dir, '..')
@@ -32,6 +37,14 @@ export function requireKbRoot(): string {
     throw new Error('Not inside a knowledge base. Run `theora init` first.')
   }
   return root
+}
+
+export function getGlobalTheoraDir(): string {
+  return join(homedir(), '.theora')
+}
+
+export function getGlobalEnvPath(): string {
+  return join(getGlobalTheoraDir(), '.env')
 }
 
 export type KbPaths = ReturnType<typeof kbPaths>

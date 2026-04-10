@@ -3,13 +3,22 @@ import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import pc from 'picocolors'
 import ora from 'ora'
-import { kbPaths, findKbRoot } from '../lib/paths.js'
+import { kbPaths, findKbRoot, getGlobalEnvPath, getGlobalTheoraDir } from '../lib/paths.js'
 import { checkDeps } from '../lib/deps.js'
 import { DEFAULT_THEME } from '../lib/theme.js'
 import type { KbConfig } from '../lib/config.js'
 import type { Provider } from '../lib/types.js'
 import { DEFAULT_MODELS } from '../lib/types.js'
 import { DEFAULT_ACTION_MODELS } from '../lib/config.js'
+
+const GLOBAL_ENV_TEMPLATE = `# theora — shared LLM API keys
+
+# OpenAI (default)
+OPENAI_API_KEY=
+
+# Anthropic
+# ANTHROPIC_API_KEY=
+`
 
 export const initCommand = new Command('init')
   .description('Initialize a new knowledge base')
@@ -42,8 +51,12 @@ export const initCommand = new Command('init')
       writeFileSync(paths.theme, DEFAULT_THEME)
     }
 
-    if (!existsSync(join(cwd, '.env'))) {
-      writeFileSync(join(cwd, '.env'), `# theora — LLM API Keys\n\n# OpenAI (default)\nOPENAI_API_KEY=\n\n# Anthropic\n# ANTHROPIC_API_KEY=\n`)
+    const globalTheoraDir = getGlobalTheoraDir()
+    const globalEnvPath = getGlobalEnvPath()
+
+    mkdirSync(globalTheoraDir, { recursive: true })
+    if (!existsSync(globalEnvPath)) {
+      writeFileSync(globalEnvPath, GLOBAL_ENV_TEMPLATE)
     }
 
     writeFileSync(paths.wikiIndex, `# ${name}\n\n> Auto-maintained index. Do not edit manually.\n\n## Sources\n\n_No sources ingested yet. Run \`theora ingest <file>\` to add documents._\n\n## Concepts\n\n_No concepts compiled yet. Run \`theora compile\` after ingesting sources._\n`)
@@ -54,8 +67,10 @@ export const initCommand = new Command('init')
     console.log(`  ${pc.gray('raw/')}        Source documents`)
     console.log(`  ${pc.gray('wiki/')}       Compiled wiki`)
     console.log(`  ${pc.gray('output/')}     Answers, slides, charts`)
-    console.log(`  ${pc.gray('.env')}        API keys`)
     console.log(`  ${pc.gray('.theora/')}    Config and theme`)
+    console.log()
+    console.log(`  Shared API keys: ${pc.white(globalEnvPath)}`)
+    console.log(`  Local override:  ${pc.white(join(cwd, '.env'))} ${pc.gray('(optional)')}`)
     console.log()
     console.log(`  Provider: ${pc.white(provider)}  Model: ${pc.white(model)}`)
     console.log()
@@ -63,5 +78,5 @@ export const initCommand = new Command('init')
     checkDeps()
 
     console.log()
-    console.log(`Next: add your API key to ${pc.cyan('.env')}, then ${pc.cyan('theora ingest <file>')}`)
+    console.log(`Next: add your API key to ${pc.cyan(globalEnvPath)}, then ${pc.cyan('theora ingest <file>')}`)
   })

@@ -155,7 +155,7 @@ mkdir my-research && cd my-research
 theora init my-research
 ```
 
-`theora init` checks for optional dependencies and tells you what to install if anything is missing. It creates the directory structure and a `.env` file for your API keys:
+`theora init` checks for optional dependencies and tells you what to install if anything is missing. It creates the directory structure and a shared `~/.theora/.env` file for your API keys:
 
 ```
 raw/              Source documents you feed in
@@ -164,13 +164,12 @@ wiki/             LLM-compiled wiki (don't edit — the LLM owns this)
   concepts/       Concept articles
   sources/        Source summaries
 output/           Answers, slides, charts, and rendered outputs
-.env              API keys
-.kb/              Config and slide theme
+.theora/          Config and slide theme
 ```
 
 ### Add your API key
 
-Edit `.env` in your knowledge base root:
+Edit `~/.theora/.env` once and every knowledge base can use it:
 
 ```bash
 # OpenAI (default)
@@ -179,6 +178,8 @@ OPENAI_API_KEY=sk-...
 # Or Anthropic
 # ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+If you need per-project overrides, you can still create a local `.env` in the knowledge base root.
 
 ---
 
@@ -250,7 +251,7 @@ Use `--concepts-only` to regenerate all concept articles without re-summarizing 
 
 Use `--force` when you want to reprocess all sources with updated prompts or settings. It clears `wiki/sources/` and `wiki/concepts/` then runs a full compile. Your `raw/` files are never touched.
 
-By default, `theora compile` runs **3 parallel LLM calls** at a time — safe for both OpenAI and Anthropic rate limits. Use `--concurrency` to tune this per-run, or set a permanent default with `theora init --concurrency <n>` (stored in `.kb/config.json`).
+By default, `theora compile` runs **3 parallel LLM calls** at a time — safe for both OpenAI and Anthropic rate limits. Use `--concurrency` to tune this per-run, or set a permanent default with `theora init --concurrency <n>` (stored in `.theora/config.json`).
 
 ### Ask
 
@@ -405,7 +406,7 @@ theora init my-research --provider openai --model gpt-4o-mini
 theora init my-research --concurrency 5
 ```
 
-Or edit `.kb/config.json` directly:
+Or edit `.theora/config.json` directly:
 
 ```json
 {
@@ -453,7 +454,7 @@ Override any action in your `.theora/config.json`:
 
 Unspecified actions keep their defaults.
 
-All API keys live in `.env` at the knowledge base root. This file is gitignored by default.
+API keys can live in the shared `~/.theora/.env` file. If needed, a knowledge-base-local `.env` can override the shared values for just that project.
 
 ---
 
@@ -536,7 +537,7 @@ This produces two files in `output/`:
 
 ### Theming
 
-`theora init` creates a default slide theme at `.kb/theme.css`. Customize it to control fonts, colors, and layout for all generated decks:
+`theora init` creates a default slide theme at `.theora/theme.css`. Customize it to control fonts, colors, and layout for all generated decks:
 
 ```css
 :root {
@@ -549,7 +550,7 @@ This produces two files in `output/`:
 }
 ```
 
-If you delete `.kb/theme.css`, slides fall back to Marp's built-in default theme.
+If you delete `.theora/theme.css`, slides fall back to Marp's built-in default theme.
 
 ### Good slide prompts
 

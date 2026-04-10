@@ -83,7 +83,7 @@ export function getSession(): SessionStats {
   return { ...session }
 }
 
-// --- Cumulative stats (persisted to .kb/stats.json) ---
+// --- Cumulative stats (persisted to .theora/stats.json) ---
 
 function statsPath(): string | null {
   const root = findKbRoot()

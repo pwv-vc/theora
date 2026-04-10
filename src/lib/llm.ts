@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 import { readConfig } from './config.js'
 import { loadEnv } from './env.js'
 import { logLlmCall, estimateCost } from './llm-stats.js'
+import { getGlobalEnvPath } from './paths.js'
 
 import type { Provider } from './types.js'
 
@@ -48,7 +49,7 @@ function getOpenAI(): OpenAI {
   if (!openaiClient) {
     loadEnv()
     if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY not set. Add it to .env in your knowledge base root.')
+      throw new Error(`OPENAI_API_KEY not set. Add it to ${getGlobalEnvPath()} or a local .env in your knowledge base root.`)
     }
     openaiClient = new OpenAI()
   }
@@ -145,7 +146,7 @@ function getAnthropic(): Anthropic {
   if (!anthropicClient) {
     loadEnv()
     if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error('ANTHROPIC_API_KEY not set. Add it to .env in your knowledge base root.')
+      throw new Error(`ANTHROPIC_API_KEY not set. Add it to ${getGlobalEnvPath()} or a local .env in your knowledge base root.`)
     }
     anthropicClient = new Anthropic()
   }
