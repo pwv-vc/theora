@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, accessSync, constants } from 'node:fs'
 import { findKbRoot } from './paths.js'
 import { readConfig, KbConfig } from './config.js'
 import { getGlobalEnvPath, globalEnvExists } from './env.js'
@@ -19,6 +19,17 @@ export interface SettingsInfo {
   globalEnvPath: string
 }
 
+function isReadableFile(path: string): boolean {
+  if (!existsSync(path)) return false
+
+  try {
+    accessSync(path, constants.R_OK)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function findActiveEnvFile(): EnvLocation {
   const kbRoot = findKbRoot()
   const cwd = process.cwd()
@@ -26,20 +37,20 @@ export function findActiveEnvFile(): EnvLocation {
   // Check KB root first (highest priority)
   if (kbRoot) {
     const kbEnvPath = join(kbRoot, '.env')
-    if (existsSync(kbEnvPath)) {
+    if (isReadableFile(kbEnvPath)) {
       return { source: 'kb', path: kbEnvPath, exists: true }
     }
   }
 
   // Check CWD second
   const cwdEnvPath = join(cwd, '.env')
-  if (existsSync(cwdEnvPath)) {
+  if (isReadableFile(cwdEnvPath)) {
     return { source: 'cwd', path: cwdEnvPath, exists: true }
   }
 
   // Check global last
   const globalPath = getGlobalEnvPath()
-  if (existsSync(globalPath)) {
+  if (isReadableFile(globalPath)) {
     return { source: 'global', path: globalPath, exists: true }
   }
 
@@ -48,9 +59,14 @@ export function findActiveEnvFile(): EnvLocation {
 
 export function getEnvKeysFromFile(envPath: string): string[] {
   const keys: string[] = []
-  if (!existsSync(envPath)) return keys
+  if (!isReadableFile(envPath)) return keys
 
-  const content = readFileSync(envPath, 'utf-8')
+  let content: string
+  try {
+    content = readFileSync(envPath, 'utf-8')
+  } catch {
+    return keys
+  }
   const lines = content.split('\n')
 
   for (const line of lines) {

@@ -165,7 +165,7 @@ wiki/             LLM-compiled wiki (don't edit — the LLM owns this)
   sources/        Source summaries
 output/           Answers, slides, charts, and rendered outputs
 .env              API keys
-.kb/              Config and slide theme
+.theora/          Config, logs, and slide theme
 ```
 
 ### Global Configuration (Optional)
@@ -178,12 +178,14 @@ theora init  # Creates ~/.theora/.env if it doesn't exist
 
 **Environment File Hierarchy:**
 
-Theora looks for environment files in this priority order:
+Theora loads environment files in this order:
 
-1. **Knowledge Base `.env`** — Highest priority, KB-specific settings
+1. **Global `~/.theora/.env`** — Shared defaults across all KBs
 2. **Current Directory `.env`** — For flexibility when running outside KB
-3. **Global `~/.theora/.env`** — Shared across all KBs (created by init)
-4. **System environment variables** — Lowest priority
+3. **Knowledge Base `.env`** — Highest priority, KB-specific overrides
+4. **System environment variables** — Available to the process before file loading
+
+Later files override earlier ones. Unreadable `.env` files are skipped.
 
 This means you can:
 - Use `~/.theora/.env` for your main API keys (set once, use everywhere)
@@ -197,6 +199,10 @@ Edit `.env` in your knowledge base root:
 ```bash
 # OpenAI (default)
 OPENAI_API_KEY=sk-...
+
+# Or OpenAI-compatible
+# OPENAI_COMPATIBLE_BASE_URL=http://localhost:11434/v1
+# OPENAI_COMPATIBLE_API_KEY=
 
 # Or Anthropic
 # ANTHROPIC_API_KEY=sk-ant-...
@@ -272,7 +278,7 @@ Use `--concepts-only` to regenerate all concept articles without re-summarizing 
 
 Use `--force` when you want to reprocess all sources with updated prompts or settings. It clears `wiki/sources/` and `wiki/concepts/` then runs a full compile. Your `raw/` files are never touched.
 
-By default, `theora compile` runs **3 parallel LLM calls** at a time — safe for both OpenAI and Anthropic rate limits. Use `--concurrency` to tune this per-run, or set a permanent default with `theora init --concurrency <n>` (stored in `.kb/config.json`).
+By default, `theora compile` runs **3 parallel LLM calls** at a time — safe for both OpenAI and Anthropic rate limits. Use `--concurrency` to tune this per-run, or set a permanent default with `theora init --concurrency <n>` (stored in `.theora/config.json`).
 
 ### Ask
 
@@ -432,6 +438,7 @@ Theora supports multiple LLM providers. OpenAI is the default.
 | Provider | Default Model | API Key Variable |
 |----------|--------------|-----------------|
 | `openai` | `gpt-4o` | `OPENAI_API_KEY` |
+| `openai-compatible` | `gpt-4o` | `OPENAI_COMPATIBLE_API_KEY` |
 | `anthropic` | `claude-sonnet-4-20250514` | `ANTHROPIC_API_KEY` |
 
 Set the provider at init time:
@@ -439,10 +446,13 @@ Set the provider at init time:
 ```bash
 theora init my-research --provider anthropic
 theora init my-research --provider openai --model gpt-4o-mini
+theora init my-research --provider openai-compatible --model llama3.1:8b
 theora init my-research --concurrency 5
 ```
 
-Or edit `.kb/config.json` directly:
+For `openai-compatible`, set `OPENAI_COMPATIBLE_BASE_URL` to your server's `/v1` endpoint. `OPENAI_COMPATIBLE_API_KEY` is optional and defaults to `not-needed` for local servers that do not require authentication.
+
+Or edit the KB-local `.theora/config.json` directly:
 
 ```json
 {
@@ -477,7 +487,7 @@ Each action uses a model optimized for its task. Cheaper models (`gpt-4o-mini`) 
 | `slides` | `gpt-4o` | Generate slide decks |
 | `lint` | `gpt-4o-mini` | Suggest improvements |
 
-Override any action in your `.theora/config.json`:
+Override any action in your KB-local `.theora/config.json`:
 
 ```json
 {
@@ -490,7 +500,7 @@ Override any action in your `.theora/config.json`:
 
 Unspecified actions keep their defaults.
 
-All API keys live in `.env` at the knowledge base root. This file is gitignored by default.
+API keys can live in either the knowledge base `.env` or the global `~/.theora/.env`. KB-local values override global ones. These files are gitignored by default when they live in the knowledge base.
 
 ---
 
@@ -573,7 +583,7 @@ This produces two files in `output/`:
 
 ### Theming
 
-`theora init` creates a default slide theme at `.kb/theme.css`. Customize it to control fonts, colors, and layout for all generated decks:
+`theora init` creates a default slide theme at `.theora/theme.css`. Customize it to control fonts, colors, and layout for all generated decks:
 
 ```css
 :root {
@@ -586,7 +596,7 @@ This produces two files in `output/`:
 }
 ```
 
-If you delete `.kb/theme.css`, slides fall back to Marp's built-in default theme.
+If you delete `.theora/theme.css`, slides fall back to Marp's built-in default theme.
 
 ### Good slide prompts
 

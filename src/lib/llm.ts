@@ -6,6 +6,8 @@ import { logLlmCall, estimateCost } from './llm-stats.js'
 
 import type { Provider } from './types.js'
 
+type OpenAiFamilyProvider = Extract<Provider, 'openai' | 'openai-compatible'>
+
 export type LlmAction =
   | 'compile'
   | 'vision'
@@ -42,21 +44,42 @@ function resolveProvider(options: LlmOptions): { provider: Provider; model: stri
 
 // --- OpenAI ---
 
-let openaiClient: OpenAI | null = null
+const openAiClients: Partial<Record<OpenAiFamilyProvider, OpenAI>> = {}
 
-function getOpenAI(): OpenAI {
-  if (!openaiClient) {
+function getOpenAI(provider: OpenAiFamilyProvider = 'openai'): OpenAI {
+  if (!openAiClients[provider]) {
     loadEnv()
+    if (provider === 'openai-compatible') {
+      const compatibleBaseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL?.trim()
+      if (!compatibleBaseUrl) {
+        throw new Error('OPENAI_COMPATIBLE_BASE_URL not set. Add it to .env in your knowledge base root.')
+      }
+      const compatibleApiKey = process.env.OPENAI_COMPATIBLE_API_KEY?.trim() || 'not-needed'
+      openAiClients[provider] = new OpenAI({
+        apiKey: compatibleApiKey,
+        baseURL: compatibleBaseUrl,
+      })
+      return openAiClients[provider]
+    }
+
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY not set. Add it to .env in your knowledge base root.')
     }
-    openaiClient = new OpenAI()
+    openAiClients[provider] = new OpenAI()
   }
-  return openaiClient
+  return openAiClients[provider]
 }
 
-async function openaiComplete(prompt: string, system: string, model: string, maxTokens: number, action: string = 'unknown', meta?: string | null): Promise<string> {
-  const client = getOpenAI()
+async function openaiComplete(
+  prompt: string,
+  system: string,
+  model: string,
+  maxTokens: number,
+  provider: OpenAiFamilyProvider = 'openai',
+  action: string = 'unknown',
+  meta?: string | null,
+): Promise<string> {
+  const client = getOpenAI(provider)
   const startTime = Date.now()
   const response = await client.chat.completions.create({
     model,
@@ -76,7 +99,7 @@ async function openaiComplete(prompt: string, system: string, model: string, max
     timestamp: new Date().toISOString(),
     action,
     meta,
-    provider: 'openai',
+    provider,
     model,
     inputTokens,
     outputTokens,
@@ -92,11 +115,12 @@ async function openaiStream(
   system: string,
   model: string,
   maxTokens: number,
+  provider: OpenAiFamilyProvider = 'openai',
   onText: (text: string) => void,
   action: string = 'unknown',
   meta?: string | null,
 ): Promise<string> {
-  const client = getOpenAI()
+  const client = getOpenAI(provider)
   const startTime = Date.now()
   const stream = await client.chat.completions.create({
     model,
@@ -126,7 +150,7 @@ async function openaiStream(
     timestamp: new Date().toISOString(),
     action,
     meta,
-    provider: 'openai',
+    provider,
     model,
     inputTokens,
     outputTokens,
@@ -245,10 +269,11 @@ async function openaiVision(
   system: string,
   model: string,
   maxTokens: number,
+  provider: OpenAiFamilyProvider = 'openai',
   action: string = 'vision',
   meta?: string | null,
 ): Promise<string> {
-  const client = getOpenAI()
+  const client = getOpenAI(provider)
   const startTime = Date.now()
   const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
     ...images.map((img): OpenAI.Chat.Completions.ChatCompletionContentPart => ({
@@ -276,7 +301,7 @@ async function openaiVision(
     timestamp: new Date().toISOString(),
     action,
     meta,
-    provider: 'openai',
+    provider,
     model,
     inputTokens,
     outputTokens,
@@ -353,7 +378,7 @@ export async function llmVision(
   if (provider === 'anthropic') {
     return anthropicVision(prompt, images, system, model, maxTokens, action, meta)
   }
-  return openaiVision(prompt, images, system, model, maxTokens, action, meta)
+  return openaiVision(prompt, images, system, model, maxTokens, provider, action, meta)
 }
 
 export async function llm(prompt: string, options: LlmOptions = {}): Promise<string> {
@@ -366,7 +391,7 @@ export async function llm(prompt: string, options: LlmOptions = {}): Promise<str
   if (provider === 'anthropic') {
     return anthropicComplete(prompt, system, model, maxTokens, action, meta)
   }
-  return openaiComplete(prompt, system, model, maxTokens, action, meta)
+  return openaiComplete(prompt, system, model, maxTokens, provider, action, meta)
 }
 
 export async function llmStream(
@@ -383,5 +408,5 @@ export async function llmStream(
   if (provider === 'anthropic') {
     return anthropicStream(prompt, system, model, maxTokens, onText, action, meta)
   }
-  return openaiStream(prompt, system, model, maxTokens, onText, action, meta)
+  return openaiStream(prompt, system, model, maxTokens, provider, onText, action, meta)
 }

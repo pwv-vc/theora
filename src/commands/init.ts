@@ -15,7 +15,7 @@ import { createGlobalEnv, globalEnvExists, getGlobalEnvPath } from '../lib/env.j
 export const initCommand = new Command('init')
   .description('Initialize a new knowledge base')
   .argument('[name]', 'name for the knowledge base', 'knowledge-base')
-  .option('--provider <provider>', 'LLM provider: openai, anthropic', 'openai')
+  .option('--provider <provider>', 'LLM provider: openai, openai-compatible, anthropic', 'openai')
   .option('--model <model>', 'model name (defaults to provider default)')
   .option('--concurrency <n>', 'parallel LLM calls during compile (default: 3)', '3')
   .action(async (name: string, options: { provider: string; model?: string; concurrency: string }) => {
@@ -48,6 +48,10 @@ export const initCommand = new Command('init')
 
 # OpenAI (default)
 OPENAI_API_KEY=
+
+# OpenAI-compatible
+# OPENAI_COMPATIBLE_BASE_URL=http://localhost:11434/v1
+# OPENAI_COMPATIBLE_API_KEY=
 
 # Anthropic
 # ANTHROPIC_API_KEY=
