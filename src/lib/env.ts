@@ -15,7 +15,7 @@ function loadReadableEnvFile(path: string): void {
     return
   }
 
-  dotenv.config({ path, quiet: true, override: true })
+  dotenv.config({ path, quiet: true })
 }
 
 export function loadEnv(): void {
