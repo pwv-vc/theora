@@ -11,7 +11,8 @@ export const CONTENT_RULES = `IMPORTANT formatting rules:
 - Aim for 400–800 words — dense and informative, not padded
 - Preserve exact names: people, companies, products, locations, and technical terms exactly as they appear in the source
 - Always qualify time-sensitive data with its period: "as of [date]", "for [quarter/year]", "reported in [month year]"
-- On the very last line, output tags as: Tags: tag1, tag2, tag3`
+- On the very last line, output tags as: Tags: tag1, tag2, tag3
+- Use hyphens for multi-word tags (e.g., "machine-learning" not "machine learning")`
 
 const SOURCE_SECTIONS = `Write a wiki article with these exact sections:
 

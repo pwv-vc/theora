@@ -1,6 +1,9 @@
 import { Command } from 'commander'
 import pc from 'picocolors'
 import ora from 'ora'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import matter from 'gray-matter'
 import { kbPaths, requireKbRoot } from '../lib/paths.js'
 import { llm } from '../lib/llm.js'
 import {
@@ -10,6 +13,7 @@ import {
   readWikiIndex,
   fixBrokenLinks,
 } from '../lib/wiki.js'
+import { normalizeTag } from '../lib/utils.js'
 import { basename, extname } from 'node:path'
 
 interface LintIssue {
@@ -93,6 +97,64 @@ function checkMissingFrontmatter(articles: ReturnType<typeof listWikiArticles>):
   return issues
 }
 
+interface TagDuplicateGroup {
+  normalized: string
+  variants: string[]
+  articles: Map<string, string[]> // article path -> tags found
+}
+
+function findDuplicateTagVariants(articles: ReturnType<typeof listWikiArticles>): TagDuplicateGroup[] {
+  const groups = new Map<string, TagDuplicateGroup>()
+
+  for (const article of articles) {
+    if (!Array.isArray(article.tags)) continue
+
+    for (const tag of article.tags) {
+      const normalized = normalizeTag(tag)
+      if (!normalized) continue
+
+      // If tag differs from normalized form, it's a variant that could cause dupes
+      if (tag !== normalized) {
+        const group: TagDuplicateGroup = groups.get(normalized) ?? {
+          normalized,
+          variants: [],
+          articles: new Map(),
+        }
+        if (!group.variants.includes(tag)) {
+          group.variants.push(tag)
+        }
+        const articleTags = group.articles.get(article.relativePath) ?? []
+        if (!articleTags.includes(tag)) {
+          articleTags.push(tag)
+        }
+        group.articles.set(article.relativePath, articleTags)
+        groups.set(normalized, group)
+      }
+    }
+  }
+
+  return [...groups.values()].sort((a, b) => a.normalized.localeCompare(b.normalized))
+}
+
+function checkDuplicateTagVariants(articles: ReturnType<typeof listWikiArticles>): LintIssue[] {
+  const issues: LintIssue[] = []
+  const duplicates = findDuplicateTagVariants(articles)
+
+  for (const group of duplicates) {
+    const articleList = [...group.articles.entries()]
+      .map(([path, tags]) => `${path} (${tags.join(', ')})`)
+      .join(', ')
+    issues.push({
+      level: 'warning',
+      message: `Tag variants for "${group.normalized}": ${group.variants.join(', ')}`,
+      file: articleList,
+      fixable: true,
+    })
+  }
+
+  return issues
+}
+
 export const lintCommand = new Command('lint')
   .description('Health check the wiki')
   .option('--fix', 'fix broken links and missing frontmatter')
@@ -111,6 +173,7 @@ export const lintCommand = new Command('lint')
       ...checkBrokenLinks(articles),
       ...checkOrphanedSources(articles, rawFiles, root),
       ...checkMissingFrontmatter(articles),
+      ...checkDuplicateTagVariants(articles),
     ]
 
     spinner.succeed('Health check complete')
@@ -160,6 +223,7 @@ export const lintCommand = new Command('lint')
     if (options.fix) {
       const fixSpinner = ora('Fixing issues').start()
       let fixedLinks = 0
+      let fixedTags = 0
 
       const articleSlugs = new Set(articles.map(a => basename(a.path, '.md')))
 
@@ -168,8 +232,32 @@ export const lintCommand = new Command('lint')
         fixedLinks += linksFixed
       }
 
-      if (fixedLinks > 0) {
-        fixSpinner.succeed(`Fixed: ${fixedLinks} broken links`)
+      // Fix tag duplicates by normalizing all tags
+      const duplicateGroups = findDuplicateTagVariants(articles)
+      for (const group of duplicateGroups) {
+        for (const [articlePath, tags] of group.articles) {
+          const fullPath = join(root, articlePath)
+          const raw = readFileSync(fullPath, 'utf-8')
+          const { data, content } = matter(raw)
+          if (Array.isArray(data.tags)) {
+            const originalTags = data.tags as string[]
+            const normalizedTags = originalTags.map(t => normalizeTag(t))
+            const uniqueTags = [...new Set(normalizedTags)].sort()
+            if (JSON.stringify(originalTags) !== JSON.stringify(uniqueTags)) {
+              data.tags = uniqueTags
+              writeFileSync(fullPath, matter.stringify(content, data))
+              fixedTags++
+            }
+          }
+        }
+      }
+
+      const totalFixed = fixedLinks + fixedTags
+      if (totalFixed > 0) {
+        const parts = []
+        if (fixedLinks > 0) parts.push(`${fixedLinks} broken links`)
+        if (fixedTags > 0) parts.push(`${fixedTags} tag issues`)
+        fixSpinner.succeed(`Fixed: ${parts.join(', ')}`)
       } else {
         fixSpinner.succeed('Nothing to fix')
       }
