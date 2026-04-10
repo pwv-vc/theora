@@ -56,5 +56,9 @@ See [web/taste.md](web/taste.md)
 # workflow
 - After implementing a feature, run build and typecheck as verification steps before considering the task complete. Confidence: 0.85
 
+# code-style
+- Always ensure files end with a newline character (EOF newline). Confidence: 0.90
+- Define variables, constants, and functions before they are used (no forward references). Confidence: 0.85
+
 # documentation
 See [documentation/taste.md](documentation/taste.md)

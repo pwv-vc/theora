@@ -29,6 +29,84 @@ const themes = [
   { id: 'neon',      color: '#00bbff', title: 'NEON — electric cyan' },
 ]
 
+interface MobileMenuProps {
+  active: string
+}
+
+function MobileMenu({ active }: MobileMenuProps) {
+  return (
+    <div
+      data-mobile-menu
+      class="fixed inset-0 bg-zinc-950/95 backdrop-blur-sm z-[19999] opacity-0 invisible transition-all duration-200 sm:hidden"
+    >
+      <div class="flex flex-col h-full px-4 py-4">
+        {/* Mobile menu header */}
+        <div class="flex items-center justify-between mb-8">
+          <a href="/" class="flex items-center gap-2" onclick="closeMobileMenu()">
+            <img src="/static/logo.svg" width="28" height="28" alt="theora logo" />
+            <span class="text-red-500 font-bold text-sm tracking-widest uppercase glow">theora</span>
+          </a>
+          <button
+            type="button"
+            data-mobile-menu-close
+            class="p-2 -mr-2 text-zinc-400 hover:text-zinc-100 transition-colors"
+            aria-label="Close menu"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Mobile navigation */}
+        <nav class="flex flex-col gap-2 mb-8">
+          <div class="text-zinc-500 text-xs uppercase tracking-wider mb-2">Wiki</div>
+          {wikiSubLinks.map(link => (
+            <a
+              key={link.key}
+              href={link.href}
+              class={active === link.key ? 'text-zinc-100 py-2 text-sm' : 'text-zinc-400 hover:text-zinc-100 py-2 text-sm transition-colors'}
+              onclick="closeMobileMenu()"
+            >
+              {link.label}
+            </a>
+          ))}
+          <div class="text-zinc-500 text-xs uppercase tracking-wider mt-4 mb-2">Actions</div>
+          {navLinks.map(link => (
+            <a
+              key={link.key}
+              href={link.href}
+              class={active === link.key ? 'text-zinc-100 py-2 text-sm' : 'text-zinc-400 hover:text-zinc-100 py-2 text-sm transition-colors'}
+              onclick="closeMobileMenu()"
+            >
+              {link.label}
+            </a>
+          ))}
+        </nav>
+
+        {/* Mobile theme picker */}
+        <div class="mt-auto">
+          <div class="text-zinc-500 text-xs uppercase tracking-wider mb-3">Theme</div>
+          <div class="flex flex-wrap gap-3">
+            {themes.map(theme => (
+              <button
+                key={theme.id}
+                data-theme-id={theme.id}
+                title={theme.title}
+                onclick={`setTheme('${theme.id}'); closeMobileMenu();`}
+                class="theme-swatch w-8 h-8 rounded-full cursor-pointer hover:scale-110 focus:outline-none flex items-center justify-center"
+                style={`background-color: ${theme.color}`}
+              >
+                <span class="sr-only">{theme.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function Header({ active }: HeaderProps) {
   const isWikiActive = wikiKeys.has(active)
 
@@ -128,76 +206,7 @@ export function Header({ active }: HeaderProps) {
         </div>
       </div>
 
-      {/* Mobile menu overlay */}
-      <div
-        data-mobile-menu
-        class="fixed inset-0 bg-zinc-950/95 backdrop-blur-sm z-[19999] opacity-0 invisible transition-all duration-200 sm:hidden"
-      >
-        <div class="flex flex-col h-full px-4 py-4">
-          {/* Mobile menu header */}
-          <div class="flex items-center justify-between mb-8">
-            <a href="/" class="flex items-center gap-2" onclick="closeMobileMenu()">
-              <img src="/static/logo.svg" width="28" height="28" alt="theora logo" />
-              <span class="text-red-500 font-bold text-sm tracking-widest uppercase glow">theora</span>
-            </a>
-            <button
-              type="button"
-              data-mobile-menu-close
-              class="p-2 -mr-2 text-zinc-400 hover:text-zinc-100 transition-colors"
-              aria-label="Close menu"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Mobile navigation */}
-          <nav class="flex flex-col gap-2 mb-8">
-            <div class="text-zinc-500 text-xs uppercase tracking-wider mb-2">Wiki</div>
-            {wikiSubLinks.map(link => (
-              <a
-                key={link.key}
-                href={link.href}
-                class={active === link.key ? 'text-zinc-100 py-2 text-sm' : 'text-zinc-400 hover:text-zinc-100 py-2 text-sm transition-colors'}
-                onclick="closeMobileMenu()"
-              >
-                {link.label}
-              </a>
-            ))}
-            <div class="text-zinc-500 text-xs uppercase tracking-wider mt-4 mb-2">Actions</div>
-            {navLinks.map(link => (
-              <a
-                key={link.key}
-                href={link.href}
-                class={active === link.key ? 'text-zinc-100 py-2 text-sm' : 'text-zinc-400 hover:text-zinc-100 py-2 text-sm transition-colors'}
-                onclick="closeMobileMenu()"
-              >
-                {link.label}
-              </a>
-            ))}
-          </nav>
-
-          {/* Mobile theme picker */}
-          <div class="mt-auto">
-            <div class="text-zinc-500 text-xs uppercase tracking-wider mb-3">Theme</div>
-            <div class="flex flex-wrap gap-3">
-              {themes.map(theme => (
-                <button
-                  key={theme.id}
-                  data-theme-id={theme.id}
-                  title={theme.title}
-                  onclick={`setTheme('${theme.id}'); closeMobileMenu();`}
-                  class="theme-swatch w-8 h-8 rounded-full cursor-pointer hover:scale-110 focus:outline-none flex items-center justify-center"
-                  style={`background-color: ${theme.color}`}
-                >
-                  <span class="sr-only">{theme.title}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      <MobileMenu active={active} />
     </header>
   )
 }
