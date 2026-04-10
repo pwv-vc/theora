@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 
 import { join, relative, basename, extname } from 'node:path'
 import matter from 'gray-matter'
 import { kbPaths, requireKbRoot } from './paths.js'
+import { normalizeTag } from './utils.js'
 
 // --- Types ---
 
@@ -74,7 +75,7 @@ export function sanitizeLlmOutput(raw: string): { body: string; tags: string[] }
   const lastLine = lines[lines.length - 1]?.trim() ?? ''
   if (lastLine.toLowerCase().startsWith('tags:')) {
     const tagStr = lastLine.slice(5).trim()
-    tags = tagStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
+    tags = tagStr.split(',').map(t => normalizeTag(t)).filter(Boolean)
     lines.pop()
     while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop()
   }

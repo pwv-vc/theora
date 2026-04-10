@@ -25,3 +25,17 @@ export function titleFromFilename(file: string): string {
     .replace(/\b\w/g, c => c.toUpperCase())
     .trim()
 }
+
+/**
+ * Normalize a tag to use hyphens consistently.
+ * Converts spaces to hyphens, removes extra whitespace, lowercases.
+ * This ensures "sneaker pimps" becomes "sneaker-pimps" to match ingest conventions.
+ */
+export function normalizeTag(tag: string): string {
+  return tag
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-') // collapse multiple hyphens
+    .replace(/^-|-$/g, '') // trim leading/trailing hyphens
+}

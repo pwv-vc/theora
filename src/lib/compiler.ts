@@ -11,7 +11,7 @@ import type { ImageInput } from './llm.js'
 import { listRawFiles, listWikiArticles, writeArticle, sanitizeLlmOutput, readWikiIndex, getWikiStats, ONTOLOGY_TYPES, ONTOLOGY_SCHEMA_URLS } from './wiki.js'
 import type { ArticleMeta, OntologyType } from './wiki.js'
 import { getTagForFile } from './manifest.js'
-import { slugify, titleFromFilename } from './utils.js'
+import { slugify, titleFromFilename, normalizeTag } from './utils.js'
 import { readConfig } from './config.js'
 import {
   COMPILE_SYSTEM,
@@ -46,8 +46,8 @@ const MEDIA_TYPES: Record<string, ImageInput['mediaType']> = {
 }
 
 function mergeTags(ingestTag: string | null, llmTags: string[]): string[] {
-  const set = new Set(llmTags)
-  if (ingestTag) set.add(ingestTag.toLowerCase())
+  const set = new Set(llmTags.map(t => normalizeTag(t)))
+  if (ingestTag) set.add(normalizeTag(ingestTag))
   return [...set].sort()
 }
 

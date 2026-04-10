@@ -48,6 +48,7 @@ See [cli-design/taste.md](cli-design/taste.md)
 - Keep tags flat (simple strings like "ai", "transformers") — do not implement hierarchical/namespaced tags (e.g., "artist/prince"). Users can use conventions like "artist-prince" if they want structure. Confidence: 0.70
 - Auto-tagging at ingest should be interactive by default (LLM suggests, user confirms/edits), with a --yes flag to skip confirmation for bulk/scripted use. Confidence: 0.65
 - Tag vocabulary should live in .theora/tags.yaml, seeded at init time with predefined common tags based on KB category (e.g., research, music, business). Confidence: 0.65
+- Enforce a consistent tag convention (e.g., always use hyphens or spaces, not both) to prevent duplicates like "sneaker pimps" vs "sneaker-pimps". Provide linting and auto-fix capabilities to detect and resolve duplicate tag variants. Confidence: 0.75
 
 # wiki
 See [wiki/taste.md](wiki/taste.md)
