@@ -5,7 +5,7 @@ import { Footer } from './ui/footer.js'
 
 interface LayoutProps {
   title: string
-  active: 'home' | 'concepts' | 'queries' | 'search' | 'ask' | 'compile' | 'ingest' | 'stats'
+  active: 'home' | 'concepts' | 'queries' | 'search' | 'ask' | 'compile' | 'ingest' | 'stats' | 'settings'
   children: Child
 }
 
@@ -64,6 +64,46 @@ export function Layout({ title, active, children }: LayoutProps) {
             localStorage.setItem('theora-theme', t);
           }
           setTheme(localStorage.getItem('theora-theme') || 'max');
+
+          // Mobile menu handling
+          function openMobileMenu() {
+            const menu = document.querySelector('[data-mobile-menu]');
+            if (menu) {
+              menu.classList.remove('opacity-0', 'invisible');
+              menu.classList.add('opacity-100', 'visible');
+              document.body.style.overflow = 'hidden';
+            }
+          }
+
+          function closeMobileMenu() {
+            const menu = document.querySelector('[data-mobile-menu]');
+            if (menu) {
+              menu.classList.add('opacity-0', 'invisible');
+              menu.classList.remove('opacity-100', 'visible');
+              document.body.style.overflow = '';
+            }
+          }
+
+          document.addEventListener('DOMContentLoaded', function() {
+            const trigger = document.querySelector('[data-mobile-menu-trigger]');
+            const closeBtn = document.querySelector('[data-mobile-menu-close]');
+
+            if (trigger) {
+              trigger.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openMobileMenu();
+              });
+            }
+
+            if (closeBtn) {
+              closeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                closeMobileMenu();
+              });
+            }
+          });
 
           // Dropdown menu handling with click and hover support
           (function() {

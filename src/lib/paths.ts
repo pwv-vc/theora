@@ -17,7 +17,8 @@ export function safeJoin(base: string, untrusted: string): string {
 export function findKbRoot(from: string = process.cwd()): string | null {
   let dir = resolve(from)
   while (true) {
-    if (existsSync(join(dir, '.theora'))) {
+    // Check for .theora/config.json to distinguish KB roots from global ~/.theora
+    if (existsSync(join(dir, '.theora', 'config.json'))) {
       return dir
     }
     const parent = resolve(dir, '..')

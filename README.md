@@ -168,6 +168,28 @@ output/           Answers, slides, charts, and rendered outputs
 .kb/              Config and slide theme
 ```
 
+### Global Configuration (Optional)
+
+You can set up a global `.env` file at `~/.theora/.env` to share API keys across all knowledge bases:
+
+```bash
+theora init  # Creates ~/.theora/.env if it doesn't exist
+```
+
+**Environment File Hierarchy:**
+
+Theora looks for environment files in this priority order:
+
+1. **Knowledge Base `.env`** — Highest priority, KB-specific settings
+2. **Current Directory `.env`** — For flexibility when running outside KB
+3. **Global `~/.theora/.env`** — Shared across all KBs (created by init)
+4. **System environment variables** — Lowest priority
+
+This means you can:
+- Use `~/.theora/.env` for your main API keys (set once, use everywhere)
+- Override with a KB-specific `.env` for special cases
+- Check `theora settings` to see which .env file is active
+
 ### Add your API key
 
 Edit `.env` in your knowledge base root:

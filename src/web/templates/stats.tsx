@@ -1,6 +1,7 @@
-import { jsx } from 'hono/jsx'
+/** @jsxImportSource hono/jsx */
 import type { StatsSummary, LlmCallLog } from '../../lib/llm-stats.js'
 import type { KbConfig } from '../../lib/config.js'
+import { PageHeader } from './ui/index.js'
 
 interface StatsPageProps {
   summary: StatsSummary
@@ -49,17 +50,13 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
   const dayEntries = Object.entries(summary.byDay).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 14)
 
   return (
-    <div class="max-w-6xl mx-auto p-6">
-      <div class="flex items-center justify-between mb-8">
-        <div>
-          <h1 class="text-3xl font-bold">LLM Usage Statistics</h1>
-          <p class="text-zinc-500 text-sm mt-1">Usage and logs for the {config.name} wiki.</p>
-        </div>
-        <div class="flex gap-2">
-          <a href="/stats?days=7" class={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${days === 7 ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'bg-transparent text-zinc-400 border border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'}`}>7 days</a>
-          <a href="/stats?days=30" class={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${days === 30 ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'bg-transparent text-zinc-400 border border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'}`}>30 days</a>
-          <a href="/stats?days=90" class={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${days === 90 ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'bg-transparent text-zinc-400 border border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'}`}>90 days</a>
-        </div>
+    <div>
+      <PageHeader title="Stats" subtitle={`Usage and logs for the ${config.name} wiki.`} />
+
+      <div class="flex items-center justify-end mb-8 gap-2">
+        <a href="/stats?days=7" class={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${days === 7 ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'bg-transparent text-zinc-400 border border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'}`}>7 days</a>
+        <a href="/stats?days=30" class={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${days === 30 ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'bg-transparent text-zinc-400 border border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'}`}>30 days</a>
+        <a href="/stats?days=90" class={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${days === 90 ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'bg-transparent text-zinc-400 border border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'}`}>90 days</a>
       </div>
 
       {/* Overview Cards */}

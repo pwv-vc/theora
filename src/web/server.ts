@@ -31,6 +31,7 @@ import { IngestPage } from './templates/ingest.js'
 import { StatsPage } from './templates/stats.js'
 import { AboutPage } from './templates/about.js'
 import { readLlmLogs, summarizeStats } from '../lib/llm-stats.js'
+import { settingsRoutes } from './routes/settings.js'
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: [
@@ -69,6 +70,9 @@ const __dirname = dirname(__filename)
 
 export function startServer(port: number): void {
   const app = new Hono()
+
+  // Mount settings routes before other routes
+  app.route('/settings', settingsRoutes)
 
   app.use('*', secureHeaders({
     contentSecurityPolicy: {
