@@ -1,13 +1,30 @@
 /** @jsxImportSource hono/jsx */
-import { Input, PageHeader, Panel, PrimaryButton, SectionLabel } from './ui/index.js'
+import type { TagWithCount } from "../../lib/wiki.js";
+import {
+  Input,
+  PageHeader,
+  Panel,
+  PrimaryButton,
+  SectionLabel,
+  TagSelectorBar,
+} from "./ui/index.js";
 
-const VALID_EXTS_LIST = '.md .mdx .txt .html .json .csv .xml .yaml .yml .pdf .png .jpg .jpeg .gif .webp'
-const VALID_EXTS_ACCEPT = '.md,.mdx,.txt,.html,.json,.csv,.xml,.yaml,.yml,.pdf,.png,.jpg,.jpeg,.gif,.webp'
+const VALID_EXTS_LIST =
+  ".md .mdx .txt .html .json .csv .xml .yaml .yml .pdf .png .jpg .jpeg .gif .webp";
+const VALID_EXTS_ACCEPT =
+  ".md,.mdx,.txt,.html,.json,.csv,.xml,.yaml,.yml,.pdf,.png,.jpg,.jpeg,.gif,.webp";
 
-export function IngestPage() {
+interface IngestPageProps {
+  tagsWithCounts?: TagWithCount[];
+}
+
+export function IngestPage({ tagsWithCounts = [] }: IngestPageProps) {
   return (
     <div>
-      <PageHeader title="Ingest" subtitle="Add source documents to the knowledge base." />
+      <PageHeader
+        title="Ingest"
+        subtitle="Add source documents to the knowledge base."
+      />
 
       <Panel class="mb-6">
         {/* Drop zone */}
@@ -19,15 +36,30 @@ export function IngestPage() {
             onclick="document.getElementById('file-input').click()"
           >
             <div class="flex flex-col items-center gap-3 pointer-events-none">
-              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-600">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="36"
+                height="36"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-zinc-600"
+              >
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="17 8 12 3 7 8" />
                 <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
               <div>
-                <div class="text-zinc-300 text-sm font-medium">Drop files here or click to browse</div>
+                <div class="text-zinc-300 text-sm font-medium">
+                  Drop files here or click to browse
+                </div>
                 <div class="text-zinc-600 text-xs mt-1">{VALID_EXTS_LIST}</div>
-                <div class="text-zinc-700 text-xs mt-0.5">Max 50 MB per file</div>
+                <div class="text-zinc-700 text-xs mt-0.5">
+                  Max 50 MB per file
+                </div>
               </div>
             </div>
             <input
@@ -65,27 +97,48 @@ export function IngestPage() {
           <textarea
             id="url-input"
             rows={3}
-            placeholder={'https://example.com/article\nhttps://arxiv.org/abs/...'}
+            placeholder={
+              "https://example.com/article\nhttps://arxiv.org/abs/..."
+            }
             class="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-700 px-4 py-2.5 rounded-lg text-sm focus:border-red-600 focus:outline-none transition-colors font-mono resize-none"
           />
         </div>
 
-        {/* Tag input */}
+        {/* Tag selector */}
         <div class="mb-5">
           <label class="block mb-2">
             <SectionLabel>Tag</SectionLabel>
-            <span class="text-zinc-600 text-xs ml-2">optional — categorizes all ingested sources</span>
+            <span class="text-zinc-600 text-xs ml-2">
+              optional — tags all ingested sources with selected or new tag
+            </span>
           </label>
-          <Input
-            id="tag-input"
-            type="text"
-            placeholder="e.g. transformers, neurips-2025"
-          />
+          {tagsWithCounts.length > 0 && (
+            <TagSelectorBar
+              tagsWithCounts={tagsWithCounts}
+              inputId="ingest-tag-input"
+              chipId="ingest-tag-chip"
+            />
+          )}
+          <div class="mt-3">
+            <Input
+              id="tag-input"
+              type="text"
+              placeholder={tagsWithCounts.length > 0 ? "New tag ..." : ""}
+              oninput="syncTagFromInput(this.value)"
+            />
+          </div>
+          <input type="hidden" id="ingest-tag-input" name="tag" value="" />
         </div>
 
         {/* Error list */}
-        <div id="error-list" class="hidden mb-5 bg-red-950 border border-red-900 rounded-lg p-4 no-scanline" style="position: relative; z-index: 10001;">
-          <div class="text-red-400 text-xs font-bold mb-2 uppercase tracking-wider">Validation errors</div>
+        <div
+          id="error-list"
+          class="hidden mb-5 bg-red-950 border border-red-900 rounded-lg p-4 no-scanline"
+          style="position: relative; z-index: 10001;"
+        >
+          <div class="text-red-400 text-xs font-bold mb-2 uppercase tracking-wider">
+            Validation errors
+          </div>
           <div id="error-items" class="space-y-1" />
         </div>
 
@@ -93,7 +146,17 @@ export function IngestPage() {
         <div class="flex items-center gap-4">
           <PrimaryButton id="ingest-btn" onclick="runIngest()">
             <span class="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="17 8 12 3 7 8" />
                 <line x1="12" y1="3" x2="12" y2="15" />
@@ -101,11 +164,15 @@ export function IngestPage() {
               Ingest
             </span>
           </PrimaryButton>
-          <span id="ingest-status" class="text-xs text-zinc-500 hidden">Uploading…</span>
+          <span id="ingest-status" class="text-xs text-zinc-500 hidden">
+            Uploading…
+          </span>
         </div>
       </Panel>
 
-      <script dangerouslySetInnerHTML={{ __html: `
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
         const VALID_EXTS = new Set(['.md','.mdx','.txt','.html','.json','.csv','.xml','.yaml','.yml','.pdf','.png','.jpg','.jpeg','.gif','.webp']);
         const MAX_SIZE = 50 * 1024 * 1024;
         let selectedFiles = [];
@@ -277,7 +344,26 @@ export function IngestPage() {
             renderErrors(['Upload failed: ' + err.message]);
           }
         }
-      ` }} />
+
+        function syncTagFromInput(value) {
+          const hiddenInput = document.getElementById('ingest-tag-input');
+          const chip = document.getElementById('ingest-tag-chip');
+          if (hiddenInput) hiddenInput.value = value;
+          if (chip) {
+            const chipText = chip.querySelector('[data-chip-text]');
+            if (chipText) chipText.textContent = value ? '#' + value : '';
+            if (value) chip.classList.remove('hidden');
+            else chip.classList.add('hidden');
+          }
+          // Clear visual selection from TagSelectorBar buttons
+          const popoverId = 'tag-selector-ingest-tag-input';
+          document.querySelectorAll('#' + popoverId + '-list button').forEach(function(b) {
+            b.classList.remove('bg-red-900/30', 'border-red-700', 'text-red-400');
+          });
+        }
+      `,
+        }}
+      />
     </div>
-  )
+  );
 }

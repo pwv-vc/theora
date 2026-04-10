@@ -313,11 +313,12 @@ export function startServer(port: number): void {
   })
 
   app.get('/ingest', (c) => {
+    const tagsWithCounts = getAllTagsWithCounts()
     return c.html(
       Layout({
         title: 'Ingest',
         active: 'ingest',
-        children: IngestPage(),
+        children: IngestPage({ tagsWithCounts }),
       }).toString()
     )
   })

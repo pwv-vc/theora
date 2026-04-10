@@ -53,5 +53,8 @@ See [cli-design/taste.md](cli-design/taste.md)
 See [wiki/taste.md](wiki/taste.md)
 # web
 See [web/taste.md](web/taste.md)
+# workflow
+- After implementing a feature, run build and typecheck as verification steps before considering the task complete. Confidence: 0.85
+
 # documentation
 See [documentation/taste.md](documentation/taste.md)
