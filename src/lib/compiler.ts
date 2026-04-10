@@ -67,7 +67,8 @@ async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, 
   const slug = slugify(name)
 
   const content = readFileSync(file, 'utf-8').slice(0, 50000)
-  const raw = await llm(buildSourcePrompt(basename(file), content, ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096 })
+  const ext = extname(file).toLowerCase().slice(1)
+  const raw = await llm(buildSourcePrompt(basename(file), content, ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: ext })
   const { body, tags } = sanitizeLlmOutput(raw)
 
   const meta: ArticleMeta = {
@@ -96,7 +97,7 @@ async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, i
     return
   }
 
-  const raw = await llm(buildPdfPrompt(basename(file), text.slice(0, 50000), ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096 })
+  const raw = await llm(buildPdfPrompt(basename(file), text.slice(0, 50000), ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: 'pdf' })
   const { body, tags } = sanitizeLlmOutput(raw)
 
   const meta: ArticleMeta = {

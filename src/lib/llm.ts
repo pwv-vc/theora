@@ -22,6 +22,7 @@ export interface LlmOptions {
   model?: string
   provider?: Provider
   action?: LlmAction
+  meta?: string | null
 }
 
 function resolveProvider(options: LlmOptions): { provider: Provider; model: string } {
@@ -54,7 +55,7 @@ function getOpenAI(): OpenAI {
   return openaiClient
 }
 
-async function openaiComplete(prompt: string, system: string, model: string, maxTokens: number, action: string = 'unknown'): Promise<string> {
+async function openaiComplete(prompt: string, system: string, model: string, maxTokens: number, action: string = 'unknown', meta?: string | null): Promise<string> {
   const client = getOpenAI()
   const startTime = Date.now()
   const response = await client.chat.completions.create({
@@ -74,6 +75,7 @@ async function openaiComplete(prompt: string, system: string, model: string, max
   logLlmCall({
     timestamp: new Date().toISOString(),
     action,
+    meta,
     provider: 'openai',
     model,
     inputTokens,
@@ -92,6 +94,7 @@ async function openaiStream(
   maxTokens: number,
   onText: (text: string) => void,
   action: string = 'unknown',
+  meta?: string | null,
 ): Promise<string> {
   const client = getOpenAI()
   const startTime = Date.now()
@@ -122,6 +125,7 @@ async function openaiStream(
   logLlmCall({
     timestamp: new Date().toISOString(),
     action,
+    meta,
     provider: 'openai',
     model,
     inputTokens,
@@ -148,7 +152,7 @@ function getAnthropic(): Anthropic {
   return anthropicClient
 }
 
-async function anthropicComplete(prompt: string, system: string, model: string, maxTokens: number, action: string = 'unknown'): Promise<string> {
+async function anthropicComplete(prompt: string, system: string, model: string, maxTokens: number, action: string = 'unknown', meta?: string | null): Promise<string> {
   const client = getAnthropic()
   const startTime = Date.now()
   const response = await client.messages.create({
@@ -166,6 +170,7 @@ async function anthropicComplete(prompt: string, system: string, model: string, 
   logLlmCall({
     timestamp: new Date().toISOString(),
     action,
+    meta,
     provider: 'anthropic',
     model,
     inputTokens,
@@ -188,6 +193,7 @@ async function anthropicStream(
   maxTokens: number,
   onText: (text: string) => void,
   action: string = 'unknown',
+  meta?: string | null,
 ): Promise<string> {
   const client = getAnthropic()
   const startTime = Date.now()
@@ -214,6 +220,7 @@ async function anthropicStream(
   logLlmCall({
     timestamp: new Date().toISOString(),
     action,
+    meta,
     provider: 'anthropic',
     model,
     inputTokens,
@@ -239,6 +246,7 @@ async function openaiVision(
   model: string,
   maxTokens: number,
   action: string = 'vision',
+  meta?: string | null,
 ): Promise<string> {
   const client = getOpenAI()
   const startTime = Date.now()
@@ -267,6 +275,7 @@ async function openaiVision(
   logLlmCall({
     timestamp: new Date().toISOString(),
     action,
+    meta,
     provider: 'openai',
     model,
     inputTokens,
@@ -285,6 +294,7 @@ async function anthropicVision(
   model: string,
   maxTokens: number,
   action: string = 'vision',
+  meta?: string | null,
 ): Promise<string> {
   const client = getAnthropic()
   const startTime = Date.now()
@@ -311,6 +321,7 @@ async function anthropicVision(
   logLlmCall({
     timestamp: new Date().toISOString(),
     action,
+    meta,
     provider: 'anthropic',
     model,
     inputTokens,
@@ -337,11 +348,12 @@ export async function llmVision(
   const system = options.system ?? 'You are a knowledge base assistant.'
   const maxTokens = options.maxTokens ?? 4096
   const action = options.action ?? 'vision'
+  const meta = options.meta
 
   if (provider === 'anthropic') {
-    return anthropicVision(prompt, images, system, model, maxTokens, action)
+    return anthropicVision(prompt, images, system, model, maxTokens, action, meta)
   }
-  return openaiVision(prompt, images, system, model, maxTokens, action)
+  return openaiVision(prompt, images, system, model, maxTokens, action, meta)
 }
 
 export async function llm(prompt: string, options: LlmOptions = {}): Promise<string> {
@@ -349,11 +361,12 @@ export async function llm(prompt: string, options: LlmOptions = {}): Promise<str
   const system = options.system ?? 'You are a knowledge base assistant.'
   const maxTokens = options.maxTokens ?? 8192
   const action = options.action ?? 'unknown'
+  const meta = options.meta
 
   if (provider === 'anthropic') {
-    return anthropicComplete(prompt, system, model, maxTokens, action)
+    return anthropicComplete(prompt, system, model, maxTokens, action, meta)
   }
-  return openaiComplete(prompt, system, model, maxTokens, action)
+  return openaiComplete(prompt, system, model, maxTokens, action, meta)
 }
 
 export async function llmStream(
@@ -365,9 +378,10 @@ export async function llmStream(
   const system = options.system ?? 'You are a knowledge base assistant.'
   const maxTokens = options.maxTokens ?? 8192
   const action = options.action ?? 'unknown'
+  const meta = options.meta
 
   if (provider === 'anthropic') {
-    return anthropicStream(prompt, system, model, maxTokens, onText, action)
+    return anthropicStream(prompt, system, model, maxTokens, onText, action, meta)
   }
-  return openaiStream(prompt, system, model, maxTokens, onText, action)
+  return openaiStream(prompt, system, model, maxTokens, onText, action, meta)
 }

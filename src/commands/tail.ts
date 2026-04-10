@@ -8,17 +8,19 @@ import { readLlmLogs, type LlmCallLog } from '../lib/llm-stats.js'
 function formatLogEntry(log: LlmCallLog): string {
   const timestamp = new Date(log.timestamp).toLocaleTimeString()
   const action = pc.cyan(log.action.padEnd(10))
-  const model = pc.gray(log.model.slice(0, 30).padEnd(30))
+  const meta = log.meta ? pc.gray(log.meta.padEnd(6)) : ' '.repeat(6)
+  const model = pc.gray(log.model.slice(0, 24).padEnd(24))
   const tokens = `${log.inputTokens}+${log.outputTokens}`.padStart(10)
   const cost = pc.yellow(`$${log.estimatedCostUsd.toFixed(4)}`.padStart(8))
   const duration = `${log.durationMs}ms`.padStart(6)
 
-  return `${pc.gray(timestamp)}  ${action}  ${model}  ${tokens} tok  ${cost}  ${duration}`
+  return `${pc.gray(timestamp)}  ${action}  ${meta}  ${model}  ${tokens} tok  ${cost}  ${duration}`
 }
 
 function formatLogEntryCompact(log: LlmCallLog): string {
   const timestamp = new Date(log.timestamp).toLocaleTimeString()
-  return `${timestamp}  ${log.action}  ${log.model}  ${log.inputTokens}+${log.outputTokens} tok  $${log.estimatedCostUsd.toFixed(4)}  ${log.durationMs}ms`
+  const meta = log.meta ? ` [${log.meta}]` : ''
+  return `${timestamp}  ${log.action}${meta}  ${log.model}  ${log.inputTokens}+${log.outputTokens} tok  $${log.estimatedCostUsd.toFixed(4)}  ${log.durationMs}ms`
 }
 
 export const tailCommand = new Command('tail')
@@ -49,8 +51,8 @@ export const tailCommand = new Command('tail')
     if (!options.compact) {
       console.log(`\n${pc.bold('LLM Call Logs')}`)
       console.log(pc.gray(`  Showing last ${recentLogs.length} of ${logs.length} calls\n`))
-      console.log(`${pc.gray('Time'.padEnd(10))}  ${'Action'.padEnd(10)}  ${'Model'.padEnd(30)}  ${'Tokens'.padStart(10)}  ${'Cost'.padStart(8)}  ${'Duration'.padStart(8)}`)
-      console.log(pc.gray('─'.repeat(90)))
+      console.log(`${pc.gray('Time'.padEnd(10))}  ${'Action'.padEnd(10)}  ${'Meta'.padEnd(6)}  ${'Model'.padEnd(24)}  ${'Tokens'.padStart(10)}  ${'Cost'.padStart(8)}  ${'Duration'.padStart(8)}`)
+      console.log(pc.gray('─'.repeat(98)))
     }
 
     // Print logs

@@ -40,6 +40,14 @@ See [llm-integration/taste.md](llm-integration/taste.md)
 See [cli-design/taste.md](cli-design/taste.md)
 # observability
 - Track operational metrics (ingest time, AI cost, AI processing time) in stats for CLI tools that use LLM APIs. Confidence: 0.65
+- Use specific, descriptive action names for LLM call logging that indicate both the operation and the target type (e.g., `compile-text`, `compile-pdf`, `compile-image` rather than generic `compile` or `unknown`). Confidence: 0.80
+- Structure LLM action logging with actions as verbs and a separate `meta` field for file type details — e.g., action: `'compile'` with meta: `'md'` or `'pdf'` rather than compound action names like `'compile-text'`. Update logger, tail, and web log viewer to support the meta field (can be null/empty). Confidence: 0.80
+- Stats display logic (grouping, aggregation, formatting) must be shared between CLI and web via common lib utilities — both interfaces should show identical stats with the same logic. Confidence: 0.85
+
+# tagging
+- Keep tags flat (simple strings like "ai", "transformers") — do not implement hierarchical/namespaced tags (e.g., "artist/prince"). Users can use conventions like "artist-prince" if they want structure. Confidence: 0.70
+- Auto-tagging at ingest should be interactive by default (LLM suggests, user confirms/edits), with a --yes flag to skip confirmation for bulk/scripted use. Confidence: 0.65
+- Tag vocabulary should live in .theora/tags.yaml, seeded at init time with predefined common tags based on KB category (e.g., research, music, business). Confidence: 0.65
 
 # wiki
 See [wiki/taste.md](wiki/taste.md)

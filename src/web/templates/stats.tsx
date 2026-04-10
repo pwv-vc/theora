@@ -31,6 +31,7 @@ function formatLogEntry(log: LlmCallLog) {
     <tr class="border-b last:border-0 border-zinc-800">
       <td class="py-2 font-mono text-xs text-zinc-300">{time}</td>
       <td class="py-2 capitalize text-zinc-300">{log.action}</td>
+      <td class="py-2 text-zinc-400 text-xs">{log.meta ?? ''}</td>
       <td class="py-2 font-mono text-xs text-zinc-300">{log.model}</td>
       <td class="text-right py-2 text-zinc-300">{log.inputTokens}+{log.outputTokens}</td>
       <td class="text-right py-2 text-zinc-300">{formatCost(log.estimatedCostUsd)}</td>
@@ -209,6 +210,7 @@ export function StatsPage({ summary, days, recentLogs }: StatsPageProps) {
               <tr class="border-b border-zinc-800">
                 <th class="text-left py-2 text-zinc-400 font-medium">Time</th>
                 <th class="text-left py-2 text-zinc-400 font-medium">Action</th>
+                <th class="text-left py-2 text-zinc-400 font-medium">Meta</th>
                 <th class="text-left py-2 text-zinc-400 font-medium">Model</th>
                 <th class="text-right py-2 text-zinc-400 font-medium">Tokens</th>
                 <th class="text-right py-2 text-zinc-400 font-medium">Cost</th>
@@ -239,6 +241,7 @@ export function StatsPage({ summary, days, recentLogs }: StatsPageProps) {
               const cells = [
                 { text: time, cls: 'py-2 font-mono text-xs text-zinc-300' },
                 { text: String(log.action), cls: 'py-2 capitalize text-zinc-300' },
+                { text: log.meta ?? '', cls: 'py-2 text-zinc-400 text-xs' },
                 { text: String(log.model), cls: 'py-2 font-mono text-xs text-zinc-300' },
                 { text: String(log.inputTokens) + '+' + String(log.outputTokens), cls: 'text-right py-2 text-zinc-300' },
                 { text: formatCost(log.estimatedCostUsd), cls: 'text-right py-2 text-zinc-300' },

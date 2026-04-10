@@ -1,5 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import { TagFilterLink } from './badges.js'
+import { TagIcon } from './icons/index.js'
 
 const TOP_TAGS = 10
 
@@ -25,13 +26,18 @@ function TagPopoverShell({
       <button
         type="button"
         onclick={`(function(btn){var p=document.getElementById('${popoverId}');p.toggleAttribute('hidden');if(!p.hidden){document.getElementById('${popoverId}-input').focus();document.addEventListener('click',function h(e){if(!btn.closest('#${popoverId}-container').contains(e.target)){p.setAttribute('hidden','');document.removeEventListener('click',h)}},{once:false,capture:true})}})(this)`}
-        class={`text-xs px-2.5 py-1 rounded border transition-colors whitespace-nowrap ${
+        class={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded border transition-colors whitespace-nowrap ${
           activeTag
             ? 'bg-red-900/30 border-red-700 text-red-400'
-            : 'border-zinc-700 bg-zinc-900 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
+            : 'border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'
         }`}
       >
-        {activeTag ? `#${activeTag}` : `Browse ${totalCount} tags`}
+        {activeTag ? `#${activeTag}` : (
+          <>
+            <TagIcon size={12} />
+            <span>Browse {totalCount} tags</span>
+          </>
+        )}
       </button>
       <div
         id={popoverId}
@@ -82,7 +88,7 @@ export function TagFilterBar({
 
   return (
     <div>
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="flex flex-wrap items-start gap-2">
         <TagFilterLink label="all" href={clearHref} active={!activeTag} />
         {topTags.map(({ tag }) => (
           <TagFilterLink
@@ -144,14 +150,14 @@ export function TagSelectorBar({
   const remainingCount = tagsWithCounts.length - TOP_TAGS
 
   const selectScript = (tag: string) =>
-    `(function(){document.getElementById('${inputId}').value='${tag.replace(/'/g, "\\'")}';var c=document.getElementById('${chipId}');c.textContent='#${tag.replace(/'/g, "\\'")}';c.classList.remove('hidden');document.getElementById('${popoverId}').setAttribute('hidden','');document.querySelectorAll('#${popoverId}-list button').forEach(function(b){b.classList.toggle('bg-red-900/30',b.dataset.tag==='${tag.replace(/'/g, "\\'")}');b.classList.toggle('border-red-700',b.dataset.tag==='${tag.replace(/'/g, "\\'")}');b.classList.toggle('text-red-400',b.dataset.tag==='${tag.replace(/'/g, "\\'")}')});})()`
+    `(function(){document.getElementById('${inputId}').value='${tag.replace(/'/g, "\\'")}';var c=document.getElementById('${chipId}');var ct=c.querySelector('[data-chip-text]');if(ct)ct.textContent='#${tag.replace(/'/g, "\\'")}';c.classList.remove('hidden');document.getElementById('${popoverId}').setAttribute('hidden','');document.querySelectorAll('#${popoverId}-list button').forEach(function(b){b.classList.toggle('bg-red-900/30',b.dataset.tag==='${tag.replace(/'/g, "\\'")}');b.classList.toggle('border-red-700',b.dataset.tag==='${tag.replace(/'/g, "\\'")}');b.classList.toggle('text-red-400',b.dataset.tag==='${tag.replace(/'/g, "\\'")}')});})()`
 
   const chipClass = () =>
     `inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border transition-colors bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200`
 
   return (
     <div>
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="flex flex-wrap items-start gap-2">
         <button
           type="button"
           onclick={`document.getElementById('${inputId}').value='';document.getElementById('${chipId}').classList.add('hidden');document.querySelectorAll('#${popoverId}-list button').forEach(function(b){b.classList.remove('bg-red-900/30','border-red-700','text-red-400')})`}
@@ -199,7 +205,7 @@ export function TagSelectorBar({
       <input type="hidden" id={inputId} name="tag" value="" />
       <div class="mt-3 flex items-center gap-2 hidden" id={chipId}>
         <span class="text-zinc-500 text-xs">Filtered by</span>
-        <span class="text-xs px-2 py-0.5 rounded border border-red-700 bg-red-900/30 text-red-400"></span>
+        <span class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-red-600 text-white font-medium" data-chip-text></span>
         <button
           type="button"
           onclick={`document.getElementById('${inputId}').value='';document.getElementById('${chipId}').classList.add('hidden')`}

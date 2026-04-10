@@ -23,6 +23,7 @@ export function estimateCost(model: string, inputTokens: number, outputTokens: n
 export interface LlmCallLog {
   timestamp: string
   action: string
+  meta?: string | null
   provider: string
   model: string
   inputTokens: number

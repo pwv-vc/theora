@@ -57,6 +57,22 @@ export const statsCommand = new Command('stats')
       }
     }
 
+    // By Action per Model
+    const actionPerModelKeys = Object.keys(summary.byActionPerModel)
+    if (actionPerModelKeys.length > 0) {
+      console.log(`\n${pc.bold('By Action per Model')}`)
+      for (const action of actionPerModelKeys.sort()) {
+        const models = summary.byActionPerModel[action]
+        const modelEntries = Object.entries(models).sort((a, b) => b[1].calls - a[1].calls)
+        if (modelEntries.length > 0) {
+          console.log(`  ${pc.cyan(action)}:`)
+          for (const [model, stats] of modelEntries) {
+            console.log(`    ${model.padEnd(28)} ${String(stats.calls).padStart(4)} calls  ${formatCost(stats.costUsd).padStart(8)}  ${formatTokens(stats.inputTokens + stats.outputTokens).padStart(8)} tokens`)
+          }
+        }
+      }
+    }
+
     const recentDays = Object.entries(summary.byDay)
       .sort((a, b) => b[0].localeCompare(a[0]))
       .slice(0, 7)

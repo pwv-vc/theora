@@ -16,7 +16,7 @@
 - Tag filter UX must scale to 100s of tags — a flat horizontal pill list is not acceptable at scale. Prefer patterns like: collapsible panel/drawer, popover/overlay picker, sorted-by-popularity with a "show more" expand, or a searchable tag dropdown. Show most-used tags first. Confidence: 0.80
 - The tag filter component (top N quick-filter chips + "Browse all tags" searchable popover) must be shared and consistent across all pages/actions — wiki/home, search, and ask should all use the same TagPopover/TagFilterLink components. Confidence: 0.85
 - Always create shared UI components (cards, pills/tags, form inputs, buttons) for DRY reuse — avoid duplicating Tailwind class strings across templates. Confidence: 0.85
-- Never use emoji for UI icons — always use SVG icons, preferring Lucide-style icons. Confidence: 0.85
+- Never use emoji for UI icons — always use Lucide icons. Confidence: 0.90
 - Do not use Next.js for web interfaces in this project. Confidence: 0.90
 - Use Tailwind CSS for styling web interfaces in this project. Confidence: 0.85
 - Use Hono (with @hono/node-server) as the web server framework for local web interfaces in this project. Confidence: 0.65
@@ -49,3 +49,4 @@
 - When a logo icon is finalized, add it as a favicon to all HTML pages using `<link rel="icon" type="image/svg+xml" href="...">`. Confidence: 0.80
 - Avoid hover-based dropdown menus for navigation — they are hard to control and make submenu items difficult to select. Prefer click-based menus or other Tailwind UI navigation patterns that don't rely on hover persistence. Confidence: 0.80
 - When implementing SSE (Server-Sent Events) endpoints, reference existing working SSE implementations in the codebase (e.g., compile, ask stream handlers) to ensure correct implementation patterns. Confidence: 0.75
+- Store SVG UI icons in a dedicated `ui/icons/` directory with each icon as its own file — one icon per file for modular organization and easy imports. Confidence: 0.85
