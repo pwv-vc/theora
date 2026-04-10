@@ -64,13 +64,14 @@ export async function streamAsk(question: string, options: AskOptions): Promise<
 
   const slug = slugifyShort(question)
   const timestamp = new Date().toISOString()
+  const safeTitle = question.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]+/g, ' ')
   const filed = `---
-title: "${question}"
+title: "${safeTitle}"
 type: query
 date: ${timestamp}
 ---
 
-# ${question}
+# ${question.replace(/[\r\n]+/g, ' ')}
 
 ${normalizeLinks(rawAnswer, allArticles)}
 

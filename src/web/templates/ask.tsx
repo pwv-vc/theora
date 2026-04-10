@@ -9,7 +9,8 @@ interface AskPageProps {
 export function AskPage({ tagsWithCounts }: AskPageProps) {
   return (
     <div>
-      <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" />
+      <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js" integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+" crossorigin="anonymous" />
+      <script src="https://cdn.jsdelivr.net/npm/dompurify@3.3.3/dist/purify.min.js" integrity="sha384-pcBjnGbkyKeOXaoFkmJiuR9E08/6gkmus6/Strimnxtl3uk0Hx23v345pWyC/MMr" crossorigin="anonymous" />
 
       <PageHeader title="Ask" subtitle="Ask a question against the compiled wiki." />
 
@@ -110,7 +111,8 @@ export function AskPage({ tagsWithCounts }: AskPageProps) {
 
             const fullAnswer = e.data;
             if (typeof marked !== 'undefined' && fullAnswer) {
-              renderedEl.innerHTML = marked.parse(fullAnswer);
+              const rawHtml = marked.parse(fullAnswer);
+              renderedEl.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
               streamEl.classList.add('hidden');
               renderedEl.classList.remove('hidden');
               if (typeof window.renderMermaid === 'function') {

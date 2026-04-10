@@ -28,22 +28,22 @@ export function Layout({ title, active, children }: LayoutProps) {
         <link rel="shortcut icon" href="/static/logo.svg" />
         {/* Runs before first paint to avoid flash of wrong theme */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theora-theme')||'broadcast';document.documentElement.setAttribute('data-theme',t);})();` }} />
-        <script src="https://unpkg.com/htmx.org@2.0.4" defer />
+        <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous" defer />
         <script type="module" dangerouslySetInnerHTML={{ __html: `
-          import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+          import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.14.0/dist/mermaid.esm.min.mjs';
           const theme = document.documentElement.getAttribute('data-theme');
           mermaid.initialize({
             startOnLoad: true,
             theme: theme === 'broadcast' ? 'default' : 'dark',
-            securityLevel: 'loose',
+            securityLevel: 'strict',
           });
           window.__mermaid = mermaid;
           window.renderMermaid = async function(el) {
-            el.querySelectorAll('pre > code.language-mermaid').forEach(code => {
+            el.querySelectorAll('pre > code.language-mermaid, pre.mermaid').forEach(node => {
               const div = document.createElement('div');
               div.className = 'mermaid';
-              div.textContent = code.textContent;
-              code.parentElement.replaceWith(div);
+              div.textContent = node.textContent;
+              node.replaceWith(div);
             });
             const nodes = Array.from(el.querySelectorAll('.mermaid:not([data-processed])'));
             if (nodes.length > 0) {

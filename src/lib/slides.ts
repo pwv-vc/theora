@@ -1,6 +1,6 @@
 import { writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import pc from 'picocolors'
 import ora from 'ora'
 import { hasMarpCli } from './deps.js'
@@ -9,8 +9,9 @@ import type { KbPaths } from './paths.js'
 
 export function exportToPdf(marpPath: string, pdfPath: string, themePath: string): boolean {
   try {
-    const themeFlag = existsSync(themePath) ? ` --theme "${themePath}"` : ''
-    execSync(`marp --no-stdin "${marpPath}" -o "${pdfPath}"${themeFlag} --allow-local-files`, { stdio: 'ignore' })
+    const args = ['--no-stdin', marpPath, '-o', pdfPath, '--allow-local-files']
+    if (existsSync(themePath)) args.push('--theme', themePath)
+    execFileSync('marp', args, { stdio: 'ignore' })
     return true
   } catch {
     return false

@@ -262,7 +262,7 @@ Only return the JSON array, no other text. Identify ${conceptMin}-${conceptMax} 
     .filter(a => a.path.startsWith(paths.wikiConcepts))
     .map(a => basename(a.path, '.md'))
 
-  const newConcepts = concepts.filter(c => !existingConcepts.includes(c.slug))
+  const newConcepts = concepts.filter(c => !existingConcepts.includes(slugify(c.slug)))
 
   if (newConcepts.length === 0) return
 
@@ -317,7 +317,9 @@ Only return the JSON array, no other text. Identify ${conceptMin}-${conceptMax} 
           relatedSources: concept.related_sources,
         }
 
-        writeArticle(join(paths.wikiConcepts, `${concept.slug}.md`), meta, body)
+        const safeSlug = slugify(concept.slug)
+        if (!safeSlug) return
+        writeArticle(join(paths.wikiConcepts, `${safeSlug}.md`), meta, body)
         inFlight.delete(concept.title)
         done++
         updateConceptSpinner()

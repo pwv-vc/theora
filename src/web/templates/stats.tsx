@@ -236,14 +236,20 @@ export function StatsPage({ summary, days, recentLogs }: StatsPageProps) {
               const row = document.createElement('tr');
               row.className = 'border-b last:border-0 border-zinc-800 animate-fade-in';
               const time = new Date(log.timestamp).toLocaleTimeString();
-              row.innerHTML = \`
-                <td class="py-2 font-mono text-xs text-zinc-300">\${time}</td>
-                <td class="py-2 capitalize text-zinc-300">\${log.action}</td>
-                <td class="py-2 font-mono text-xs text-zinc-300">\${log.model}</td>
-                <td class="text-right py-2 text-zinc-300">\${log.inputTokens}+\${log.outputTokens}</td>
-                <td class="text-right py-2 text-zinc-300">\${formatCost(log.estimatedCostUsd)}</td>
-                <td class="text-right py-2 text-zinc-300">\${log.durationMs}ms</td>
-              \`;
+              const cells = [
+                { text: time, cls: 'py-2 font-mono text-xs text-zinc-300' },
+                { text: String(log.action), cls: 'py-2 capitalize text-zinc-300' },
+                { text: String(log.model), cls: 'py-2 font-mono text-xs text-zinc-300' },
+                { text: String(log.inputTokens) + '+' + String(log.outputTokens), cls: 'text-right py-2 text-zinc-300' },
+                { text: formatCost(log.estimatedCostUsd), cls: 'text-right py-2 text-zinc-300' },
+                { text: String(log.durationMs) + 'ms', cls: 'text-right py-2 text-zinc-300' },
+              ];
+              cells.forEach(function(cell) {
+                const td = document.createElement('td');
+                td.className = cell.cls;
+                td.textContent = cell.text;
+                row.appendChild(td);
+              });
               logTbody.insertBefore(row, logTbody.firstChild);
 
               // Remove old rows

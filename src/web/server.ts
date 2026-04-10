@@ -4,20 +4,10 @@ import { dirname, join } from 'node:path'
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
 import { streamSSE } from 'hono/streaming'
+import { secureHeaders } from 'hono/secure-headers'
 import { marked, Renderer } from 'marked'
-
-function parseMarkdown(content: string): string {
-  const renderer = new Renderer()
-  const originalCode = renderer.code.bind(renderer)
-  renderer.code = function(token) {
-    if (token.lang === 'mermaid') {
-      return `<div class="mermaid">${token.text}</div>`
-    }
-    return originalCode(token)
-  }
-  return marked.parse(content, { renderer }) as string
-}
-import { requireKbRoot, kbPaths } from '../lib/paths.js'
+import sanitizeHtml from 'sanitize-html'
+import { requireKbRoot, kbPaths, safeJoin } from '../lib/paths.js'
 import { listWikiArticles, readWikiIndex, getAllTagsWithCounts } from '../lib/wiki.js'
 import { findRelevantArticles, buildContext } from '../lib/query.js'
 import { llmStream } from '../lib/llm.js'
@@ -28,6 +18,7 @@ import { normalizeLinksForWeb } from '../lib/wiki.js'
 import { streamAsk } from '../lib/ask.js'
 import { readManifest, writeManifest } from '../lib/manifest.js'
 import { ingestWebFile, ingestWebUrl } from '../lib/ingest.js'
+import { escapeHtml } from '../lib/utils.js'
 import { Layout } from './templates/layout.js'
 import { HomePage } from './templates/home.js'
 import { ArticlePage } from './templates/article.js'
@@ -40,11 +31,63 @@ import { IngestPage } from './templates/ingest.js'
 import { StatsPage } from './templates/stats.js'
 import { readLlmLogs, summarizeStats } from '../lib/llm-stats.js'
 
+const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: [
+    ...sanitizeHtml.defaults.allowedTags,
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'img', 'pre', 'details', 'summary',
+  ],
+  allowedAttributes: {
+    ...sanitizeHtml.defaults.allowedAttributes,
+    'img': ['src', 'alt', 'title', 'width', 'height'],
+    'a': ['href', 'title', 'target', 'rel'],
+    'code': ['class'],
+    'div': ['class'],
+    'span': ['class'],
+    'pre': ['class'],
+  },
+  allowedSchemes: ['http', 'https', 'mailto'],
+  disallowedTagsMode: 'discard',
+}
+
+function parseMarkdown(content: string): string {
+  const renderer = new Renderer()
+  const originalCode = renderer.code.bind(renderer)
+  renderer.code = function(token) {
+    if (token.lang === 'mermaid') {
+      return `<pre class="mermaid">${escapeHtml(token.text)}</pre>`
+    }
+    return originalCode(token)
+  }
+  const raw = marked.parse(content, { renderer }) as string
+  return sanitizeHtml(raw, SANITIZE_OPTIONS)
+}
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 export function startServer(port: number): void {
   const app = new Hono()
+
+  app.use('*', secureHeaders({
+    contentSecurityPolicy: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        'https://unpkg.com',
+        'https://cdn.jsdelivr.net',
+        "'unsafe-inline'",
+      ],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+    },
+    xFrameOptions: 'DENY',
+    xContentTypeOptions: 'nosniff',
+    referrerPolicy: 'strict-origin-when-cross-origin',
+  }))
 
   app.get('/static/styles.css', (c) => {
     const cssPath = join(__dirname, 'web', 'static', 'styles.css')
@@ -155,6 +198,8 @@ export function startServer(port: number): void {
     const paths = kbPaths(root)
     const { type, slug } = c.req.param()
 
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) return c.notFound()
+
     const dirMap: Record<string, string> = {
       sources: paths.wikiSources,
       concepts: paths.wikiConcepts,
@@ -184,6 +229,8 @@ export function startServer(port: number): void {
     const root = requireKbRoot()
     const paths = kbPaths(root)
     const { slug } = c.req.param()
+
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) return c.notFound()
 
     const filePath = join(paths.output, `${slug}.md`)
     if (!existsSync(filePath)) return c.notFound()
@@ -281,7 +328,10 @@ export function startServer(port: number): void {
     const body = await c.req.parseBody({ all: true })
 
     const tag = typeof body['tag'] === 'string' ? body['tag'].trim() || null : null
-    const destDir = tag ? join(paths.raw, tag) : paths.raw
+    if (tag && !/^[a-z0-9][a-z0-9-]*$/.test(tag)) {
+      return c.json({ error: 'Invalid tag — use lowercase letters, numbers, and hyphens only' }, 400)
+    }
+    const destDir = tag ? safeJoin(paths.raw, tag) : paths.raw
     mkdirSync(destDir, { recursive: true })
 
     const entries = readManifest()

@@ -1,6 +1,8 @@
 import { writeFileSync } from 'node:fs'
-import { join, extname } from 'node:path'
+import { join, extname, basename } from 'node:path'
+import { lookup } from 'node:dns/promises'
 import { slugify } from './utils.js'
+import { safeJoin } from './paths.js'
 
 export const VALID_EXTS = new Set([
   '.md', '.mdx', '.txt', '.html', '.json', '.csv', '.xml', '.yaml', '.yml',
@@ -45,25 +47,79 @@ export function filenameFromUrl(url: string, contentType: string): string {
   return `${stem}${ext}`
 }
 
+const PRIVATE_IP_RANGES = [
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^169\.254\./,
+  /^::1$/,
+  /^fc00:/i,
+  /^fe80:/i,
+]
+
+async function isPrivateUrl(urlStr: string): Promise<boolean> {
+  try {
+    const url = new URL(urlStr)
+    const hostname = url.hostname
+    if (hostname === 'localhost' || hostname === '0.0.0.0') return true
+    const { address } = await lookup(hostname)
+    return PRIVATE_IP_RANGES.some(re => re.test(address))
+  } catch {
+    return true
+  }
+}
+
 export async function fetchUrl(url: string, destDir: string): Promise<{ name: string }> {
+  if (await isPrivateUrl(url)) {
+    throw new Error(`Blocked: "${url}" resolves to a private or internal address`)
+  }
+
   const response = await fetch(url)
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} fetching ${url}`)
   }
 
+  const contentLength = response.headers.get('content-length')
+  if (contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE) {
+    throw new Error(`Response too large (${contentLength} bytes, max ${MAX_FILE_SIZE})`)
+  }
+
   const contentType = response.headers.get('content-type') ?? 'text/html'
   const name = filenameFromUrl(url, contentType)
-  const destPath = join(destDir, name)
+  const destPath = safeJoin(destDir, name)
 
   const mimeBase = contentType.split(';')[0].trim()
   const isImage = mimeBase.startsWith('image/')
 
   if (isImage) {
-    const buffer = Buffer.from(await response.arrayBuffer())
-    writeFileSync(destPath, buffer)
+    const chunks: Buffer[] = []
+    let totalBytes = 0
+    const reader = response.body!.getReader()
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      totalBytes += value.length
+      if (totalBytes > MAX_FILE_SIZE) {
+        throw new Error(`Response exceeded ${MAX_FILE_SIZE} byte limit`)
+      }
+      chunks.push(Buffer.from(value))
+    }
+    writeFileSync(destPath, Buffer.concat(chunks))
   } else {
-    const text = await response.text()
-    writeFileSync(destPath, text)
+    const chunks: Buffer[] = []
+    let totalBytes = 0
+    const reader = response.body!.getReader()
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      totalBytes += value.length
+      if (totalBytes > MAX_FILE_SIZE) {
+        throw new Error(`Response exceeded ${MAX_FILE_SIZE} byte limit`)
+      }
+      chunks.push(Buffer.from(value))
+    }
+    writeFileSync(destPath, Buffer.concat(chunks).toString('utf-8'))
   }
 
   return { name }
@@ -80,7 +136,7 @@ export async function ingestWebFile(
   destDir: string,
   existingNames: Set<string>,
 ): Promise<IngestResult> {
-  const name = file.name
+  const name = basename(file.name)
 
   if (!isValidFile(name)) {
     return { name, status: 'skipped_type', error: `${name}: unsupported file type` }
@@ -94,7 +150,7 @@ export async function ingestWebFile(
     return { name, status: 'skipped_dupe' }
   }
 
-  const destPath = join(destDir, name)
+  const destPath = safeJoin(destDir, name)
   const buffer = Buffer.from(await file.arrayBuffer())
   writeFileSync(destPath, buffer)
   existingNames.add(name)
