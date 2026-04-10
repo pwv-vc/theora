@@ -9,7 +9,7 @@ import { DEFAULT_THEME } from '../lib/theme.js'
 import type { KbConfig } from '../lib/config.js'
 import type { Provider } from '../lib/types.js'
 import { DEFAULT_MODELS } from '../lib/types.js'
-import { getDefaultActionModels } from '../lib/config.js'
+import { getDefaultActionModels, getDefaultLocalModelPricing } from '../lib/config.js'
 import { createGlobalEnv, globalEnvExists, getGlobalEnvPath } from '../lib/env.js'
 
 export const initCommand = new Command('init')
@@ -42,6 +42,7 @@ export const initCommand = new Command('init')
       provider,
       model,
       models: getDefaultActionModels(provider, model),
+      localModelPricing: getDefaultLocalModelPricing(),
       compileConcurrency: parseInt(options.concurrency, 10),
       conceptSummaryChars: 3000,
       conceptMin: 5,

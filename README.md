@@ -452,6 +452,29 @@ theora init my-research --concurrency 5
 
 For `openai-compatible`, set `OPENAI_COMPATIBLE_BASE_URL` to your server's `/v1` endpoint. `OPENAI_COMPATIBLE_API_KEY` is optional and defaults to an empty value for local servers that do not require authentication.
 
+For local `openai-compatible` models, Theora can estimate costs from runtime duration plus configurable machine-cost assumptions:
+
+```json
+{
+  "provider": "openai-compatible",
+  "model": "gemma-4-E2B-it",
+  "localModelPricing": {
+    "mode": "duration",
+    "powerWatts": 250,
+    "electricityUsdPerKwh": 0.15,
+    "hardwareUsdPerHour": 0.35
+  }
+}
+```
+
+The fallback cost is:
+
+```text
+duration_hours * ((powerWatts / 1000 * electricityUsdPerKwh) + hardwareUsdPerHour)
+```
+
+Set `"mode": "zero"` if you want local models to report `$0` instead.
+
 Or edit the KB-local `.theora/config.json` directly:
 
 ```json

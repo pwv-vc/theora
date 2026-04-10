@@ -14,12 +14,20 @@ export interface ModelConfig {
   rank?: string
 }
 
+export interface LocalModelPricingConfig {
+  mode: 'duration' | 'zero'
+  powerWatts: number
+  electricityUsdPerKwh: number
+  hardwareUsdPerHour: number
+}
+
 export interface KbConfig {
   name: string
   created: string
   provider: Provider
   model: string
   models?: ModelConfig
+  localModelPricing?: LocalModelPricingConfig
   compileConcurrency: number
   conceptSummaryChars: number
   conceptMin: number
@@ -64,16 +72,38 @@ export function getDefaultActionModels(
 
 export const DEFAULT_ACTION_MODELS: ModelConfig = getDefaultActionModels('openai')
 
+const DEFAULT_LOCAL_MODEL_PRICING: LocalModelPricingConfig = {
+  mode: 'duration',
+  powerWatts: 250,
+  electricityUsdPerKwh: 0.15,
+  hardwareUsdPerHour: 0.35,
+}
+
+export function getDefaultLocalModelPricing(): LocalModelPricingConfig {
+  return JSON.parse(JSON.stringify(DEFAULT_LOCAL_MODEL_PRICING)) as LocalModelPricingConfig
+}
+
 const DEFAULT_CONFIG: KbConfig = {
   name: 'knowledge-base',
   created: new Date().toISOString(),
   provider: 'openai',
   model: 'gpt-4o',
   models: getDefaultActionModels('openai'),
+  localModelPricing: getDefaultLocalModelPricing(),
   compileConcurrency: 3,
   conceptSummaryChars: 3000,
   conceptMin: 5,
   conceptMax: 10,
+}
+
+function mergeLocalModelPricing(
+  rawPricing: Partial<LocalModelPricingConfig> | undefined,
+): LocalModelPricingConfig {
+  const defaults = getDefaultLocalModelPricing()
+  return {
+    ...defaults,
+    ...rawPricing,
+  }
 }
 
 export function readConfig(): KbConfig {
@@ -86,7 +116,8 @@ export function readConfig(): KbConfig {
   const provider = (raw.provider as Provider | undefined) ?? DEFAULT_CONFIG.provider
   const model = typeof raw.model === 'string' && raw.model.trim() ? raw.model : DEFAULT_MODELS[provider]
   const mergedModels = { ...getDefaultActionModels(provider, model), ...raw.models }
-  return { ...DEFAULT_CONFIG, ...raw, models: mergedModels }
+  const localModelPricing = mergeLocalModelPricing(raw.localModelPricing)
+  return { ...DEFAULT_CONFIG, ...raw, models: mergedModels, localModelPricing }
 }
 
 export function writeConfig(config: KbConfig): void {

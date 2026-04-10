@@ -3,7 +3,7 @@ import OpenAI from 'openai'
 import { readConfig } from './config.js'
 import { loadEnv } from './env.js'
 import { logLlmCall, estimateCost } from './llm-stats.js'
-import type { KbConfig } from './config.js'
+import type { KbConfig, LocalModelPricingConfig } from './config.js'
 
 import type { Provider } from './types.js'
 
@@ -161,6 +161,7 @@ async function openaiComplete(
   provider: OpenAiFamilyProvider = 'openai',
   action: string = 'unknown',
   meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
 ): Promise<string> {
   const client = getOpenAI(provider)
   const startTime = Date.now()
@@ -191,7 +192,7 @@ async function openaiComplete(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, provider),
+    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, provider, localModelPricing, durationMs),
   })
 
   return outputText
@@ -206,6 +207,7 @@ async function openaiStream(
   onText: (text: string) => void,
   action: string = 'unknown',
   meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
 ): Promise<string> {
   const client = getOpenAI(provider)
   const startTime = Date.now()
@@ -242,7 +244,7 @@ async function openaiStream(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, provider),
+    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, provider, localModelPricing, durationMs),
   })
 
   return full
@@ -263,7 +265,15 @@ function getAnthropic(): Anthropic {
   return anthropicClient
 }
 
-async function anthropicComplete(prompt: string, system: string, model: string, maxTokens: number, action: string = 'unknown', meta?: string | null): Promise<string> {
+async function anthropicComplete(
+  prompt: string,
+  system: string,
+  model: string,
+  maxTokens: number,
+  action: string = 'unknown',
+  meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
+): Promise<string> {
   const client = getAnthropic()
   const startTime = Date.now()
   const response = await client.messages.create({
@@ -288,7 +298,7 @@ async function anthropicComplete(prompt: string, system: string, model: string, 
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, 'anthropic'),
+    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs),
   })
 
   const block = response.content[0]
@@ -306,6 +316,7 @@ async function anthropicStream(
   onText: (text: string) => void,
   action: string = 'unknown',
   meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
 ): Promise<string> {
   const client = getAnthropic()
   const startTime = Date.now()
@@ -338,7 +349,7 @@ async function anthropicStream(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, 'anthropic'),
+    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs),
   })
 
   return full
@@ -360,6 +371,7 @@ async function openaiVision(
   provider: OpenAiFamilyProvider = 'openai',
   action: string = 'vision',
   meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
 ): Promise<string> {
   const client = getOpenAI(provider)
   const startTime = Date.now()
@@ -398,7 +410,7 @@ async function openaiVision(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, provider),
+    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, provider, localModelPricing, durationMs),
   })
 
   return outputText
@@ -412,6 +424,7 @@ async function anthropicVision(
   maxTokens: number,
   action: string = 'vision',
   meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
 ): Promise<string> {
   const client = getAnthropic()
   const startTime = Date.now()
@@ -444,7 +457,7 @@ async function anthropicVision(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, 'anthropic'),
+    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs),
   })
 
   const block = response.content[0]
@@ -465,29 +478,33 @@ export async function llmVision(
   images: ImageInput[],
   options: LlmOptions = {},
 ): Promise<string> {
-  const { provider, model } = resolveProvider(options)
+  const config = readConfig()
+  const { provider, model } = resolveProvider(options, config)
   const system = options.system ?? 'You are a knowledge base assistant.'
   const maxTokens = options.maxTokens ?? 4096
   const action = options.action ?? 'vision'
   const meta = options.meta
+  const localModelPricing = config.localModelPricing
 
   if (provider === 'anthropic') {
-    return anthropicVision(prompt, images, system, model, maxTokens, action, meta)
+    return anthropicVision(prompt, images, system, model, maxTokens, action, meta, localModelPricing)
   }
-  return openaiVision(prompt, images, system, model, maxTokens, provider, action, meta)
+  return openaiVision(prompt, images, system, model, maxTokens, provider, action, meta, localModelPricing)
 }
 
 export async function llm(prompt: string, options: LlmOptions = {}): Promise<string> {
-  const { provider, model } = resolveProvider(options)
+  const config = readConfig()
+  const { provider, model } = resolveProvider(options, config)
   const system = options.system ?? 'You are a knowledge base assistant.'
   const maxTokens = options.maxTokens ?? 8192
   const action = options.action ?? 'unknown'
   const meta = options.meta
+  const localModelPricing = config.localModelPricing
 
   if (provider === 'anthropic') {
-    return anthropicComplete(prompt, system, model, maxTokens, action, meta)
+    return anthropicComplete(prompt, system, model, maxTokens, action, meta, localModelPricing)
   }
-  return openaiComplete(prompt, system, model, maxTokens, provider, action, meta)
+  return openaiComplete(prompt, system, model, maxTokens, provider, action, meta, localModelPricing)
 }
 
 export async function llmStream(
@@ -495,14 +512,16 @@ export async function llmStream(
   options: LlmOptions = {},
   onText: (text: string) => void,
 ): Promise<string> {
-  const { provider, model } = resolveProvider(options)
+  const config = readConfig()
+  const { provider, model } = resolveProvider(options, config)
   const system = options.system ?? 'You are a knowledge base assistant.'
   const maxTokens = options.maxTokens ?? 8192
   const action = options.action ?? 'unknown'
   const meta = options.meta
+  const localModelPricing = config.localModelPricing
 
   if (provider === 'anthropic') {
-    return anthropicStream(prompt, system, model, maxTokens, onText, action, meta)
+    return anthropicStream(prompt, system, model, maxTokens, onText, action, meta, localModelPricing)
   }
-  return openaiStream(prompt, system, model, maxTokens, provider, onText, action, meta)
+  return openaiStream(prompt, system, model, maxTokens, provider, onText, action, meta, localModelPricing)
 }

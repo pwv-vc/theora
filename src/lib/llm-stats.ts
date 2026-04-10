@@ -2,6 +2,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import pc from 'picocolors'
 import { kbPaths, findKbRoot } from './paths.js'
+import type { LocalModelPricingConfig } from './config.js'
 
 // Cost per million tokens for supported models
 const COST_PER_MILLION: Record<string, { input: number; output: number }> = {
@@ -31,10 +32,24 @@ function createCallCostBucket(): { calls: number; costUsd: number } {
   return { calls: 0, costUsd: 0 }
 }
 
-function getDefaultCostRates(provider: string): { input: number; output: number } | null {
-  if (provider === 'openai-compatible') {
-    return null
+function estimateDurationBasedLocalCost(
+  durationMs: number,
+  localModelPricing: LocalModelPricingConfig | undefined,
+): number {
+  if (!localModelPricing || localModelPricing.mode === 'zero') {
+    return 0
   }
+
+  const electricityUsdPerHour =
+    (localModelPricing.powerWatts / 1000) * localModelPricing.electricityUsdPerKwh
+  const totalHourlyCostUsd = electricityUsdPerHour + localModelPricing.hardwareUsdPerHour
+  return (durationMs / 3_600_000) * totalHourlyCostUsd
+}
+
+function getDefaultCostRates(
+  provider: string,
+): { input: number; output: number } | null {
+  if (provider === 'openai-compatible') return null
   return DEFAULT_COST
 }
 
@@ -47,9 +62,16 @@ export function estimateCost(
   inputTokens: number,
   outputTokens: number,
   provider: string = 'openai',
+  localModelPricing?: LocalModelPricingConfig,
+  durationMs: number = 0,
 ): number {
   const rates = COST_PER_MILLION[model] ?? getDefaultCostRates(provider)
-  if (!rates) return 0
+  if (!rates) {
+    if (provider === 'openai-compatible') {
+      return estimateDurationBasedLocalCost(durationMs, localModelPricing)
+    }
+    return 0
+  }
   return (inputTokens * rates.input + outputTokens * rates.output) / 1_000_000
 }
 

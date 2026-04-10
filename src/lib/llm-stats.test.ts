@@ -1,13 +1,34 @@
 import { describe, expect, it } from 'vitest'
+import { getDefaultLocalModelPricing } from './config.js'
 import { estimateCost, summarizeStats } from './llm-stats.js'
 
 describe('estimateCost', () => {
-  it('returns zero for unknown openai-compatible models', () => {
-    expect(estimateCost('llama3.2', 1000, 500, 'openai-compatible')).toBe(0)
+  it('uses configurable duration-based fallback pricing for unknown openai-compatible models', () => {
+    expect(
+      estimateCost('llama3.2', 1000, 500, 'openai-compatible', getDefaultLocalModelPricing(), 60_000),
+    ).toBeCloseTo(0.0064583333, 8)
   })
 
   it('keeps known pricing for recognized models on compatible providers', () => {
     expect(estimateCost('gpt-4o', 1000, 500, 'openai-compatible')).toBe(0.0075)
+  })
+
+  it('lets users tune duration-based local pricing', () => {
+    const localModelPricing = getDefaultLocalModelPricing()
+    localModelPricing.powerWatts = 400
+    localModelPricing.electricityUsdPerKwh = 0.2
+    localModelPricing.hardwareUsdPerHour = 0.5
+
+    expect(
+      estimateCost('gemma-4-E2B-it', 1000, 500, 'openai-compatible', localModelPricing, 120_000),
+    ).toBeCloseTo(0.0193333333, 8)
+  })
+
+  it('can disable fallback local model pricing', () => {
+    const localModelPricing = getDefaultLocalModelPricing()
+    localModelPricing.mode = 'zero'
+
+    expect(estimateCost('llama3.2', 1000, 500, 'openai-compatible', localModelPricing, 60_000)).toBe(0)
   })
 })
 
