@@ -26,6 +26,7 @@ import { errorPageHtml } from './templates/error.js'
 import { HomePage } from './templates/home.js'
 import { ArticlePage } from './templates/article.js'
 import { SearchPage, SearchResults } from './templates/search.js'
+import { buildAskPlaceholderPhrases } from '../lib/askPlaceholders.js'
 import { AskPage } from './templates/ask.js'
 import { CompilePage } from './templates/compile.js'
 import { ConceptsPage } from './templates/concepts.js'
@@ -370,6 +371,7 @@ export function startServer(port: number): void {
 
   app.get('/ask', (c) => {
     const tagsWithCounts = getAllTagsWithCounts()
+    const placeholderPhrases = buildAskPlaceholderPhrases()
 
     const configPath = join(requireKbRoot(), '.theora', 'config.json')
     const config = existsSync(configPath)
@@ -380,7 +382,7 @@ export function startServer(port: number): void {
       Layout({
         title: 'Ask',
         active: 'ask',
-        children: AskPage({ tagsWithCounts, config }),
+        children: AskPage({ tagsWithCounts, config, placeholderPhrases }),
       }).toString()
     )
   })
