@@ -4,3 +4,4 @@ dist/
 .env
 .env.local
 src/web/static/styles.css
+.DS_Store

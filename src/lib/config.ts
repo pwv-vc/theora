@@ -154,7 +154,10 @@ function mergeLocalModelPricing(
 }
 
 export function readConfig(): KbConfig {
-  const root = requireKbRoot()
+  return readConfigAtRoot(requireKbRoot())
+}
+
+export function readConfigAtRoot(root: string): KbConfig {
   const paths = kbPaths(root)
   if (!existsSync(paths.configFile)) {
     return DEFAULT_CONFIG

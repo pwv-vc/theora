@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 import { join } from 'node:path'
 import { existsSync, mkdirSync, writeFileSync, accessSync, constants } from 'node:fs'
 import { homedir } from 'node:os'
-import { findKbRoot } from './paths.js'
+import { findActiveKbRoot } from './paths.js'
 
 let loaded = false
 let loadedForRoot: string | null = null
@@ -19,8 +19,13 @@ function loadReadableEnvFile(path: string, override = false): void {
   dotenv.config({ path, quiet: true, override })
 }
 
+function getUserHomeDir(): string {
+  const home = process.env.HOME?.trim()
+  return home ? home : homedir()
+}
+
 export function loadEnv(): void {
-  const root = findKbRoot()
+  const root = findActiveKbRoot()
 
   // If we've already loaded and we're in the same KB root, skip
   if (loaded && loadedForRoot === root) return
@@ -36,7 +41,7 @@ export function loadEnv(): void {
   if (!loaded) {
     loaded = true
 
-    const globalEnv = join(homedir(), '.theora', '.env')
+    const globalEnv = join(getUserHomeDir(), '.theora', '.env')
     loadReadableEnvFile(globalEnv)
 
     const cwd = process.cwd()
@@ -48,7 +53,7 @@ export function loadEnv(): void {
 }
 
 export function getGlobalEnvPath(): string {
-  return join(homedir(), '.theora', '.env')
+  return join(getUserHomeDir(), '.theora', '.env')
 }
 
 export function globalEnvExists(): boolean {

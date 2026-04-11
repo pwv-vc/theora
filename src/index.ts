@@ -13,6 +13,7 @@ import { statsCommand } from './commands/stats.js'
 import { tailCommand } from './commands/tail.js'
 import { serveCommand } from './commands/serve.js'
 import { settingsCommand } from './commands/settings.js'
+import { kbCommand } from './commands/kb.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -50,6 +51,7 @@ program.addCommand(statsCommand)
 program.addCommand(tailCommand)
 program.addCommand(serveCommand)
 program.addCommand(settingsCommand)
+program.addCommand(kbCommand)
 
 function handleError(err: unknown): never {
   const msg = err instanceof Error ? err.message : String(err)
