@@ -598,14 +598,57 @@ export async function compileTargetedSource(
   const file = resolveRawSourceTarget(root, sourceArg)
   const relSource = relative(paths.raw, file)
   const displayName = basename(file)
+  const spinner = onProgress ? null : ora(`Compiling source → ${relSource}`).start()
+  let stepTick: ReturnType<typeof setInterval> | undefined
+  let currentStepBase = ''
+
+  const clearStepTick = () => {
+    if (stepTick !== undefined) {
+      clearInterval(stepTick)
+      stepTick = undefined
+    }
+    currentStepBase = ''
+  }
+
+  const emitStep = (step: string) => {
+    clearStepTick()
+    currentStepBase = step
+    onProgress?.(`  · ${displayName}: ${step}`)
+    if (spinner) {
+      spinner.text = `Compiling source → ${relSource}\n    ${pc.dim(`${displayName}: ${step}`)}`
+    }
+
+    const started = Date.now()
+    stepTick = setInterval(() => {
+      const sec = Math.max(1, Math.floor((Date.now() - started) / 1000))
+      const withElapsed = `${currentStepBase} · ${sec}s`
+      if (spinner) {
+        spinner.text = `Compiling source → ${relSource}\n    ${pc.dim(`${displayName}: ${withElapsed}`)}`
+      }
+      if (onProgress && sec >= 3 && sec % 5 === 0) {
+        onProgress(`  · ${displayName}: ${withElapsed}`)
+      }
+    }, 1000)
+  }
 
   removeCompiledArtifactsForSource(file, paths)
   onProgress?.(`Compiling source → ${relSource}`)
 
-  await compileOneSourceFile(file, paths, step => onProgress?.(`  · ${displayName}: ${step}`))
-  onProgress?.(`✓ Compiled source: ${relSource}`)
+  try {
+    await compileOneSourceFile(file, paths, emitStep)
+    clearStepTick()
+    if (spinner) spinner.succeed(`Compiled source: ${relSource}`)
+    else onProgress?.(`✓ Compiled source: ${relSource}`)
+    return file
+  } catch (err) {
+    clearStepTick()
+    if (spinner) {
+      const msg = err instanceof Error ? err.message : String(err)
+      spinner.fail(`Compile failed for ${relSource}: ${msg}`)
+    }
+    throw err
+  }
 
-  return file
 }
 
 export async function compileSources(root: string, concurrency?: number, onProgress?: (msg: string) => void): Promise<void> {
