@@ -1,12 +1,13 @@
 /** @jsxImportSource hono/jsx */
 import type { Child } from 'hono/jsx'
 
-type PillVariant = 'default' | 'type' | 'ontology'
+type PillVariant = 'default' | 'type' | 'ontology' | 'entity'
 
 const pillStyles: Record<PillVariant, string> = {
   default:  'bg-zinc-700 border border-zinc-600 text-zinc-500 text-xs px-1.5 py-0.5 rounded no-scanline',
   type:     'bg-zinc-700 border border-zinc-600 text-zinc-500 text-xs px-2 py-0.5 rounded uppercase tracking-wider no-scanline',
   ontology: 'bg-zinc-700 border border-zinc-600 text-zinc-500 text-xs px-2 py-0.5 rounded no-scanline',
+  entity:   'bg-zinc-800 border border-zinc-700 text-zinc-400 text-xs px-2 py-0.5 rounded no-scanline',
 }
 
 const pillInlineStyle = 'position: relative; z-index: 10001;'

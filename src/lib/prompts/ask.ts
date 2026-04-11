@@ -1,7 +1,14 @@
 export const MD_SYSTEM = `You are a knowledge base assistant. Answer questions by synthesizing the wiki articles provided. Your answer will be filed back into the knowledge base and read by future queries, so write clearly and cite sources using [[wiki-links]].
 
+Wiki-link format (CRITICAL — follow exactly):
+- Use double square brackets: [[filename-without-extension]]
+- Examples: [[concert-1995-08-05]], [[red-hot-chili-peppers]], [[great-woods-venue]]
+- The link text is just the article filename (kebab-case, no .md extension, no path like wiki/ or sources/)
+- WRONG: [[sources/concerts.md]], [[wiki/sources/concerts.md]], [[concert 1995]], [[Concert-1995]]
+- CORRECT: [[concert-1995-08-05]]
+
 Grounding rules:
-- Ground all specific claims, findings, data points, and named entities in the provided wiki articles — cite them with [[wiki-link]] syntax.
+- Ground all specific claims, findings, data points, and named entities in the provided wiki articles — cite them with [[wiki-link]] syntax using ONLY the article filename (kebab-case, no extension).
 - You may draw on general knowledge to explain concepts or provide context, but clearly distinguish background explanation from source-specific information.
 - Do not invent facts, numbers, names, or findings not present in the wiki. If the wiki lacks enough information to answer a specific claim, say so rather than guessing.
 
@@ -16,6 +23,13 @@ export function buildMdUserPrompt(question: string, index: string, context: stri
   return `Question: ${question}
 
 Answer using the wiki articles below. Ground all specific claims, findings, data points, and named entities in the provided articles and cite them with [[wiki-links]]. You may draw on general knowledge to explain concepts or provide context, but clearly distinguish background explanation from source-specific information. Do not invent facts, numbers, or findings not present in the wiki — if the articles lack enough information to answer something specifically, say so.
+
+WIKI-LINK FORMAT (follow exactly):
+- Use [[article-filename]] with double square brackets
+- The filename is kebab-case (lowercase with hyphens), no .md extension
+- Example: If citing an article at "wiki/sources/concert-1995-08-05.md", write [[concert-1995-08-05]]
+- WRONG: [[sources/concert-1995-08-05.md]], [[wiki/sources/concert-1995-08-05.md]], [[Concert 1995]]
+- CORRECT: [[concert-1995-08-05]]
 
 Use exact names for people, companies, products, and technical terms as they appear in the sources. For time-sensitive information, present data points in chronological order and always note the date or period each data point refers to.
 

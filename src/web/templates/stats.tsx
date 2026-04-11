@@ -1,7 +1,9 @@
 /** @jsxImportSource hono/jsx */
-import type { StatsSummary, LlmCallLog } from '../../lib/llm-stats.js'
+import type { StatsSummary, LlmCallLog, CostSource } from '../../lib/llm-stats.js'
+import { formatCost } from '../../lib/llm-stats.js'
 import type { KbConfig } from '../../lib/config.js'
 import { PageHeader } from './ui/index.js'
+import { formatDuration } from '../../lib/utils.js'
 
 interface StatsPageProps {
   summary: StatsSummary
@@ -10,22 +12,14 @@ interface StatsPageProps {
   config: KbConfig
 }
 
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
-  return `${(ms / 60000).toFixed(1)}m`
-}
-
 function formatTokens(n: number): string {
   if (n < 1000) return `${n}`
   if (n < 1_000_000) return `${(n / 1000).toFixed(1)}k`
   return `${(n / 1_000_000).toFixed(2)}M`
 }
 
-function formatCost(usd: number): string {
-  if (usd < 0.01) return `$${usd.toFixed(4)}`
-  if (usd < 1) return `$${usd.toFixed(2)}`
-  return `$${usd.toFixed(2)}`
+function formatCostWithSource(usd: number, source?: CostSource): string {
+  return formatCost(usd, source)
 }
 
 function formatLogEntry(log: LlmCallLog) {
@@ -38,8 +32,8 @@ function formatLogEntry(log: LlmCallLog) {
       <td class="py-2 text-zinc-400 text-xs">{log.provider}</td>
       <td class="py-2 font-mono text-xs text-zinc-300">{log.model}</td>
       <td class="text-right py-2 text-zinc-300">{log.inputTokens}+{log.outputTokens}</td>
-      <td class="text-right py-2 text-zinc-300">{formatCost(log.estimatedCostUsd)}</td>
-      <td class="text-right py-2 text-zinc-300">{log.durationMs}ms</td>
+      <td class="text-right py-2 text-zinc-300">{formatCostWithSource(log.estimatedCostUsd, log.costSource)}</td>
+      <td class="text-right py-2 text-zinc-300">{formatDuration(log.durationMs)}</td>
     </tr>
   )
 }
@@ -76,10 +70,62 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
           <div class="text-zinc-100 text-2xl font-bold">{formatDuration(summary.totalDurationMs)}</div>
         </div>
         <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-4 no-scanline relative z-[10001]">
-          <div class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Est. Cost</div>
+          <div class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Cost</div>
           <div class="text-zinc-100 text-2xl font-bold">{formatCost(summary.totalCostUsd)}</div>
+          {(summary.totalEstimatedCostUsd > 0 || summary.totalActualCostUsd > 0 || summary.totalFreeCostUsd > 0) && (
+            <div class="text-xs text-zinc-500 mt-1">
+              {summary.totalEstimatedCostUsd > 0 && <span>{formatCost(summary.totalEstimatedCostUsd, 'estimated')} </span>}
+              {summary.totalActualCostUsd > 0 && <span>{formatCost(summary.totalActualCostUsd, 'actual')} </span>}
+              {summary.totalFreeCostUsd > 0 && <span>{formatCost(summary.totalFreeCostUsd, 'free')} </span>}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Cost Breakdown Card */}
+      {(summary.totalEstimatedCostUsd > 0 || summary.totalActualCostUsd > 0 || summary.totalFreeCostUsd > 0) && (
+        <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-8 no-scanline relative z-[10001]">
+          <h2 class="text-lg font-semibold mb-4 text-zinc-100">Cost Breakdown</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {summary.totalActualCostUsd > 0 && (
+              <div class="bg-zinc-800/50 rounded-lg p-4">
+                <div class="text-zinc-400 text-xs uppercase tracking-wider mb-1">Actual</div>
+                <div class="text-zinc-100 text-xl font-bold">{formatCost(summary.totalActualCostUsd)}</div>
+                <div class="text-zinc-500 text-xs mt-1">
+                  {((summary.totalActualCostUsd / summary.totalCostUsd) * 100).toFixed(1)}% of cost
+                  {summary.totalActualCalls > 0 && (
+                    <span> · {summary.totalActualCalls} calls ({((summary.totalActualCalls / summary.totalCalls) * 100).toFixed(0)}%)</span>
+                  )}
+                </div>
+              </div>
+            )}
+            {summary.totalEstimatedCostUsd > 0 && (
+              <div class="bg-zinc-800/50 rounded-lg p-4">
+                <div class="text-zinc-400 text-xs uppercase tracking-wider mb-1">Estimated</div>
+                <div class="text-zinc-100 text-xl font-bold">{formatCost(summary.totalEstimatedCostUsd)}</div>
+                <div class="text-zinc-500 text-xs mt-1">
+                  {((summary.totalEstimatedCostUsd / summary.totalCostUsd) * 100).toFixed(1)}% of cost
+                  {summary.totalEstimatedCalls > 0 && (
+                    <span> · {summary.totalEstimatedCalls} calls ({((summary.totalEstimatedCalls / summary.totalCalls) * 100).toFixed(0)}%)</span>
+                  )}
+                </div>
+              </div>
+            )}
+            {summary.totalFreeCostUsd > 0 && (
+              <div class="bg-zinc-800/50 rounded-lg p-4">
+                <div class="text-zinc-400 text-xs uppercase tracking-wider mb-1">Free</div>
+                <div class="text-zinc-100 text-xl font-bold">{formatCost(summary.totalFreeCostUsd)}</div>
+                <div class="text-zinc-500 text-xs mt-1">
+                  {((summary.totalFreeCostUsd / summary.totalCostUsd) * 100).toFixed(1)}% of cost
+                  {summary.totalFreeCalls > 0 && (
+                    <span> · {summary.totalFreeCalls} calls ({((summary.totalFreeCalls / summary.totalCalls) * 100).toFixed(0)}%)</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* By Action */}
@@ -100,7 +146,15 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
                   <tr key={action} class="border-b last:border-0 border-zinc-800">
                     <td class="py-2 capitalize text-zinc-300">{action}</td>
                     <td class="text-right py-2 text-zinc-300">{stats.calls}</td>
-                    <td class="text-right py-2 text-zinc-300">{formatCost(stats.costUsd)}</td>
+                    <td class="text-right py-2 text-zinc-300">
+                      {formatCost(stats.costUsd)}
+                      {(stats.estimatedCostUsd > 0 || stats.actualCostUsd > 0 || stats.freeCostUsd > 0) && (
+                        <span class="text-xs text-zinc-500 ml-1">
+                          ({stats.estimatedCostUsd > 0 && <span>est. {formatCost(stats.estimatedCostUsd)} </span>}
+                          {stats.actualCostUsd > 0 && <span>actual {formatCost(stats.actualCostUsd)} </span>}
+                          {stats.freeCostUsd > 0 && <span>free {formatCost(stats.freeCostUsd)}</span>})</span>
+                      )}
+                    </td>
                     <td class="text-right py-2 text-zinc-300">{formatTokens(stats.inputTokens + stats.outputTokens)}</td>
                   </tr>
                 ))}
@@ -266,6 +320,14 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
               return '$' + usd.toFixed(2);
             }
 
+            function formatDuration(ms) {
+              if (ms < 1000) return ms + 'ms';
+              if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+              const mins = Math.floor(ms / 60000);
+              const secs = Math.floor((ms % 60000) / 1000);
+              return mins + 'm ' + secs + 's';
+            }
+
             function addLogEntry(log) {
               const row = document.createElement('tr');
               row.className = 'border-b last:border-0 border-zinc-800 animate-fade-in';
@@ -278,7 +340,7 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
                 { text: String(log.model), cls: 'py-2 font-mono text-xs text-zinc-300' },
                 { text: String(log.inputTokens) + '+' + String(log.outputTokens), cls: 'text-right py-2 text-zinc-300' },
                 { text: formatCost(log.estimatedCostUsd), cls: 'text-right py-2 text-zinc-300' },
-                { text: String(log.durationMs) + 'ms', cls: 'text-right py-2 text-zinc-300' },
+                { text: formatDuration(log.durationMs), cls: 'text-right py-2 text-zinc-300' },
               ];
               cells.forEach(function(cell) {
                 const td = document.createElement('td');

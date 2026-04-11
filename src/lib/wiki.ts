@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 
 import { join, relative, basename, extname } from 'node:path'
 import matter from 'gray-matter'
 import { kbPaths, requireKbRoot } from './paths.js'
-import { normalizeTag } from './utils.js'
+import { normalizeTag, slugify } from './utils.js'
 
 // --- Types ---
 
@@ -13,6 +13,7 @@ export interface WikiArticle {
   content: string
   tags: string[]
   frontmatter: Record<string, unknown>
+  entities?: Record<string, string[]>
 }
 
 // Ontology types aligned with schema.org (https://schema.org) and Wikidata equivalents.
@@ -48,11 +49,12 @@ export interface ArticleMeta {
   sourceType?: 'text' | 'pdf' | 'image'
   tags: string[]
   relatedSources?: string[]
+  entities?: Record<string, string[]>
 }
 
 // --- LLM Output Sanitization ---
 
-export function sanitizeLlmOutput(raw: string): { body: string; tags: string[] } {
+export function sanitizeLlmOutput(raw: string): { body: string; tags: string[]; entities?: Record<string, string[]> } {
   let text = raw.trim()
 
   // Strip outer markdown code fence wrapper (preserves inner fences like ```mermaid)
@@ -69,18 +71,50 @@ export function sanitizeLlmOutput(raw: string): { body: string; tags: string[] }
     }
   }
 
-  // Extract tags from last line if present
+  // Extract tags and entities from last lines if present
   const lines = text.split('\n')
   let tags: string[] = []
+  let entities: Record<string, string[]> = {}
+
+  // Check for entities line (should be last or second-to-last)
   const lastLine = lines[lines.length - 1]?.trim() ?? ''
-  if (lastLine.toLowerCase().startsWith('tags:')) {
-    const tagStr = lastLine.slice(5).trim()
+  const secondLastLine = lines[lines.length - 2]?.trim() ?? ''
+
+  // Parse entities from line starting with "Entities:"
+  const entitiesLine = lastLine.toLowerCase().startsWith('entities:')
+    ? lastLine
+    : secondLastLine.toLowerCase().startsWith('entities:')
+      ? secondLastLine
+      : null
+
+  if (entitiesLine) {
+    try {
+      const jsonStr = entitiesLine.slice(entitiesLine.indexOf(':') + 1).trim()
+      const parsed = JSON.parse(jsonStr)
+      if (parsed && typeof parsed === 'object') {
+        entities = parsed
+      }
+    } catch {
+      // Ignore parse errors - entities will be empty
+    }
+    // Remove entities line
+    if (lastLine.toLowerCase().startsWith('entities:')) {
+      lines.pop()
+    } else {
+      lines.splice(lines.length - 2, 1)
+    }
+  }
+
+  // Parse tags from last line (after entities removal)
+  const finalLastLine = lines[lines.length - 1]?.trim() ?? ''
+  if (finalLastLine.toLowerCase().startsWith('tags:')) {
+    const tagStr = finalLastLine.slice(5).trim()
     tags = tagStr.split(',').map(t => normalizeTag(t)).filter(Boolean)
     lines.pop()
     while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop()
   }
 
-  return { body: lines.join('\n').trim(), tags }
+  return { body: lines.join('\n').trim(), tags, entities }
 }
 
 // --- Article Writing ---
@@ -102,6 +136,13 @@ export function writeArticle(destPath: string, meta: ArticleMeta, body: string):
   if (meta.sourceFile) frontmatter.source_file = meta.sourceFile
   if (meta.sourceType) frontmatter.source_type = meta.sourceType
   if (meta.relatedSources?.length) frontmatter.related_sources = meta.relatedSources.map(s => `[[${s}]]`)
+  if (meta.entities && Object.keys(meta.entities).length > 0) {
+    const slugifiedEntities: Record<string, string[]> = {}
+    for (const [category, names] of Object.entries(meta.entities)) {
+      slugifiedEntities[category] = names.map(name => slugify(name))
+    }
+    frontmatter.entities = slugifiedEntities
+  }
 
   let finalBody = body
   if (meta.type === 'concept' && meta.relatedSources?.length) {
@@ -120,6 +161,7 @@ export function readWikiArticle(filePath: string): WikiArticle {
   const { data, content } = matter(raw)
   const title = data.title ?? basename(filePath, extname(filePath)).replace(/-/g, ' ')
   const tags = Array.isArray(data.tags) ? data.tags.map(String) : []
+  const entities = data.entities && typeof data.entities === 'object' ? data.entities as Record<string, string[]> : undefined
 
   return {
     path: filePath,
@@ -128,6 +170,7 @@ export function readWikiArticle(filePath: string): WikiArticle {
     content,
     tags,
     frontmatter: data,
+    entities,
   }
 }
 
@@ -246,7 +289,9 @@ export function normalizeLinks(text: string, articles: WikiArticle[]): string {
   const bySlug = new Map(articles.map(a => [basename(a.path, '.md'), a]))
 
   return text.replace(/\[\[([^\]]+)\]\]/g, (match, linkText: string) => {
-    const slug = linkText.toLowerCase().replace(/\s+/g, '-')
+    // Extract just the filename part if the link includes a path (e.g., "sources/concerts" -> "concerts")
+    const filename = linkText.includes('/') ? linkText.split('/').pop()! : linkText
+    const slug = filename.toLowerCase().replace(/\s+/g, '-')
     const article = bySlug.get(slug)
     if (article) return `[${article.title}](${article.relativePath})`
     return `**${linkText}**`
@@ -257,7 +302,9 @@ export function normalizeLinksForWeb(text: string, articles: WikiArticle[]): str
   const bySlug = new Map(articles.map(a => [basename(a.path, '.md'), a]))
 
   let result = text.replace(/\[\[([^\]]+)\]\]/g, (match, linkText: string) => {
-    const slug = linkText.toLowerCase().replace(/\s+/g, '-')
+    // Extract just the filename part if the link includes a path (e.g., "sources/concerts" -> "concerts")
+    const filename = linkText.includes('/') ? linkText.split('/').pop()! : linkText
+    const slug = filename.toLowerCase().replace(/\s+/g, '-')
     const article = bySlug.get(slug)
     if (article) {
       const webPath = '/' + article.relativePath.replace(/\.md$/, '')

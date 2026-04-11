@@ -5,8 +5,9 @@ import { homedir } from 'node:os'
 import { findKbRoot } from './paths.js'
 
 let loaded = false
+let loadedForRoot: string | null = null
 
-function loadReadableEnvFile(path: string): void {
+function loadReadableEnvFile(path: string, override = false): void {
   if (!existsSync(path)) return
 
   try {
@@ -15,25 +16,35 @@ function loadReadableEnvFile(path: string): void {
     return
   }
 
-  dotenv.config({ path, quiet: true })
+  dotenv.config({ path, quiet: true, override })
 }
 
 export function loadEnv(): void {
-  if (loaded) return
-  loaded = true
-
-  const globalEnv = join(homedir(), '.theora', '.env')
-  loadReadableEnvFile(globalEnv)
-
-  const cwd = process.cwd()
-  const cwdEnv = join(cwd, '.env')
-  loadReadableEnvFile(cwdEnv)
-
   const root = findKbRoot()
-  if (root) {
+
+  // If we've already loaded and we're in the same KB root, skip
+  if (loaded && loadedForRoot === root) return
+
+  // If this is a new KB root (or first load), load its env
+  // Use override=true so KB .env takes precedence over global/CWD envs
+  if (root && root !== loadedForRoot) {
     const kbEnvPath = join(root, '.env')
-    loadReadableEnvFile(kbEnvPath)
+    loadReadableEnvFile(kbEnvPath, true)
   }
+
+  // On first load only, also load global and CWD envs
+  if (!loaded) {
+    loaded = true
+
+    const globalEnv = join(homedir(), '.theora', '.env')
+    loadReadableEnvFile(globalEnv)
+
+    const cwd = process.cwd()
+    const cwdEnv = join(cwd, '.env')
+    loadReadableEnvFile(cwdEnv)
+  }
+
+  loadedForRoot = root
 }
 
 export function getGlobalEnvPath(): string {

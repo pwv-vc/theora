@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import pc from 'picocolors'
 import { findKbRoot } from './paths.js'
+import { formatDuration } from './utils.js'
 
 export interface LlmCallStats {
   inputTokens: number
@@ -135,15 +136,6 @@ export function persistSession(command: 'compile' | 'ask' | 'lint' | 'ingest', e
 }
 
 // --- Display ---
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`
-  const secs = ms / 1000
-  if (secs < 60) return `${secs.toFixed(1)}s`
-  const mins = Math.floor(secs / 60)
-  const remainSecs = (secs % 60).toFixed(0)
-  return `${mins}m ${remainSecs}s`
-}
 
 function formatCost(usd: number): string {
   if (usd < 0.01) return `$${usd.toFixed(4)}`

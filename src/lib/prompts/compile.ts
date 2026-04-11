@@ -12,7 +12,12 @@ export const CONTENT_RULES = `IMPORTANT formatting rules:
 - Preserve exact names: people, companies, products, locations, and technical terms exactly as they appear in the source
 - Always qualify time-sensitive data with its period: "as of [date]", "for [quarter/year]", "reported in [month year]"
 - On the very last line, output tags as: Tags: tag1, tag2, tag3
-- Use hyphens for multi-word tags (e.g., "machine-learning" not "machine learning")`
+- Use hyphens for multi-word tags (e.g., "machine-learning" not "machine learning")
+
+CRITICAL: After the tags line, add a final line with structured entity data:
+Entities: {"people":["Name 1","Name 2"],"organizations":["Company 1"],"events":["Event Name"],"dates":["2024-03-15","Q3 2024"],"products":["Product Name"],"places":["Location"]}
+
+Include ALL notable entities from the source. Use empty arrays [] for categories with no entities. Keep entity names exactly as they appear in the source.`
 
 const SOURCE_SECTIONS = `Write a wiki article with these exact sections:
 

@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import pc from 'picocolors'
 import { kbPaths, findKbRoot } from './paths.js'
 import type { LocalModelPricingConfig } from './config.js'
+import { formatDuration } from './utils.js'
 
 // Cost per million tokens for supported models
 const COST_PER_MILLION: Record<string, { input: number; output: number }> = {
@@ -22,14 +23,17 @@ type UsageBucket = {
   outputTokens: number
   costUsd: number
   durationMs: number
+  estimatedCostUsd: number
+  actualCostUsd: number
+  freeCostUsd: number
 }
 
 function createUsageBucket(): UsageBucket {
-  return { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, durationMs: 0 }
+  return { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, durationMs: 0, estimatedCostUsd: 0, actualCostUsd: 0, freeCostUsd: 0 }
 }
 
-function createCallCostBucket(): { calls: number; costUsd: number } {
-  return { calls: 0, costUsd: 0 }
+function createCallCostBucket(): { calls: number; costUsd: number; estimatedCostUsd: number; actualCostUsd: number; freeCostUsd: number } {
+  return { calls: 0, costUsd: 0, estimatedCostUsd: 0, actualCostUsd: 0, freeCostUsd: 0 }
 }
 
 function estimateDurationBasedLocalCost(
@@ -57,6 +61,11 @@ export function formatProviderModel(provider: string, model: string): string {
   return `${provider} / ${model}`
 }
 
+export interface CostEstimate {
+  costUsd: number
+  source: CostSource
+}
+
 export function estimateCost(
   model: string,
   inputTokens: number,
@@ -64,16 +73,24 @@ export function estimateCost(
   provider: string = 'openai',
   localModelPricing?: LocalModelPricingConfig,
   durationMs: number = 0,
-): number {
+): CostEstimate {
   const rates = COST_PER_MILLION[model] ?? getDefaultCostRates(provider)
   if (!rates) {
     if (provider === 'openai-compatible') {
-      return estimateDurationBasedLocalCost(durationMs, localModelPricing)
+      const cost = estimateDurationBasedLocalCost(durationMs, localModelPricing)
+      // If local model pricing is zero or not configured, mark as free
+      if (cost === 0) {
+        return { costUsd: 0, source: 'free' }
+      }
+      return { costUsd: cost, source: 'estimated' }
     }
-    return 0
+    return { costUsd: 0, source: 'estimated' }
   }
-  return (inputTokens * rates.input + outputTokens * rates.output) / 1_000_000
+  const cost = (inputTokens * rates.input + outputTokens * rates.output) / 1_000_000
+  return { costUsd: cost, source: 'estimated' }
 }
+
+export type CostSource = 'actual' | 'estimated' | 'free'
 
 export interface LlmCallLog {
   timestamp: string
@@ -85,6 +102,7 @@ export interface LlmCallLog {
   outputTokens: number
   durationMs: number
   estimatedCostUsd: number
+  costSource: CostSource
 }
 
 export interface StatsSummary {
@@ -93,11 +111,17 @@ export interface StatsSummary {
   totalOutputTokens: number
   totalCostUsd: number
   totalDurationMs: number
+  totalEstimatedCostUsd: number
+  totalActualCostUsd: number
+  totalFreeCostUsd: number
+  totalEstimatedCalls: number
+  totalActualCalls: number
+  totalFreeCalls: number
   byAction: Record<string, UsageBucket>
   byProvider: Record<string, UsageBucket>
   byModel: Record<string, UsageBucket>
   byActionPerModel: Record<string, Record<string, UsageBucket>>
-  byDay: Record<string, { calls: number; costUsd: number }>
+  byDay: Record<string, { calls: number; costUsd: number; estimatedCostUsd: number; actualCostUsd: number; freeCostUsd: number }>
 }
 
 function getLogPath(): string | null {
@@ -141,6 +165,12 @@ export function summarizeStats(logs: LlmCallLog[]): StatsSummary {
     totalOutputTokens: 0,
     totalCostUsd: 0,
     totalDurationMs: 0,
+    totalEstimatedCostUsd: 0,
+    totalActualCostUsd: 0,
+    totalFreeCostUsd: 0,
+    totalEstimatedCalls: 0,
+    totalActualCalls: 0,
+    totalFreeCalls: 0,
     byAction: {},
     byProvider: {},
     byModel: {},
@@ -154,6 +184,19 @@ export function summarizeStats(logs: LlmCallLog[]): StatsSummary {
     summary.totalOutputTokens += log.outputTokens
     summary.totalCostUsd += log.estimatedCostUsd
     summary.totalDurationMs += log.durationMs
+    // Track cost sources at summary level
+    if (log.costSource === 'estimated') {
+      summary.totalEstimatedCostUsd += log.estimatedCostUsd
+      summary.totalEstimatedCalls++
+    }
+    if (log.costSource === 'actual') {
+      summary.totalActualCostUsd += log.estimatedCostUsd
+      summary.totalActualCalls++
+    }
+    if (log.costSource === 'free') {
+      summary.totalFreeCostUsd += log.estimatedCostUsd
+      summary.totalFreeCalls++
+    }
 
     if (!summary.byAction[log.action]) {
       summary.byAction[log.action] = createUsageBucket()
@@ -163,6 +206,10 @@ export function summarizeStats(logs: LlmCallLog[]): StatsSummary {
     summary.byAction[log.action].outputTokens += log.outputTokens
     summary.byAction[log.action].costUsd += log.estimatedCostUsd
     summary.byAction[log.action].durationMs += log.durationMs
+    // Track cost sources separately
+    if (log.costSource === 'estimated') summary.byAction[log.action].estimatedCostUsd += log.estimatedCostUsd
+    if (log.costSource === 'actual') summary.byAction[log.action].actualCostUsd += log.estimatedCostUsd
+    if (log.costSource === 'free') summary.byAction[log.action].freeCostUsd += log.estimatedCostUsd
 
     if (!summary.byProvider[log.provider]) {
       summary.byProvider[log.provider] = createUsageBucket()
@@ -172,6 +219,9 @@ export function summarizeStats(logs: LlmCallLog[]): StatsSummary {
     summary.byProvider[log.provider].outputTokens += log.outputTokens
     summary.byProvider[log.provider].costUsd += log.estimatedCostUsd
     summary.byProvider[log.provider].durationMs += log.durationMs
+    if (log.costSource === 'estimated') summary.byProvider[log.provider].estimatedCostUsd += log.estimatedCostUsd
+    if (log.costSource === 'actual') summary.byProvider[log.provider].actualCostUsd += log.estimatedCostUsd
+    if (log.costSource === 'free') summary.byProvider[log.provider].freeCostUsd += log.estimatedCostUsd
 
     const providerModel = formatProviderModel(log.provider, log.model)
     if (!summary.byModel[providerModel]) {
@@ -182,6 +232,9 @@ export function summarizeStats(logs: LlmCallLog[]): StatsSummary {
     summary.byModel[providerModel].outputTokens += log.outputTokens
     summary.byModel[providerModel].costUsd += log.estimatedCostUsd
     summary.byModel[providerModel].durationMs += log.durationMs
+    if (log.costSource === 'estimated') summary.byModel[providerModel].estimatedCostUsd += log.estimatedCostUsd
+    if (log.costSource === 'actual') summary.byModel[providerModel].actualCostUsd += log.estimatedCostUsd
+    if (log.costSource === 'free') summary.byModel[providerModel].freeCostUsd += log.estimatedCostUsd
 
     if (!summary.byActionPerModel[log.action]) {
       summary.byActionPerModel[log.action] = {}
@@ -194,6 +247,9 @@ export function summarizeStats(logs: LlmCallLog[]): StatsSummary {
     summary.byActionPerModel[log.action][providerModel].outputTokens += log.outputTokens
     summary.byActionPerModel[log.action][providerModel].costUsd += log.estimatedCostUsd
     summary.byActionPerModel[log.action][providerModel].durationMs += log.durationMs
+    if (log.costSource === 'estimated') summary.byActionPerModel[log.action][providerModel].estimatedCostUsd += log.estimatedCostUsd
+    if (log.costSource === 'actual') summary.byActionPerModel[log.action][providerModel].actualCostUsd += log.estimatedCostUsd
+    if (log.costSource === 'free') summary.byActionPerModel[log.action][providerModel].freeCostUsd += log.estimatedCostUsd
 
     const day = log.timestamp.slice(0, 10) // YYYY-MM-DD
     if (!summary.byDay[day]) {
@@ -201,15 +257,12 @@ export function summarizeStats(logs: LlmCallLog[]): StatsSummary {
     }
     summary.byDay[day].calls++
     summary.byDay[day].costUsd += log.estimatedCostUsd
+    if (log.costSource === 'estimated') summary.byDay[day].estimatedCostUsd += log.estimatedCostUsd
+    if (log.costSource === 'actual') summary.byDay[day].actualCostUsd += log.estimatedCostUsd
+    if (log.costSource === 'free') summary.byDay[day].freeCostUsd += log.estimatedCostUsd
   }
 
   return summary
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
-  return `${(ms / 60000).toFixed(1)}m`
 }
 
 function formatTokens(n: number): string {
@@ -218,10 +271,18 @@ function formatTokens(n: number): string {
   return `${(n / 1_000_000).toFixed(2)}M`
 }
 
-function formatCost(usd: number): string {
-  if (usd < 0.01) return `$${usd.toFixed(4)}`
-  if (usd < 1) return `$${usd.toFixed(2)}`
-  return `$${usd.toFixed(2)}`
+export function formatCost(usd: number, source?: CostSource): string {
+  // Format the base cost
+  let formatted: string
+  if (usd < 0.01) formatted = `$${usd.toFixed(4)}`
+  else if (usd < 1) formatted = `$${usd.toFixed(2)}`
+  else formatted = `$${usd.toFixed(2)}`
+
+  // Add source indicator
+  if (source === 'free') return `${formatted} (free)`
+  if (source === 'estimated') return `${formatted} (est.)`
+  if (source === 'actual') return `${formatted} (actual)`
+  return formatted
 }
 
 export function printStatsSummary(summary: StatsSummary): void {
@@ -229,7 +290,13 @@ export function printStatsSummary(summary: StatsSummary): void {
   console.log(`  Total calls:    ${summary.totalCalls}`)
   console.log(`  Tokens:         ${formatTokens(summary.totalInputTokens)} in / ${formatTokens(summary.totalOutputTokens)} out`)
   console.log(`  AI time:        ${formatDuration(summary.totalDurationMs)}`)
-  console.log(`  Est. cost:      ${formatCost(summary.totalCostUsd)}`)
+  // Show cost with breakdown by source
+  const costParts: string[] = []
+  if (summary.totalActualCostUsd > 0) costParts.push(formatCost(summary.totalActualCostUsd, 'actual'))
+  if (summary.totalEstimatedCostUsd > 0) costParts.push(formatCost(summary.totalEstimatedCostUsd, 'estimated'))
+  if (summary.totalFreeCostUsd > 0) costParts.push(formatCost(summary.totalFreeCostUsd, 'free'))
+  if (costParts.length === 0) costParts.push(formatCost(summary.totalCostUsd, 'estimated'))
+  console.log(`  Cost:           ${costParts.join(' + ')}`)
 
   if (Object.keys(summary.byAction).length > 0) {
     console.log(`\n${pc.bold('By Action')}`)

@@ -39,11 +39,7 @@ See [llm-integration/taste.md](llm-integration/taste.md)
 # cli-design
 See [cli-design/taste.md](cli-design/taste.md)
 # observability
-- Track operational metrics (ingest time, AI cost, AI processing time) in stats for CLI tools that use LLM APIs. Confidence: 0.65
-- Use specific, descriptive action names for LLM call logging that indicate both the operation and the target type (e.g., `compile-text`, `compile-pdf`, `compile-image` rather than generic `compile` or `unknown`). Confidence: 0.80
-- Structure LLM action logging with actions as verbs and a separate `meta` field for file type details — e.g., action: `'compile'` with meta: `'md'` or `'pdf'` rather than compound action names like `'compile-text'`. Update logger, tail, and web log viewer to support the meta field (can be null/empty). Confidence: 0.80
-- Stats display logic (grouping, aggregation, formatting) must be shared between CLI and web via common lib utilities — both interfaces should show identical stats with the same logic. Confidence: 0.85
-
+See [observability/taste.md](observability/taste.md)
 # tagging
 - Keep tags flat (simple strings like "ai", "transformers") — do not implement hierarchical/namespaced tags (e.g., "artist/prince"). Users can use conventions like "artist-prince" if they want structure. Confidence: 0.70
 - Auto-tagging at ingest should be interactive by default (LLM suggests, user confirms/edits), with a --yes flag to skip confirmation for bulk/scripted use. Confidence: 0.65
@@ -60,6 +56,7 @@ See [web/taste.md](web/taste.md)
 # code-style
 - Always ensure files end with a newline character (EOF newline). Confidence: 0.90
 - Define variables, constants, and functions before they are used (no forward references). Confidence: 0.85
+- Use shared library utility functions rather than duplicating logic inline — if a function exists in lib/utils.js or similar shared location, import and use it instead of creating a duplicate implementation. Confidence: 0.80
 
 # documentation
 See [documentation/taste.md](documentation/taste.md)

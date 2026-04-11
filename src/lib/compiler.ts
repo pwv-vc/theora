@@ -69,7 +69,7 @@ async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, 
   const content = readFileSync(file, 'utf-8').slice(0, 50000)
   const ext = extname(file).toLowerCase().slice(1)
   const raw = await llm(buildSourcePrompt(basename(file), content, ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: ext })
-  const { body, tags } = sanitizeLlmOutput(raw)
+  const { body, tags, entities } = sanitizeLlmOutput(raw)
 
   const meta: ArticleMeta = {
     title: titleFromFilename(file),
@@ -77,6 +77,7 @@ async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, 
     sourceFile: relative(paths.raw, file),
     sourceType: 'text',
     tags: mergeTags(ingestTag, tags),
+    entities,
   }
 
   writeArticle(join(paths.wikiSources, `${slug}.md`), meta, body)
@@ -98,7 +99,7 @@ async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, i
   }
 
   const raw = await llm(buildPdfPrompt(basename(file), text.slice(0, 50000), ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: 'pdf' })
-  const { body, tags } = sanitizeLlmOutput(raw)
+  const { body, tags, entities } = sanitizeLlmOutput(raw)
 
   const meta: ArticleMeta = {
     title: titleFromFilename(file),
@@ -106,6 +107,7 @@ async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, i
     sourceFile: relative(paths.raw, file),
     sourceType: 'pdf',
     tags: mergeTags(ingestTag, tags),
+    entities,
   }
 
   writeArticle(join(paths.wikiSources, `${slug}.md`), meta, body)
@@ -127,7 +129,7 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
     [{ base64, mediaType }],
     { system: 'You are a knowledge base compiler analyzing images. Describe what you see in detail and extract all useful information.', maxTokens: 4096, action: 'vision' },
   )
-  const { body, tags } = sanitizeLlmOutput(raw)
+  const { body, tags, entities } = sanitizeLlmOutput(raw)
 
   const meta: ArticleMeta = {
     title: titleFromFilename(file),
@@ -135,6 +137,7 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
     sourceFile: relative(paths.raw, file),
     sourceType: 'image',
     tags: mergeTags(ingestTag, tags),
+    entities,
   }
 
   writeArticle(join(paths.wikiSources, `${slug}.md`), meta, body)
@@ -347,9 +350,24 @@ export async function rebuildIndex(root: string, onProgress?: (msg: string) => v
 
   const toObsidianTag = (tag: string) => `#${tag.toLowerCase().replace(/\s+/g, '-')}`
 
+  // Build entity summary for index (top entities by category)
+  const buildEntitySummary = (a: (typeof articles)[0]): string => {
+    if (!a.entities || Object.keys(a.entities).length === 0) return ''
+    const parts: string[] = []
+    for (const [category, items] of Object.entries(a.entities)) {
+      if (items.length > 0) {
+        // Take first 3 entities per category, slugify each entity name
+        const display = items.slice(0, 3).map(item => slugify(item)).join(', ')
+        parts.push(`${category}/${display}`)
+      }
+    }
+    return parts.length > 0 ? ` — ${parts.join(' | ')}` : ''
+  }
+
   const articleLink = (a: (typeof articles)[0]) => {
     const tagStr = a.tags.length > 0 ? `  ${a.tags.map(toObsidianTag).join(' ')}` : ''
-    return `- [${a.title}](${relative(paths.wiki, a.path)})${tagStr}`
+    const entitySummary = buildEntitySummary(a)
+    return `- [${a.title}](${relative(paths.wiki, a.path)})${tagStr}${entitySummary}`
   }
 
   const tagMap = new Map<string, typeof articles>()

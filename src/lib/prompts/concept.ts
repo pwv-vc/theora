@@ -27,6 +27,13 @@ ${relatedContent || 'No specific sources available.'}
 Articles you may link to using [[wiki-link]] syntax — ONLY use links from this list:
 ${targetList}
 
+WIKI-LINK FORMAT (follow exactly):
+- Use [[article-filename]] with double square brackets
+- The filename is kebab-case (lowercase with hyphens), no .md extension
+- Example: If the list shows "concert-1995-08-05", write [[concert-1995-08-05]]
+- WRONG: [[sources/concert-1995-08-05.md]], [[wiki/sources/concert-1995-08-05.md]], [[Concert 1995]]
+- CORRECT: [[concert-1995-08-05]]
+
 Write a comprehensive wiki article with these exact sections:
 
 ## Definition
