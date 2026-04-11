@@ -17,6 +17,13 @@ const YOUTUBE_HOSTS = new Set([
 ])
 
 const YT_DLP_MAX_BUFFER = 10 * 1024 * 1024
+const MAX_YOUTUBE_DESCRIPTION_CHARS = 4000
+const YOUTUBE_VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/
+const YOUTUBE_THUMBNAIL_HOST_PATTERNS = [
+  /^i\d*\.ytimg\.com$/i,
+  /^i\.ytimg\.com$/i,
+  /^img\.youtube\.com$/i,
+]
 
 export const YT_DLP_MISSING_MESSAGE =
   `yt-dlp not found. Install it to ingest YouTube captions: ${YT_DLP_INSTALL_HINT}`
@@ -29,7 +36,12 @@ interface YouTubeMetadata {
   title: string
   uploader?: string
   channel?: string
+  channel_id?: string
   duration?: number
+  upload_date?: string
+  timestamp?: number
+  description?: string
+  thumbnail?: string
   webpage_url?: string
   _type?: string
 }
@@ -38,10 +50,27 @@ export interface YouTubeTranscriptResult {
   videoId: string
   title: string
   channel: string
+  channelId: string | null
   durationSeconds: number | null
+  publishedDate: string | null
+  description: string | null
+  thumbnailUrl: string | null
   url: string
   markdown: string
   suggestedFilename: string
+}
+
+export interface ParsedYouTubeTranscriptMarkdown {
+  title: string
+  channel: string | null
+  videoId: string | null
+  channelId: string | null
+  url: string | null
+  thumbnailUrl: string | null
+  duration: string | null
+  publishedDate: string | null
+  description: string | null
+  transcript: string | null
 }
 
 function parseSupportedYouTubeUrl(url: string): URL | null {
@@ -69,6 +98,23 @@ function parseSupportedYouTubeUrl(url: string): URL | null {
 
 export function isYouTubeUrl(url: string): boolean {
   return parseSupportedYouTubeUrl(url) !== null
+}
+
+export function normalizeYouTubeInput(input: string): string | null {
+  const trimmed = input.trim()
+  if (!trimmed) return null
+  if (isYouTubeUrl(trimmed)) return trimmed
+
+  const prefixed = trimmed.match(/^(?:youtube:|yt:)([A-Za-z0-9_-]{11})$/i)
+  if (prefixed) {
+    return `https://www.youtube.com/watch?v=${prefixed[1]}`
+  }
+
+  if (YOUTUBE_VIDEO_ID_RE.test(trimmed)) {
+    return `https://www.youtube.com/watch?v=${trimmed}`
+  }
+
+  return null
 }
 
 function extractExecStderr(error: unknown): string {
@@ -241,27 +287,150 @@ export function suggestYouTubeTranscriptFilename(videoId: string, title: string)
   return slug ? `youtube-${videoId}-${slug}.md` : `youtube-${videoId}.md`
 }
 
+function normalizePublishedDate(uploadDate?: string, timestamp?: number): string | null {
+  if (uploadDate && /^\d{8}$/.test(uploadDate)) {
+    return `${uploadDate.slice(0, 4)}-${uploadDate.slice(4, 6)}-${uploadDate.slice(6, 8)}`
+  }
+  if (typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0) {
+    return new Date(timestamp * 1000).toISOString().slice(0, 10)
+  }
+  return null
+}
+
 function formatDuration(durationSeconds: number | null): string {
   if (durationSeconds === null || durationSeconds <= 0) return 'Unknown'
   return formatTimecode(durationSeconds)
 }
 
+function collapseWhitespace(value: string): string {
+  return value.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+function stripControlChars(value: string): string {
+  return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+}
+
+function sanitizeYouTubeDescriptionText(value: string | null | undefined): string | null {
+  if (!value) return null
+  const cleaned = collapseWhitespace(
+    stripControlChars(value)
+      .replace(/[^\p{L}\p{N}\s.,!?;:'"()[\]\/@#&%+*$=_-]+/gu, ' ')
+      .slice(0, MAX_YOUTUBE_DESCRIPTION_CHARS),
+  )
+  return cleaned.length > 0 ? cleaned : null
+}
+
+function sanitizeYouTubeCaptionText(value: string): string {
+  return collapseWhitespace(
+    stripControlChars(value)
+      .replace(/[^\p{L}\p{M}\p{P}\s]+/gu, ' ')
+      .replace(/\s+([.,!?;:'")\]])/g, '$1')
+      .replace(/([(])\s+/g, '$1'),
+  )
+}
+
+function sanitizeYouTubeThumbnailUrl(value: string | null | undefined): string | null {
+  if (!value) return null
+  try {
+    const parsed = new URL(value)
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null
+    if (!YOUTUBE_THUMBNAIL_HOST_PATTERNS.some(re => re.test(parsed.hostname))) return null
+    return parsed.toString()
+  } catch {
+    return null
+  }
+}
+
 export function renderYouTubeTranscriptMarkdown(
-  result: Pick<YouTubeTranscriptResult, 'title' | 'channel' | 'url' | 'durationSeconds'> & { transcript: string },
+  result: Pick<
+    YouTubeTranscriptResult,
+    'title' | 'channel' | 'videoId' | 'channelId' | 'url' | 'thumbnailUrl' | 'durationSeconds' | 'publishedDate' | 'description'
+  > & { transcript: string; durationText?: string | null },
 ): string {
+  const descriptionBlock = result.description?.trim()
+    ? `## Description
+
+${result.description.trim()}
+
+`
+    : ''
+
   return `# ${result.title}
 
 **Channel:** ${result.channel}  
+**Video ID:** ${result.videoId}  
+**Channel ID:** ${result.channelId ?? 'Unknown'}  
 **URL:** ${result.url}  
-**Duration:** ${formatDuration(result.durationSeconds)}  
+**Thumbnail URL:** ${result.thumbnailUrl ?? 'Unknown'}  
+**Published:** ${result.publishedDate ?? 'Unknown'}  
+**Duration:** ${result.durationText ?? formatDuration(result.durationSeconds)}  
 **Source:** YouTube captions
 
 _Automated or creator-provided captions; may contain errors._
 
-## Transcript
+${descriptionBlock}## Transcript
 
 ${result.transcript}
 `
+}
+
+function extractMarkdownSection(markdown: string, heading: string): string | null {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`^## ${escaped}\\n\\n([\\s\\S]*?)(?=\\n## |$)`, 'm')
+  const match = markdown.match(re)
+  return match?.[1]?.trim() || null
+}
+
+export function sanitizeExistingYouTubeTranscriptMarkdown(markdown: string): string {
+  const parsed = parseYouTubeTranscriptMarkdown(markdown)
+  if (!parsed || !parsed.transcript) return markdown
+
+  return renderYouTubeTranscriptMarkdown({
+    title: parsed.title,
+    channel: parsed.channel ?? 'Unknown channel',
+    videoId: parsed.videoId ?? 'unknown',
+    channelId: parsed.channelId,
+    url: parsed.url ?? 'Unknown',
+    thumbnailUrl: sanitizeYouTubeThumbnailUrl(parsed.thumbnailUrl),
+    durationSeconds: null,
+    durationText: parsed.duration,
+    publishedDate: parsed.publishedDate,
+    description: sanitizeYouTubeDescriptionText(parsed.description),
+    transcript: sanitizeYouTubeCaptionText(parsed.transcript),
+  })
+}
+
+export function parseYouTubeTranscriptMarkdown(markdown: string): ParsedYouTubeTranscriptMarkdown | null {
+  if (!markdown.includes('**Source:** YouTube captions')) return null
+
+  const lines = markdown.split(/\r?\n/)
+  const titleLine = lines.find(line => line.startsWith('# '))
+  const matchField = (label: string): string | null => {
+    const line = lines.find(entry => entry.startsWith(`**${label}:** `))
+    return line ? line.slice(`**${label}:** `.length).trim() : null
+  }
+  const knownValue = (value: string | null): string | null => value && value !== 'Unknown' ? value : null
+
+  const title = titleLine?.slice(2).trim()
+  if (!title) return null
+
+  const publishedValue = matchField('Published')
+
+  return {
+    title,
+    channel: knownValue(matchField('Channel')),
+    videoId: knownValue(matchField('Video ID')),
+    channelId: knownValue(matchField('Channel ID')),
+    url: knownValue(matchField('URL')),
+    thumbnailUrl: sanitizeYouTubeThumbnailUrl(knownValue(matchField('Thumbnail URL'))),
+    duration: knownValue(matchField('Duration')),
+    publishedDate: knownValue(publishedValue),
+    description: sanitizeYouTubeDescriptionText(extractMarkdownSection(markdown, 'Description')),
+    transcript: (() => {
+      const cleaned = sanitizeYouTubeCaptionText(extractMarkdownSection(markdown, 'Transcript') ?? '')
+      return cleaned.length > 0 ? cleaned : null
+    })(),
+  }
 }
 
 export async function fetchYouTubeTranscript(url: string): Promise<YouTubeTranscriptResult> {
@@ -273,27 +442,40 @@ export async function fetchYouTubeTranscript(url: string): Promise<YouTubeTransc
 
   try {
     const metadata = await fetchYouTubeMetadata(url)
-    const transcript = parseVttTranscript(await downloadCaptionVtt(url, tempDir))
+    const transcript = sanitizeYouTubeCaptionText(parseVttTranscript(await downloadCaptionVtt(url, tempDir)))
     if (!transcript) {
       throw new Error(EMPTY_YOUTUBE_TRANSCRIPT_MESSAGE)
     }
 
     const title = metadata.title || `YouTube video ${metadata.id}`
     const channel = metadata.uploader || metadata.channel || 'Unknown channel'
+    const channelId = metadata.channel_id ?? null
     const durationSeconds = typeof metadata.duration === 'number' ? metadata.duration : null
+    const publishedDate = normalizePublishedDate(metadata.upload_date, metadata.timestamp)
+    const description = sanitizeYouTubeDescriptionText(metadata.description)
+    const thumbnailUrl = sanitizeYouTubeThumbnailUrl(metadata.thumbnail)
     const canonicalUrl = metadata.webpage_url || url
 
     return {
       videoId: metadata.id,
       title,
       channel,
+      channelId,
       durationSeconds,
+      publishedDate,
+      description,
+      thumbnailUrl,
       url: canonicalUrl,
       markdown: renderYouTubeTranscriptMarkdown({
         title,
         channel,
+        videoId: metadata.id,
+        channelId,
         url: canonicalUrl,
+        thumbnailUrl,
         durationSeconds,
+        publishedDate,
+        description,
         transcript,
       }),
       suggestedFilename: suggestYouTubeTranscriptFilename(metadata.id, title),

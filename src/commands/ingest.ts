@@ -6,6 +6,7 @@ import ora from 'ora'
 import { kbPaths, requireKbRoot, safeJoin } from '../lib/paths.js'
 import { readManifest, writeManifest } from '../lib/manifest.js'
 import { VALID_EXTS, ingestLocalFile, ingestUrlSource, isUrl, isValidFile } from '../lib/ingest.js'
+import { normalizeYouTubeInput } from '../lib/youtube.js'
 function collectFiles(dir: string): string[] {
   const results: string[] = []
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -39,15 +40,18 @@ export const ingestCommand = new Command('ingest')
     let ingested = 0, skippedType = 0, skippedDupe = 0, skippedSize = 0
 
     for (const source of sources) {
-      if (isUrl(source)) {
+      const normalizedYouTubeSource = normalizeYouTubeInput(source)
+      const remoteSource = normalizedYouTubeSource ?? (isUrl(source) ? source : null)
+
+      if (remoteSource) {
         const spinner = ora(`Fetching: ${source}`).start()
-        const result = await ingestUrlSource(source, destDir, existingNames)
+        const result = await ingestUrlSource(remoteSource, destDir, existingNames)
         if (result.status === 'ingested') {
           entries.push({
             name: result.name,
             ingested: new Date().toISOString(),
             tag: options.tag ?? null,
-            url: result.url ?? source,
+            url: result.url ?? remoteSource,
           })
           ingested++
           spinner.succeed(`Fetched: ${result.name}`)

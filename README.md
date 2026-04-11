@@ -200,24 +200,6 @@ This means you can:
 - Override with a KB-specific `.env` for special cases
 - Check `theora settings` to see which .env file is active
 
-### Active Knowledge Base
-
-You can make Theora work from any directory by selecting a global active KB:
-
-```bash
-theora kb use ~/research/my-kb
-theora kb list
-theora kb use my-kb
-theora kb remove my-kb
-```
-
-After that, KB-aware commands like `theora ask` and `theora compile` will use:
-
-1. The nearest KB from your current directory
-2. Your saved global `activeKb` from `~/.theora/config.json`
-
-This means local discovery still wins when you are already inside a KB, but Theora can still run from anywhere once you have selected an active one.
-
 ### Add your API key
 
 Edit `.env` in your knowledge base root:

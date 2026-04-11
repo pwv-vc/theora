@@ -47,6 +47,10 @@ export interface ArticleMeta {
   ontology?: OntologyType[]
   sourceFile?: string
   sourceUrl?: string
+  sourcePublishedDate?: string
+  sourceVideoId?: string
+  sourceChannelId?: string
+  sourceThumbnailUrl?: string
   sourceType?: 'text' | 'pdf' | 'image' | 'audio' | 'video'
   tags: string[]
   relatedSources?: string[]
@@ -136,6 +140,10 @@ export function writeArticle(destPath: string, meta: ArticleMeta, body: string):
   }
   if (meta.sourceFile) frontmatter.source_file = meta.sourceFile
   if (meta.sourceUrl) frontmatter.source_url = meta.sourceUrl
+  if (meta.sourcePublishedDate) frontmatter.source_published_date = meta.sourcePublishedDate
+  if (meta.sourceVideoId) frontmatter.source_video_id = meta.sourceVideoId
+  if (meta.sourceChannelId) frontmatter.source_channel_id = meta.sourceChannelId
+  if (meta.sourceThumbnailUrl) frontmatter.source_thumbnail_url = meta.sourceThumbnailUrl
   if (meta.sourceType) frontmatter.source_type = meta.sourceType
   if (meta.relatedSources?.length) frontmatter.related_sources = meta.relatedSources.map(s => `[[${s}]]`)
   if (meta.entities && Object.keys(meta.entities).length > 0) {

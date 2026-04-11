@@ -24,6 +24,7 @@ import {
   buildVideoFramePrompt,
 } from './prompts/compile.js'
 import { hasFfmpeg } from './deps.js'
+import { parseYouTubeTranscriptMarkdown, sanitizeExistingYouTubeTranscriptMarkdown } from './youtube.js'
 import {
   computeFrameSchedule,
   extractAudioForWhisper,
@@ -80,27 +81,116 @@ function getExistingSourceSlugs(root: string): Set<string> {
 
 // --- File compilers ---
 
+function buildYouTubeCompileMetadata(content: string): {
+  articleTitle: string
+  sourceUrl?: string
+  sourcePublishedDate?: string
+  sourceVideoId?: string
+  sourceChannelId?: string
+  sourceThumbnailUrl?: string
+  metadataPrompt: string
+  metadataSection: string
+  datePeriodSection: string
+} | null {
+  const parsed = parseYouTubeTranscriptMarkdown(content)
+  if (!parsed) return null
+
+  const promptLines = [
+    `Title: ${parsed.title}`,
+    `Video ID: ${parsed.videoId ?? 'Unknown'}`,
+    `Channel: ${parsed.channel ?? 'Unknown'}`,
+    `Channel ID: ${parsed.channelId ?? 'Unknown'}`,
+    `Original URL: ${parsed.url ?? 'Unknown'}`,
+    `Thumbnail URL: ${parsed.thumbnailUrl ?? 'Unknown'}`,
+    `Published: ${parsed.publishedDate ?? 'Unknown'}`,
+    `Duration: ${parsed.duration ?? 'Unknown'}`,
+    `Description: ${parsed.description ?? 'Unknown'}`,
+    'Source type: YouTube captions transcript',
+  ]
+
+  const metadataLines = [
+    '## Video Metadata',
+    '',
+    `- Title: ${parsed.title}`,
+    `- Video ID: ${parsed.videoId ?? 'Unknown'}`,
+    `- Channel: ${parsed.channel ?? 'Unknown'}`,
+    `- Channel ID: ${parsed.channelId ?? 'Unknown'}`,
+    `- Published: ${parsed.publishedDate ?? 'Unknown'}`,
+    `- Duration: ${parsed.duration ?? 'Unknown'}`,
+    `- URL: ${parsed.url ?? 'Unknown'}`,
+    `- Thumbnail URL: ${parsed.thumbnailUrl ?? 'Unknown'}`,
+  ]
+
+  if (parsed.description) {
+    metadataLines.push('', '### Original Description', '', parsed.description)
+  }
+
+  metadataLines.push('')
+
+  const datePeriodSection =
+    `Published: ${parsed.publishedDate ?? 'Unknown'} — source: exact YouTube metadata. Coverage period unknown unless stated in the transcript or description.`
+
+  return {
+    articleTitle: parsed.title,
+    sourceUrl: parsed.url ?? undefined,
+    sourcePublishedDate: parsed.publishedDate ?? undefined,
+    sourceVideoId: parsed.videoId ?? undefined,
+    sourceChannelId: parsed.channelId ?? undefined,
+    sourceThumbnailUrl: parsed.thumbnailUrl ?? undefined,
+    metadataPrompt: promptLines.join('\n'),
+    metadataSection: metadataLines.join('\n'),
+    datePeriodSection,
+  }
+}
+
+function replaceExactSection(body: string, heading: string, replacement: string): string {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`## ${escaped}\\n[\\s\\S]*?(?=\\n## |$)`)
+  const section = `## ${heading}\n${replacement.trim()}`
+  if (re.test(body)) {
+    return body.replace(re, section)
+  }
+  return `${body.trimEnd()}\n\n${section}\n`
+}
+
 async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
   const name = basename(file, extname(file))
   const slug = slugify(name)
-  const sourceUrl = getUrlForFile(basename(file))
+  let content = readFileSync(file, 'utf-8').slice(0, 50000)
+  if (content.includes('**Source:** YouTube captions')) {
+    content = sanitizeExistingYouTubeTranscriptMarkdown(content)
+  }
+  const youtubeMeta = buildYouTubeCompileMetadata(content)
+  const sourceUrl = getUrlForFile(basename(file)) ?? youtubeMeta?.sourceUrl
 
-  const content = readFileSync(file, 'utf-8').slice(0, 50000)
   const ext = extname(file).toLowerCase().slice(1)
-  const raw = await llm(buildSourcePrompt(basename(file), content, ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: ext })
+  const raw = await llm(
+    buildSourcePrompt(basename(file), content, ingestTag, youtubeMeta?.metadataPrompt),
+    { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: ext },
+  )
   const { body, tags, entities } = sanitizeLlmOutput(raw)
+  const bodyWithExactDatePeriod = youtubeMeta
+    ? replaceExactSection(body, 'Date & Period', youtubeMeta.datePeriodSection)
+    : body
+  const finalBody = youtubeMeta
+    ? `${bodyWithExactDatePeriod.trimEnd()}\n\n---\n\n${youtubeMeta.metadataSection}`
+    : bodyWithExactDatePeriod
 
   const meta: ArticleMeta = {
-    title: titleFromFilename(file),
+    title: youtubeMeta?.articleTitle ?? titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
     sourceUrl: sourceUrl ?? undefined,
+    sourcePublishedDate: youtubeMeta?.sourcePublishedDate,
+    sourceVideoId: youtubeMeta?.sourceVideoId,
+    sourceChannelId: youtubeMeta?.sourceChannelId,
+    sourceThumbnailUrl: youtubeMeta?.sourceThumbnailUrl,
     sourceType: 'text',
     tags: mergeTags(ingestTag, tags),
     entities,
   }
 
-  writeArticle(join(paths.wikiSources, `${slug}.md`), meta, body)
+  writeArticle(join(paths.wikiSources, `${slug}.md`), meta, finalBody)
 }
 
 async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {

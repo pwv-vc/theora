@@ -12,6 +12,7 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
   const type = String(fm.type ?? '')
   const dateCompiled = String(fm.date_compiled ?? fm.date ?? '')
   const sourceFile = fm.source_file ? String(fm.source_file) : null
+  const sourceThumbnailUrl = fm.source_thumbnail_url ? String(fm.source_thumbnail_url) : null
   const ontology = Array.isArray(fm.ontology) ? fm.ontology.map(String) : []
   const entities = fm.entities && typeof fm.entities === 'object' ? fm.entities as Record<string, string[]> : {}
 
@@ -62,6 +63,19 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
           )}
         </div>
       </div>
+
+      {sourceThumbnailUrl && (
+        <div class="mb-8 bg-zinc-900 border border-zinc-800 rounded-lg p-3 no-scanline" style="position: relative; z-index: 10001;">
+          <div class="aspect-video overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
+            <img
+              src={sourceThumbnailUrl}
+              alt={`Thumbnail for ${article.title}`}
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      )}
 
       <Prose html={html} />
     </div>
