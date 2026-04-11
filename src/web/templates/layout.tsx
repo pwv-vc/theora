@@ -3,6 +3,7 @@ import type { Child } from 'hono/jsx'
 import { Header } from './ui/header.js'
 import { Footer } from './ui/footer.js'
 import { getPkgVersion } from '../../lib/pkg-version.js'
+import { MERMAID_THEME_PRESETS } from '../../lib/mermaid-theme.js'
 
 interface LayoutProps {
   title: string
@@ -33,23 +34,53 @@ export function Layout({ title, active, children }: LayoutProps) {
         <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous" defer />
         <script type="module" dangerouslySetInnerHTML={{ __html: `
           import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.14.0/dist/mermaid.esm.min.mjs';
-          const theme = document.documentElement.getAttribute('data-theme');
-          mermaid.initialize({
-            startOnLoad: true,
-            theme: theme === 'broadcast' ? 'default' : 'dark',
-            securityLevel: 'strict',
-          });
+          const PRESETS = ${JSON.stringify(MERMAID_THEME_PRESETS)};
+          function buildMermaidConfig(themeId) {
+            const preset = PRESETS[themeId] || PRESETS.broadcast;
+            return {
+              startOnLoad: true,
+              theme: 'base',
+              securityLevel: 'strict',
+              themeVariables: Object.assign({ darkMode: preset.darkMode }, preset.themeVariables),
+            };
+          }
+          function seedMermaidSources(root) {
+            (root || document).querySelectorAll('.mermaid').forEach(function(el) {
+              var text = el.textContent.trim();
+              if (text && !el.dataset.mermaidSource) el.dataset.mermaidSource = text;
+            });
+          }
+          seedMermaidSources(document);
+          const themeId = document.documentElement.getAttribute('data-theme') || 'broadcast';
+          mermaid.initialize(buildMermaidConfig(themeId));
           window.__mermaid = mermaid;
           window.renderMermaid = async function(el) {
-            el.querySelectorAll('pre > code.language-mermaid, pre.mermaid').forEach(node => {
+            if (!el) return;
+            el.querySelectorAll('pre > code.language-mermaid, pre.mermaid').forEach(function(node) {
               const div = document.createElement('div');
+              const src = node.textContent.trim();
               div.className = 'mermaid';
               div.textContent = node.textContent;
+              div.dataset.mermaidSource = src;
               node.replaceWith(div);
             });
+            seedMermaidSources(el);
             const nodes = Array.from(el.querySelectorAll('.mermaid:not([data-processed])'));
             if (nodes.length > 0) {
               await mermaid.run({ nodes });
+            }
+          };
+          window.refreshTheoraMermaid = async function() {
+            const tid = document.documentElement.getAttribute('data-theme') || 'broadcast';
+            mermaid.initialize(buildMermaidConfig(tid));
+            const nodes = Array.from(document.querySelectorAll('.mermaid[data-mermaid-source]'));
+            for (var i = 0; i < nodes.length; i++) {
+              var n = nodes[i];
+              n.removeAttribute('data-processed');
+              n.textContent = n.dataset.mermaidSource;
+            }
+            if (nodes.length > 0) {
+              await mermaid.run({ nodes: nodes });
             }
           };
         ` }} />
@@ -64,8 +95,12 @@ export function Layout({ title, active, children }: LayoutProps) {
           function setTheme(t) {
             document.documentElement.setAttribute('data-theme', t);
             localStorage.setItem('theora-theme', t);
+            var r = window.refreshTheoraMermaid;
+            if (typeof r === 'function') {
+              r();
+            }
           }
-          setTheme(localStorage.getItem('theora-theme') || 'max');
+          setTheme(localStorage.getItem('theora-theme') || 'broadcast');
 
           // Mobile menu handling
           function openMobileMenu() {
