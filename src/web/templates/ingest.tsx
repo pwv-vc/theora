@@ -11,9 +11,9 @@ import {
 } from "./ui/index.js";
 
 const VALID_EXTS_LIST =
-  ".md .mdx .txt .html .json .csv .xml .yaml .yml .pdf .png .jpg .jpeg .gif .webp";
+  ".md .mdx .txt .html .json .csv .xml .yaml .yml .pdf .png .jpg .jpeg .gif .webp .mp3 .wav .ogg .flac .m4a .mp4 .mov .avi .mkv .webm";
 const VALID_EXTS_ACCEPT =
-  ".md,.mdx,.txt,.html,.json,.csv,.xml,.yaml,.yml,.pdf,.png,.jpg,.jpeg,.gif,.webp";
+  ".md,.mdx,.txt,.html,.json,.csv,.xml,.yaml,.yml,.pdf,.png,.jpg,.jpeg,.gif,.webp,.mp3,.wav,.ogg,.flac,.m4a,.mp4,.mov,.avi,.mkv,.webm";
 
 interface IngestPageProps {
   tagsWithCounts?: TagWithCount[];
@@ -21,6 +21,11 @@ interface IngestPageProps {
 }
 
 export function IngestPage({ tagsWithCounts = [], config }: IngestPageProps) {
+  const mediaMaxBytes = config.mediaMaxFileBytes ?? 50 * 1024 * 1024;
+  const videoMaxBytes = config.videoMaxFileBytes ?? 100 * 1024 * 1024;
+  const maxMbMedia = Math.round(mediaMaxBytes / (1024 * 1024));
+  const maxMbVideo = Math.round(videoMaxBytes / (1024 * 1024));
+
   return (
     <div>
       <PageHeader
@@ -60,7 +65,7 @@ export function IngestPage({ tagsWithCounts = [], config }: IngestPageProps) {
                 </div>
                 <div class="text-zinc-600 text-xs mt-1">{VALID_EXTS_LIST}</div>
                 <div class="text-zinc-700 text-xs mt-0.5">
-                  Max 50 MB per file
+                  Max ~{maxMbMedia} MB per file (~{maxMbVideo} MB for video); see `mediaMaxFileBytes` and `videoMaxFileBytes` in `.theora/config.json`
                 </div>
               </div>
             </div>
@@ -175,8 +180,10 @@ export function IngestPage({ tagsWithCounts = [], config }: IngestPageProps) {
       <script
         dangerouslySetInnerHTML={{
           __html: `
-        const VALID_EXTS = new Set(['.md','.mdx','.txt','.html','.json','.csv','.xml','.yaml','.yml','.pdf','.png','.jpg','.jpeg','.gif','.webp']);
-        const MAX_SIZE = 50 * 1024 * 1024;
+        const VALID_EXTS = new Set(['.md','.mdx','.txt','.html','.json','.csv','.xml','.yaml','.yml','.pdf','.png','.jpg','.jpeg','.gif','.webp','.mp3','.wav','.ogg','.flac','.m4a','.mp4','.mov','.avi','.mkv','.webm']);
+        const VIDEO_EXTS = new Set(['.mp4','.mov','.avi','.mkv','.webm']);
+        const MAX_MEDIA_SIZE = ${mediaMaxBytes};
+        const MAX_VIDEO_SIZE = ${videoMaxBytes};
         let selectedFiles = [];
 
         function formatBytes(bytes) {
@@ -198,8 +205,9 @@ export function IngestPage({ tagsWithCounts = [], config }: IngestPageProps) {
               errors.push(f.name + ': unsupported file type (' + ext + ')');
               continue;
             }
-            if (f.size > MAX_SIZE) {
-              errors.push(f.name + ': exceeds 50 MB (' + formatBytes(f.size) + ')');
+            const maxSize = VIDEO_EXTS.has(ext) ? MAX_VIDEO_SIZE : MAX_MEDIA_SIZE;
+            if (f.size > maxSize) {
+              errors.push(f.name + ': exceeds max size (' + formatBytes(f.size) + ' > ' + formatBytes(maxSize) + ')');
               continue;
             }
             if (!selectedFiles.find(x => x.name === f.name)) {

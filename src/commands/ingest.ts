@@ -5,8 +5,7 @@ import pc from 'picocolors'
 import ora from 'ora'
 import { kbPaths, requireKbRoot, safeJoin } from '../lib/paths.js'
 import { readManifest, writeManifest } from '../lib/manifest.js'
-import { VALID_EXTS, isUrl, isValidFile, fetchUrl } from '../lib/ingest.js'
-
+import { VALID_EXTS, isUrl, isValidFile, fetchUrl, maxIngestBytesForFilename } from '../lib/ingest.js'
 function collectFiles(dir: string): string[] {
   const results: string[] = []
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -37,7 +36,7 @@ export const ingestCommand = new Command('ingest')
     const entries = readManifest()
     const existingNames = new Set(entries.map(e => e.name))
 
-    let ingested = 0, skippedType = 0, skippedDupe = 0
+    let ingested = 0, skippedType = 0, skippedDupe = 0, skippedSize = 0
 
     for (const source of sources) {
       if (isUrl(source)) {
@@ -76,6 +75,13 @@ export const ingestCommand = new Command('ingest')
         const name = basename(file)
         if (existingNames.has(name)) { skippedDupe++; continue }
 
+        const maxBytes = maxIngestBytesForFilename(name)
+        if (statSync(file).size > maxBytes) {
+          skippedSize++
+          console.log(pc.yellow(`Skipped (too large): ${name}`))
+          continue
+        }
+
         copyFileSync(file, join(destDir, name))
         existingNames.add(name)
         entries.push({ name, ingested: new Date().toISOString(), tag: options.tag ?? null })
@@ -88,6 +94,7 @@ export const ingestCommand = new Command('ingest')
     const parts = [`Ingested ${ingested} file${ingested !== 1 ? 's' : ''}`]
     if (skippedType > 0) parts.push(`${skippedType} skipped (unsupported type)`)
     if (skippedDupe > 0) parts.push(`${skippedDupe} skipped (already ingested)`)
+    if (skippedSize > 0) parts.push(`${skippedSize} skipped (exceeds size limit for file type)`)
     console.log(pc.green('✓') + ' ' + parts.join(', '))
 
     if (skippedType > 0) {

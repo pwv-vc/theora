@@ -3,11 +3,14 @@ import { join, extname, basename } from 'node:path'
 import { lookup } from 'node:dns/promises'
 import { slugify } from './utils.js'
 import { safeJoin } from './paths.js'
+import { readConfig } from './config.js'
 
 export const VALID_EXTS = new Set([
   '.md', '.mdx', '.txt', '.html', '.json', '.csv', '.xml', '.yaml', '.yml',
   '.pdf',
   '.png', '.jpg', '.jpeg', '.gif', '.webp',
+  '.mp3', '.wav', '.ogg', '.flac', '.m4a',
+  '.mp4', '.mov', '.avi', '.mkv', '.webm',
 ])
 
 export const CONTENT_TYPE_EXT: Record<string, string> = {
@@ -18,9 +21,58 @@ export const CONTENT_TYPE_EXT: Record<string, string> = {
   'image/jpeg': '.jpg',
   'image/gif': '.gif',
   'image/webp': '.webp',
+  'audio/mpeg': '.mp3',
+  'audio/mp3': '.mp3',
+  'audio/wav': '.wav',
+  'audio/x-wav': '.wav',
+  'audio/ogg': '.ogg',
+  'audio/flac': '.flac',
+  'audio/mp4': '.m4a',
+  'audio/x-m4a': '.m4a',
+  'video/mp4': '.mp4',
+  'video/quicktime': '.mov',
+  'video/x-msvideo': '.avi',
+  'video/x-matroska': '.mkv',
+  'video/webm': '.webm',
 }
 
+/** Legacy default when config is unavailable */
 export const MAX_FILE_SIZE = 50 * 1024 * 1024
+
+const VIDEO_EXTS = new Set(['.mp4', '.mov', '.avi', '.mkv', '.webm'])
+
+const DEFAULT_VIDEO_MAX_BYTES = 100 * 1024 * 1024
+
+function mediaMaxBytes(): number {
+  try {
+    return readConfig().mediaMaxFileBytes ?? MAX_FILE_SIZE
+  } catch {
+    return MAX_FILE_SIZE
+  }
+}
+
+function videoMaxBytes(): number {
+  try {
+    return readConfig().videoMaxFileBytes ?? DEFAULT_VIDEO_MAX_BYTES
+  } catch {
+    return DEFAULT_VIDEO_MAX_BYTES
+  }
+}
+
+/** Ingest byte limit for a local filename (by extension). */
+export function maxIngestBytesForFilename(filename: string): number {
+  const ext = extname(filename).toLowerCase()
+  return VIDEO_EXTS.has(ext) ? videoMaxBytes() : mediaMaxBytes()
+}
+
+function maxBytesForMime(mimeBase: string): number {
+  if (mimeBase.startsWith('video/')) return videoMaxBytes()
+  return mediaMaxBytes()
+}
+
+function isBinaryStreamMime(mimeBase: string): boolean {
+  return mimeBase.startsWith('image/') || mimeBase.startsWith('audio/') || mimeBase.startsWith('video/')
+}
 
 export function isUrl(source: string): boolean {
   return source.startsWith('http://') || source.startsWith('https://')
@@ -80,19 +132,21 @@ export async function fetchUrl(url: string, destDir: string): Promise<{ name: st
     throw new Error(`HTTP ${response.status} fetching ${url}`)
   }
 
+  const contentType = response.headers.get('content-type') ?? 'text/html'
+  const mimeBase = contentType.split(';')[0].trim()
+  const maxBytes = maxBytesForMime(mimeBase)
+
   const contentLength = response.headers.get('content-length')
-  if (contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE) {
-    throw new Error(`Response too large (${contentLength} bytes, max ${MAX_FILE_SIZE})`)
+  if (contentLength && parseInt(contentLength, 10) > maxBytes) {
+    throw new Error(`Response too large (${contentLength} bytes, max ${maxBytes})`)
   }
 
-  const contentType = response.headers.get('content-type') ?? 'text/html'
   const name = filenameFromUrl(url, contentType)
   const destPath = safeJoin(destDir, name)
 
-  const mimeBase = contentType.split(';')[0].trim()
-  const isImage = mimeBase.startsWith('image/')
+  const binaryStream = isBinaryStreamMime(mimeBase)
 
-  if (isImage) {
+  if (binaryStream) {
     const chunks: Buffer[] = []
     let totalBytes = 0
     const reader = response.body!.getReader()
@@ -100,8 +154,8 @@ export async function fetchUrl(url: string, destDir: string): Promise<{ name: st
       const { done, value } = await reader.read()
       if (done) break
       totalBytes += value.length
-      if (totalBytes > MAX_FILE_SIZE) {
-        throw new Error(`Response exceeded ${MAX_FILE_SIZE} byte limit`)
+      if (totalBytes > maxBytes) {
+        throw new Error(`Response exceeded ${maxBytes} byte limit`)
       }
       chunks.push(Buffer.from(value))
     }
@@ -114,8 +168,8 @@ export async function fetchUrl(url: string, destDir: string): Promise<{ name: st
       const { done, value } = await reader.read()
       if (done) break
       totalBytes += value.length
-      if (totalBytes > MAX_FILE_SIZE) {
-        throw new Error(`Response exceeded ${MAX_FILE_SIZE} byte limit`)
+      if (totalBytes > maxBytes) {
+        throw new Error(`Response exceeded ${maxBytes} byte limit`)
       }
       chunks.push(Buffer.from(value))
     }
@@ -137,13 +191,14 @@ export async function ingestWebFile(
   existingNames: Set<string>,
 ): Promise<IngestResult> {
   const name = basename(file.name)
+  const maxBytes = maxIngestBytesForFilename(name)
 
   if (!isValidFile(name)) {
     return { name, status: 'skipped_type', error: `${name}: unsupported file type` }
   }
 
-  if (file.size > MAX_FILE_SIZE) {
-    return { name, status: 'skipped_size', error: `${name}: exceeds 50 MB limit` }
+  if (file.size > maxBytes) {
+    return { name, status: 'skipped_size', error: `${name}: exceeds ${maxBytes} byte limit` }
   }
 
   if (existingNames.has(name)) {

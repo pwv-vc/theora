@@ -73,6 +73,9 @@ export function createGlobalEnv(): string {
 # OpenAI (default)
 OPENAI_API_KEY=
 
+# Optional: separate key for Whisper-only (audio/video transcription); falls back to OPENAI_API_KEY
+# OPENAI_TRANSCRIBE_API_KEY=
+
 # OpenAI-compatible
 # OPENAI_COMPATIBLE_BASE_URL=http://localhost:11434/v1
 # OPENAI_COMPATIBLE_API_KEY=   # optional for local servers

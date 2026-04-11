@@ -20,7 +20,7 @@ Theora passes document content directly to an LLM. A malicious document could co
 
 ### URL Ingestion (SSRF)
 
-`theora ingest <url>` fetches the URL server-side. Private IP ranges, localhost, and cloud metadata endpoints (e.g., `169.254.169.254`) are blocked before fetching. Response size is capped at 50 MB.
+`theora ingest <url>` fetches the URL server-side. Private IP ranges, localhost, and cloud metadata endpoints (e.g., `169.254.169.254`) are blocked before fetching. Response size is capped by `mediaMaxFileBytes` (default 50 MiB) or `videoMaxFileBytes` (default 100 MiB) when the response is `video/*`. Other binary streams use `mediaMaxFileBytes`. Audio and video URLs are streamed to disk as binary (not loaded entirely into memory).
 
 **Mitigation:** Only ingest URLs from sources you trust.
 
@@ -44,7 +44,9 @@ The `theora web` server has no authentication. Anyone who can reach the server p
 | XSS in stats live tailer | `textContent` per cell instead of `row.innerHTML` |
 | Shell injection in slides | `execFileSync` with argument array instead of `execSync` with shell string |
 | Chart code execution | Import allowlist + disallowed pattern check + 30s timeout |
-| SSRF via URL fetch | Private IP range check before fetch; 50 MB response size cap |
+| SSRF via URL fetch | Private IP range check before fetch; `mediaMaxFileBytes` / `videoMaxFileBytes` cap by content type |
+| ffmpeg / ffprobe | Invoked with `execFileSync` and fixed argv; paths are KB `raw/` files or OS temp dirs only |
+| Whisper transcription | Optional `OPENAI_TRANSCRIBE_API_KEY` vs `OPENAI_API_KEY`; audio sent only to OpenAI’s transcription endpoint |
 | Prompt injection | XML delimiters around source content; explicit instruction to treat as data |
 | YAML frontmatter injection | Quotes and newlines escaped in user question before YAML embedding |
 | Filesystem path disclosure to LLM | Only filename (not full path) sent to chart prompt |

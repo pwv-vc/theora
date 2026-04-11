@@ -1,8 +1,10 @@
+import { createReadStream } from 'node:fs'
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { readConfig } from './config.js'
 import { loadEnv } from './env.js'
-import { logLlmCall, estimateCost } from './llm-stats.js'
+import { logLlmCall, estimateCost, estimateWhisperTranscriptionCostUsd } from './llm-stats.js'
+import { getFfprobeDurationSeconds } from './media-ffmpeg.js'
 import type { KbConfig, LocalModelPricingConfig } from './config.js'
 
 import type { Provider } from './types.js'
@@ -18,6 +20,7 @@ export type LlmAction =
   | 'chart'
   | 'lint'
   | 'rank'
+  | 'transcribe'
 
 export interface LlmOptions {
   system?: string
@@ -143,6 +146,70 @@ const openAiClients: Partial<Record<OpenAiFamilyProvider, OpenAI>> = {}
 export function resetOpenAiClientCache(): void {
   delete openAiClients.openai
   delete openAiClients['openai-compatible']
+  cachedTranscriptionKey = null
+  transcriptionOpenAI = null
+}
+
+let transcriptionOpenAI: OpenAI | null = null
+let cachedTranscriptionKey: string | null = null
+
+/**
+ * Official OpenAI client for Whisper only (OPENAI_TRANSCRIBE_API_KEY or OPENAI_API_KEY).
+ * Not routed through openai-compatible chat base URL.
+ */
+export function getTranscriptionOpenAI(): OpenAI {
+  loadEnv()
+  const key =
+    process.env.OPENAI_TRANSCRIBE_API_KEY?.trim() || process.env.OPENAI_API_KEY?.trim()
+  if (!key) {
+    throw new Error(
+      'Audio/video transcription requires OPENAI_API_KEY or OPENAI_TRANSCRIBE_API_KEY (OpenAI Whisper). Add one to .env in your knowledge base root.',
+    )
+  }
+  if (cachedTranscriptionKey !== key || !transcriptionOpenAI) {
+    cachedTranscriptionKey = key
+    transcriptionOpenAI = new OpenAI({ apiKey: key })
+  }
+  return transcriptionOpenAI
+}
+
+/** Transcribe audio file with OpenAI Audio API (whisper-1 or config models.transcribe). */
+export async function transcribeAudioFile(filePath: string, options: LlmOptions = {}): Promise<string> {
+  const config = readConfig()
+  const { model } = resolveProvider({ ...options, action: 'transcribe' }, config)
+  const client = getTranscriptionOpenAI()
+  const durationSec = (await getFfprobeDurationSeconds(filePath)) ?? 0
+  const startTime = Date.now()
+
+  const fileStream = createReadStream(filePath)
+  const response = await client.audio.transcriptions.create({
+    file: fileStream,
+    model,
+    response_format: 'json',
+  })
+
+  const durationMs = Date.now() - startTime
+  const text =
+    response && typeof response === 'object' && 'text' in response && typeof response.text === 'string'
+      ? response.text
+      : ''
+
+  const whisperCost = estimateWhisperTranscriptionCostUsd(durationSec)
+
+  logLlmCall({
+    timestamp: new Date().toISOString(),
+    action: 'transcribe',
+    meta: options.meta ?? null,
+    provider: 'openai',
+    model,
+    inputTokens: 0,
+    outputTokens: 0,
+    durationMs,
+    estimatedCostUsd: whisperCost,
+    costSource: 'estimated',
+  })
+
+  return text
 }
 
 export function getOpenAI(provider: OpenAiFamilyProvider = 'openai'): OpenAI {
