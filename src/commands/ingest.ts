@@ -36,6 +36,7 @@ export const ingestCommand = new Command('ingest')
 
     const entries = readManifest()
     const existingNames = new Set(entries.map(e => e.name))
+    const existingUrls = new Set(entries.flatMap(e => e.url ? [e.url] : []))
 
     let ingested = 0, skippedType = 0, skippedDupe = 0, skippedSize = 0
 
@@ -45,7 +46,7 @@ export const ingestCommand = new Command('ingest')
 
       if (remoteSource) {
         const spinner = ora(`Fetching: ${source}`).start()
-        const result = await ingestUrlSource(remoteSource, destDir, existingNames)
+        const result = await ingestUrlSource(remoteSource, destDir, existingNames, existingUrls)
         if (result.status === 'ingested') {
           entries.push({
             name: result.name,

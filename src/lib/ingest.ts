@@ -268,15 +268,24 @@ export async function ingestUrlSource(
   url: string,
   destDir: string,
   existingNames: Set<string>,
+  existingUrls?: Set<string>,
 ): Promise<IngestResult> {
   if (!isUrl(url)) {
     return { name: url, status: 'error', error: `${url}: not a valid URL` }
   }
 
   try {
+    if (existingUrls?.has(url)) {
+      return { name: url, status: 'skipped_dupe', url }
+    }
+
     if (isYouTubeUrl(url)) {
       const transcript = await fetchYouTubeTranscript(url)
+      if (existingUrls?.has(transcript.url)) {
+        return { name: transcript.suggestedFilename, status: 'skipped_dupe', url: transcript.url }
+      }
       const result = writeNamedSource(transcript.suggestedFilename, transcript.markdown, destDir, existingNames)
+      if (result.status === 'ingested') existingUrls?.add(transcript.url)
       return { ...result, url: transcript.url }
     }
 
@@ -285,6 +294,7 @@ export async function ingestUrlSource(
     if (result.skippedDupe) {
       return { name: result.name, status: 'skipped_dupe', url }
     }
+    existingUrls?.add(url)
     return { name: result.name, status: 'ingested', url }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -296,6 +306,7 @@ export async function ingestWebUrl(
   url: string,
   destDir: string,
   existingNames: Set<string>,
+  existingUrls?: Set<string>,
 ): Promise<IngestResult> {
-  return ingestUrlSource(url, destDir, existingNames)
+  return ingestUrlSource(url, destDir, existingNames, existingUrls)
 }

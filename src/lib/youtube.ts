@@ -5,7 +5,6 @@ import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { YT_DLP_INSTALL_HINT, hasYtDlp } from './deps.js'
 import { formatTimecode } from './media-ffmpeg.js'
-import { slugifyShort } from './utils.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -282,9 +281,8 @@ export function parseVttTranscript(vttContent: string): string {
   return deduped.join(' ').trim()
 }
 
-export function suggestYouTubeTranscriptFilename(videoId: string, title: string): string {
-  const slug = slugifyShort(title, 50)
-  return slug ? `youtube-${videoId}-${slug}.md` : `youtube-${videoId}.md`
+export function suggestYouTubeTranscriptFilename(videoId: string): string {
+  return `youtube-${videoId}.md`
 }
 
 function normalizePublishedDate(uploadDate?: string, timestamp?: number): string | null {
@@ -323,7 +321,7 @@ function sanitizeYouTubeDescriptionText(value: string | null | undefined): strin
 function sanitizeYouTubeCaptionText(value: string): string {
   return collapseWhitespace(
     stripControlChars(value)
-      .replace(/[^\p{L}\p{M}\p{P}\s]+/gu, ' ')
+      .replace(/[^\p{L}\p{M}\p{N}\p{P}\s]+/gu, ' ')
       .replace(/\s+([.,!?;:'")\]])/g, '$1')
       .replace(/([(])\s+/g, '$1'),
   )
@@ -478,7 +476,7 @@ export async function fetchYouTubeTranscript(url: string): Promise<YouTubeTransc
         description,
         transcript,
       }),
-      suggestedFilename: suggestYouTubeTranscriptFilename(metadata.id, title),
+      suggestedFilename: suggestYouTubeTranscriptFilename(metadata.id),
     }
   } finally {
     rmSync(tempDir, { recursive: true, force: true })

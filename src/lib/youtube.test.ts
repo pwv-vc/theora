@@ -38,9 +38,9 @@ describe('normalizeYouTubeInput', () => {
 })
 
 describe('suggestYouTubeTranscriptFilename', () => {
-  it('includes the video id and a slugged title', () => {
-    expect(suggestYouTubeTranscriptFilename('dQw4w9WgXcQ', 'Rick Astley - Never Gonna Give You Up'))
-      .toBe('youtube-dQw4w9WgXcQ-rick-astley-never-gonna-give-you-up.md')
+  it('uses a stable filename based on the video id', () => {
+    expect(suggestYouTubeTranscriptFilename('dQw4w9WgXcQ'))
+      .toBe('youtube-dQw4w9WgXcQ.md')
   })
 })
 
@@ -134,7 +134,7 @@ Hello world
 })
 
 describe('sanitizeExistingYouTubeTranscriptMarkdown', () => {
-  it('caps and sanitizes description, captions, and thumbnail url', () => {
+  it('caps and sanitizes description and thumbnail url without dropping transcript numerics', () => {
     const markdown = sanitizeExistingYouTubeTranscriptMarkdown(`# A Test Video
 
 **Channel:** Theora Lab  
@@ -159,8 +159,8 @@ Hello 123 world <script>bad</script>!!!
     expect(markdown).toContain('## Description')
     expect(markdown).toContain('Hello script alert(1) /script world $$$ 123 !!!')
     expect(markdown).toContain('## Transcript')
-    expect(markdown).toContain('Hello world script bad /script!!!')
-    expect(markdown).not.toContain('123 world <script>')
+    expect(markdown).toContain('Hello 123 world script bad /script!!!')
+    expect(markdown).not.toContain('world <script>')
   })
 })
 
