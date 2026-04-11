@@ -121,7 +121,12 @@ async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, i
     return
   }
 
-  const raw = await llm(buildPdfPrompt(basename(file), text.slice(0, 50000), ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: 'pdf' })
+  const pdfText = text.trim()
+  if (!pdfText) {
+    console.warn(pc.yellow(`No extractable text in ${basename(file)} — LLM will still produce a wiki article if possible.`))
+  }
+
+  const raw = await llm(buildPdfPrompt(basename(file), pdfText.slice(0, 50000), ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: 'pdf' })
   const { body, tags, entities } = sanitizeLlmOutput(raw)
 
   const meta: ArticleMeta = {
@@ -149,7 +154,9 @@ async function compileDocxFile(file: string, paths: ReturnType<typeof kbPaths>, 
     return
   }
 
-  if (!text) return
+  if (!text.trim()) {
+    console.warn(pc.yellow(`No extractable text in ${basename(file)} — LLM will still produce a wiki article if possible.`))
+  }
 
   const raw = await llm(buildDocxPrompt(basename(file), text.slice(0, 50000), ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: 'docx' })
   const { body, tags, entities } = sanitizeLlmOutput(raw)
