@@ -46,7 +46,7 @@ export interface ArticleMeta {
   type: 'source' | 'concept'
   ontology?: OntologyType[]
   sourceFile?: string
-  sourceType?: 'text' | 'pdf' | 'image'
+  sourceType?: 'text' | 'pdf' | 'image' | 'audio' | 'video'
   tags: string[]
   relatedSources?: string[]
   entities?: Record<string, string[]>
@@ -298,6 +298,19 @@ export function normalizeLinks(text: string, articles: WikiArticle[]): string {
   })
 }
 
+/** Encode each path segment for `/raw/...` URLs (spaces, unicode filenames). */
+export function encodeRawUrlPath(path: string): string {
+  return path
+    .split('/')
+    .map(seg => (seg ? encodeURIComponent(seg) : ''))
+    .join('/')
+}
+
+/** Wiki markdown uses `../../raw/...` from `wiki/sources/`; web URLs are `/raw/<path-under-raw>`. */
+function pathUnderRawFromRelativeMarkdown(relPath: string): string {
+  return relPath.replace(/^(?:\.\.\/)+raw\//, '')
+}
+
 export function normalizeLinksForWeb(text: string, articles: WikiArticle[]): string {
   const bySlug = new Map(articles.map(a => [basename(a.path, '.md'), a]))
 
@@ -313,10 +326,28 @@ export function normalizeLinksForWeb(text: string, articles: WikiArticle[]): str
     return `**${linkText}**`
   })
 
-  // Transform relative image paths from ../../raw/... to /raw/...
-  // This makes images work in the web interface while keeping Obsidian compatibility
-  result = result.replace(/!\[([^\]]*)\]\((\.\.\/)+raw\/([^)]+)\)/g, (match, altText: string, _dots: string, rawPath: string) => {
-    return `![${altText}](/raw/${rawPath})`
+  // Bracketed relative paths (required when path contains spaces for marked/Obsidian)
+  result = result.replace(
+    /!\[([^\]]*)\]\(<((?:\.\.\/)+raw\/[^>]+)>\)/g,
+    (match, altText: string, rawPath: string) => {
+      const underRaw = pathUnderRawFromRelativeMarkdown(rawPath)
+      return `![${altText}](/raw/${encodeRawUrlPath(underRaw)})`
+    },
+  )
+
+  // Unquoted relative ../../raw/... (including paths with spaces — old articles before angle brackets)
+  result = result.replace(
+    /!\[([^\]]*)\]\(((?:\.\.\/)+raw\/[^)]+)\)/g,
+    (match, altText: string, rawPath: string) => {
+      const underRaw = pathUnderRawFromRelativeMarkdown(rawPath)
+      return `![${altText}](/raw/${encodeRawUrlPath(underRaw)})`
+    },
+  )
+
+  // Repair /raw/... links that still contain unencoded spaces (e.g. old pipeline output)
+  result = result.replace(/!\[([^\]]*)\]\(\/raw\/([^)]+)\)/g, (match, altText: string, rawPath: string) => {
+    if (!/\s/.test(rawPath)) return match
+    return `![${altText}](/raw/${encodeRawUrlPath(rawPath)})`
   })
 
   return result

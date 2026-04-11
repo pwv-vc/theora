@@ -92,6 +92,14 @@ export function estimateCost(
 
 export type CostSource = 'actual' | 'estimated' | 'free'
 
+/** OpenAI Whisper (whisper-1) approximate USD per minute — update if vendor pricing changes */
+export const WHISPER_USD_PER_MINUTE = 0.006
+
+export function estimateWhisperTranscriptionCostUsd(durationSec: number): number {
+  if (!Number.isFinite(durationSec) || durationSec <= 0) return 0
+  return (durationSec / 60) * WHISPER_USD_PER_MINUTE
+}
+
 export interface LlmCallLog {
   timestamp: string
   action: string

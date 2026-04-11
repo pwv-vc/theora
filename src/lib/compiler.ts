@@ -1,12 +1,13 @@
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { join, basename, extname, relative } from 'node:path'
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, basename, dirname, extname, relative, sep } from 'node:path'
 import ora from 'ora'
 import pLimit from 'p-limit'
 import pc from 'picocolors'
 import { normalizeLinks } from './wiki.js'
 import { PDFParse } from 'pdf-parse'
 import { kbPaths } from './paths.js'
-import { llm, llmVision } from './llm.js'
+import { llm, llmVision, transcribeAudioFile } from './llm.js'
 import type { ImageInput } from './llm.js'
 import { listRawFiles, listWikiArticles, writeArticle, sanitizeLlmOutput, readWikiIndex, getWikiStats, ONTOLOGY_TYPES, ONTOLOGY_SCHEMA_URLS } from './wiki.js'
 import type { ArticleMeta, OntologyType } from './wiki.js'
@@ -18,7 +19,20 @@ import {
   buildSourcePrompt,
   buildPdfPrompt,
   buildImagePrompt,
+  buildAudioPrompt,
+  buildVideoPrompt,
+  buildVideoFramePrompt,
 } from './prompts/compile.js'
+import { hasFfmpeg } from './deps.js'
+import {
+  computeFrameSchedule,
+  extractAudioForWhisper,
+  extractVisionFramesJpeg,
+  formatTimecode,
+  getFfprobeDurationSeconds,
+  hasFfprobe,
+  hasMediaAudioStream,
+} from './media-ffmpeg.js'
 import { CONCEPT_SYSTEM, buildConceptPrompt } from './prompts/concept.js'
 
 // --- File classification ---
@@ -26,14 +40,18 @@ import { CONCEPT_SYSTEM, buildConceptPrompt } from './prompts/concept.js'
 const TEXT_EXTS = new Set(['.md', '.mdx', '.txt', '.html', '.json', '.csv', '.xml', '.yaml', '.yml'])
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp'])
 const PDF_EXTS = new Set(['.pdf'])
+const AUDIO_EXTS = new Set(['.mp3', '.wav', '.ogg', '.flac', '.m4a'])
+const VIDEO_EXTS = new Set(['.mp4', '.mov', '.avi', '.mkv', '.webm'])
 
-type FileKind = 'text' | 'image' | 'pdf' | 'unknown'
+type FileKind = 'text' | 'image' | 'pdf' | 'audio' | 'video' | 'unknown'
 
 function classifyFile(path: string): FileKind {
   const ext = extname(path).toLowerCase()
   if (TEXT_EXTS.has(ext)) return 'text'
   if (IMAGE_EXTS.has(ext)) return 'image'
   if (PDF_EXTS.has(ext)) return 'pdf'
+  if (AUDIO_EXTS.has(ext)) return 'audio'
+  if (VIDEO_EXTS.has(ext)) return 'video'
   return 'unknown'
 }
 
@@ -122,7 +140,8 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
   if (!mediaType) return
 
   const base64 = readFileSync(file).toString('base64')
-  const imageRef = `![${name}](${relative(join(paths.root, 'wiki', 'sources'), file)})`
+  const relImg = relative(join(paths.root, 'wiki', 'sources'), file).split(sep).join('/')
+  const imageRef = relImg.includes(' ') ? `![${name}](<${relImg}>)` : `![${name}](${relImg})`
 
   const raw = await llmVision(
     buildImagePrompt(basename(file), imageRef, ingestTag),
@@ -143,6 +162,331 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
   writeArticle(join(paths.wikiSources, `${slug}.md`), meta, body)
 }
 
+/** Written next to video/audio during compile; verbatim wiki is emitted in the same pass — do not compile via LLM again. */
+function isCompanionTranscriptRaw(filePath: string): boolean {
+  return basename(filePath).toLowerCase().endsWith('.transcript.md')
+}
+
+/** Preview JPEGs live under `raw/.../{stem}.frames/` — not standalone sources. */
+function isRawVideoExtractedFramePath(filePath: string): boolean {
+  const normalized = filePath.replace(/\\/g, '/')
+  return normalized.split('/').some(seg => seg.endsWith('.frames'))
+}
+
+function buildVideoFrameGridMarkdown(
+  frames: { path: string; timeSec: number }[],
+  wikiSourcesDir: string,
+): string {
+  if (frames.length === 0) return ''
+  const cols = 3
+  const lines: string[] = [
+    '## Sample frames',
+    '',
+    '_Preview JPEGs extracted for this compile (representative times; see `source_file` for the video)._',
+    '',
+  ]
+  lines.push(`|${'     |'.repeat(cols)}`)
+  lines.push(`|${' :---: |'.repeat(cols)}`)
+  for (let r = 0; r < frames.length; r += cols) {
+    const cells: string[] = []
+    for (let c = 0; c < cols; c++) {
+      const idx = r + c
+      if (idx < frames.length) {
+        const fr = frames[idx]!
+        const rel = relative(wikiSourcesDir, fr.path).split(sep).join('/')
+        const tc = formatTimecode(fr.timeSec)
+        // Angle brackets required: marked/Obsidian stop unquoted URLs at the first space.
+        cells.push(`![${tc}](<${rel}>)`)
+      } else {
+        cells.push(' ')
+      }
+    }
+    lines.push(`|${cells.join('|')}|`)
+  }
+  lines.push('')
+  return lines.join('\n')
+}
+
+function formatCompanionTranscriptMarkdown(
+  mediaBasename: string,
+  mainArticleSlug: string,
+  transcript: string,
+  mediaKind: 'video' | 'audio',
+): string {
+  return [
+    `# Transcript (Whisper)`,
+    '',
+    `Companion ${mediaKind} source: \`${mediaBasename}\``,
+    '',
+    `Wiki article: [[${mainArticleSlug}]]`,
+    '',
+    '_Automated transcription; may contain errors._',
+    '',
+    '## Full transcript',
+    '',
+    transcript.trimEnd(),
+    '',
+  ].join('\n')
+}
+
+function ffmpegInstallHint(): string {
+  return process.platform === 'darwin'
+    ? ' Install with Homebrew: brew install ffmpeg (https://brew.sh)'
+    : ' Install ffmpeg (e.g. sudo apt install ffmpeg or sudo dnf install ffmpeg).'
+}
+
+async function compileAudioFile(
+  file: string,
+  paths: ReturnType<typeof kbPaths>,
+  ingestTag: string | null,
+  onStep?: (step: string) => void,
+): Promise<void> {
+  const name = basename(file, extname(file))
+  const slug = slugify(name)
+  const ext = extname(file).toLowerCase().slice(1)
+  const cfg = readConfig()
+
+  let pathForWhisper = file
+  let cleanup: (() => void) | null = null
+
+  if (cfg.whisperPreprocessAudio && hasFfmpeg()) {
+    onStep?.('Normalizing audio for Whisper (ffmpeg)')
+    try {
+      const tmpDir = mkdtempSync(join(tmpdir(), 'theora-whisper-'))
+      const wav = join(tmpDir, 'whisper.wav')
+      await extractAudioForWhisper(file, wav, cfg)
+      pathForWhisper = wav
+      cleanup = () => rmSync(tmpDir, { recursive: true, force: true })
+    } catch {
+      onStep?.('Preprocess skipped — using original file for Whisper')
+      console.warn(
+        pc.yellow(`Preprocess skipped for ${basename(file)} — ffmpeg failed; sending original to Whisper.`),
+      )
+    }
+  }
+
+  onStep?.('Transcribing audio (Whisper)')
+  let transcript = ''
+  try {
+    transcript = await transcribeAudioFile(pathForWhisper, { action: 'transcribe', meta: ext })
+  } finally {
+    cleanup?.()
+  }
+
+  const cap = cfg.compileMediaTranscriptMaxChars ?? 50000
+  transcript = transcript.slice(0, cap)
+
+  onStep?.('Writing wiki article from transcript (LLM)')
+  const raw = await llm(buildAudioPrompt(basename(file), transcript, ingestTag), {
+    system: COMPILE_SYSTEM,
+    maxTokens: 4096,
+    action: 'compile',
+    meta: 'audio',
+  })
+  const { body, tags, entities } = sanitizeLlmOutput(raw)
+
+  const hasTranscriptArtifact = transcript.trim().length > 0
+  let bodyOut = body.trimEnd()
+  let related: string[] | undefined
+
+  if (hasTranscriptArtifact) {
+    const transcriptSlug = slugify(`${name}.transcript`)
+    const transcriptAbs = join(dirname(file), `${name}.transcript.md`)
+    const transcriptMd = formatCompanionTranscriptMarkdown(basename(file), slug, transcript, 'audio')
+    writeFileSync(transcriptAbs, transcriptMd, 'utf-8')
+
+    const transcriptMeta: ArticleMeta = {
+      title: `Transcript: ${titleFromFilename(file)}`,
+      type: 'source',
+      sourceFile: relative(paths.raw, transcriptAbs),
+      sourceType: 'text',
+      tags: mergeTags(ingestTag, ['transcript']),
+      relatedSources: [slug],
+    }
+    writeArticle(join(paths.wikiSources, `${transcriptSlug}.md`), transcriptMeta, transcriptMd)
+
+    bodyOut += `\n\n---\n\n**Transcript:** [[${transcriptSlug}]] (verbatim Whisper)\n`
+    related = [transcriptSlug]
+  }
+
+  const meta: ArticleMeta = {
+    title: titleFromFilename(file),
+    type: 'source',
+    sourceFile: relative(paths.raw, file),
+    sourceType: 'audio',
+    tags: mergeTags(ingestTag, tags),
+    entities,
+    relatedSources: related,
+  }
+
+  writeArticle(join(paths.wikiSources, `${slug}.md`), meta, bodyOut)
+}
+
+async function compileVideoFile(
+  file: string,
+  paths: ReturnType<typeof kbPaths>,
+  ingestTag: string | null,
+  onStep?: (step: string) => void,
+): Promise<void> {
+  if (!hasFfmpeg()) {
+    console.error(pc.red(`Skipping ${basename(file)}: ffmpeg not found.${ffmpegInstallHint()}`))
+    return
+  }
+
+  const name = basename(file, extname(file))
+  const slug = slugify(name)
+  const cfg = readConfig()
+  const tmpDir = mkdtempSync(join(tmpdir(), 'theora-video-'))
+
+  try {
+    const wav = join(tmpDir, 'audio.wav')
+    const cap = cfg.compileMediaTranscriptMaxChars ?? 50000
+    let transcript = ''
+
+    const noAudioMsg = () => {
+      onStep?.('No audio track — using frame analysis only')
+      console.warn(
+        pc.yellow(`No audio in ${basename(file)} — compiling from sampled frames only (no transcript).`),
+      )
+    }
+
+    const onTranscribeFail = (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('ffmpeg') || msg.includes('Command failed')) {
+        noAudioMsg()
+      } else {
+        onStep?.('Transcription failed — using frame analysis only')
+        console.warn(
+          pc.yellow(`Transcription failed for ${basename(file)} — using sampled frames only (no transcript).`),
+        )
+      }
+    }
+
+    if (hasFfprobe()) {
+      const withAudio = await hasMediaAudioStream(file)
+      if (!withAudio) {
+        noAudioMsg()
+      } else {
+        onStep?.('Extracting audio (ffmpeg)')
+        try {
+          await extractAudioForWhisper(file, wav, cfg)
+          onStep?.('Transcribing audio (Whisper)')
+          transcript = (await transcribeAudioFile(wav, { action: 'transcribe', meta: 'video' })).slice(0, cap)
+        } catch (err) {
+          onTranscribeFail(err)
+          transcript = ''
+        }
+      }
+    } else {
+      onStep?.('Extracting audio (ffmpeg)')
+      try {
+        await extractAudioForWhisper(file, wav, cfg)
+        onStep?.('Transcribing audio (Whisper)')
+        transcript = (await transcribeAudioFile(wav, { action: 'transcribe', meta: 'video' })).slice(0, cap)
+      } catch (err) {
+        onTranscribeFail(err)
+        transcript = ''
+      }
+    }
+
+    const hasTranscriptArtifact = transcript.trim().length > 0
+
+    onStep?.('Reading duration & planning frame samples (ffprobe)')
+    const durationSec = await getFfprobeDurationSeconds(file)
+    const times = computeFrameSchedule(durationSec, cfg)
+    const framesTmp = await extractVisionFramesJpeg(file, tmpDir, times, cfg, (i, total) =>
+      onStep?.(`Extracting preview frames (ffmpeg): ${i}/${total}`),
+    )
+
+    const framesDir = join(dirname(file), `${name}.frames`)
+    rmSync(framesDir, { recursive: true, force: true })
+    mkdirSync(framesDir, { recursive: true })
+    const persistFrames: { path: string; timeSec: number }[] = []
+    for (const fr of framesTmp) {
+      const dest = join(framesDir, basename(fr.path))
+      copyFileSync(fr.path, dest)
+      persistFrames.push({ path: dest, timeSec: fr.timeSec })
+    }
+
+    const frameAnalyses: { time: string; text: string }[] = []
+    const nFrames = persistFrames.length
+    for (let fi = 0; fi < persistFrames.length; fi++) {
+      const { path: framePath, timeSec } = persistFrames[fi]!
+      onStep?.(`Analyzing frames with vision (LLM): ${fi + 1}/${nFrames} @ ${formatTimecode(timeSec)}`)
+      try {
+        const base64 = readFileSync(framePath).toString('base64')
+        const rawFrame = await llmVision(
+          buildVideoFramePrompt(formatTimecode(timeSec), basename(file)),
+          [{ base64, mediaType: 'image/jpeg' }],
+          {
+            system: 'You are a knowledge base compiler analyzing video frames.',
+            maxTokens: 2048,
+            action: 'vision',
+            meta: 'video-frame',
+          },
+        )
+        frameAnalyses.push({ time: formatTimecode(timeSec), text: rawFrame.trim() })
+      } catch {
+        // omit failed frame
+      }
+    }
+
+    onStep?.(
+      hasTranscriptArtifact
+        ? 'Merging transcript + frames into wiki article (LLM)'
+        : 'Merging frame analysis into wiki article (LLM)',
+    )
+    const raw = await llm(buildVideoPrompt(basename(file), transcript, frameAnalyses, ingestTag), {
+      system: COMPILE_SYSTEM,
+      maxTokens: 4096,
+      action: 'compile',
+      meta: 'video',
+    })
+    const { body, tags, entities } = sanitizeLlmOutput(raw)
+
+    const frameSection = buildVideoFrameGridMarkdown(persistFrames, paths.wikiSources)
+
+    let bodyTail = `${body.trimEnd()}\n\n${frameSection}`
+    let related: string[] | undefined
+
+    if (hasTranscriptArtifact) {
+      const transcriptStem = `${name}.transcript`
+      const transcriptSlug = slugify(transcriptStem)
+      const transcriptAbs = join(dirname(file), `${name}.transcript.md`)
+      const transcriptMd = formatCompanionTranscriptMarkdown(basename(file), slug, transcript, 'video')
+      writeFileSync(transcriptAbs, transcriptMd, 'utf-8')
+
+      const transcriptTitle = `Transcript: ${titleFromFilename(file)}`
+      const transcriptMeta: ArticleMeta = {
+        title: transcriptTitle,
+        type: 'source',
+        sourceFile: relative(paths.raw, transcriptAbs),
+        sourceType: 'text',
+        tags: mergeTags(ingestTag, ['transcript']),
+        relatedSources: [slug],
+      }
+      writeArticle(join(paths.wikiSources, `${transcriptSlug}.md`), transcriptMeta, transcriptMd)
+
+      bodyTail += `\n---\n\n**Transcript:** [[${transcriptSlug}]] (verbatim Whisper)\n`
+      related = [transcriptSlug]
+    }
+
+    const meta: ArticleMeta = {
+      title: titleFromFilename(file),
+      type: 'source',
+      sourceFile: relative(paths.raw, file),
+      sourceType: 'video',
+      tags: mergeTags(ingestTag, tags),
+      entities,
+      relatedSources: related,
+    }
+
+    writeArticle(join(paths.wikiSources, `${slug}.md`), meta, bodyTail)
+  } finally {
+    rmSync(tmpDir, { recursive: true, force: true })
+  }
+}
+
 // --- Pipeline stages ---
 
 export async function compileSources(root: string, concurrency?: number, onProgress?: (msg: string) => void): Promise<void> {
@@ -151,6 +495,8 @@ export async function compileSources(root: string, concurrency?: number, onProgr
   const existingSlugs = getExistingSourceSlugs(root)
 
   const newFiles = rawFiles.filter(f => {
+    if (isCompanionTranscriptRaw(f)) return false
+    if (isRawVideoExtractedFramePath(f)) return false
     const kind = classifyFile(f)
     if (kind === 'unknown') return false
     return !existingSlugs.has(slugify(basename(f, extname(f))))
@@ -161,7 +507,7 @@ export async function compileSources(root: string, concurrency?: number, onProgr
     return
   }
 
-  const byKind = { text: 0, image: 0, pdf: 0 }
+  const byKind = { text: 0, image: 0, pdf: 0, audio: 0, video: 0 }
   for (const f of newFiles) {
     const kind = classifyFile(f)
     if (kind !== 'unknown') byKind[kind]++
@@ -171,6 +517,8 @@ export async function compileSources(root: string, concurrency?: number, onProgr
   if (byKind.text > 0) parts.push(`${byKind.text} text`)
   if (byKind.pdf > 0) parts.push(`${byKind.pdf} PDF`)
   if (byKind.image > 0) parts.push(`${byKind.image} image`)
+  if (byKind.audio > 0) parts.push(`${byKind.audio} audio`)
+  if (byKind.video > 0) parts.push(`${byKind.video} video`)
   console.log(`Found ${newFiles.length} new source${newFiles.length !== 1 ? 's' : ''} to compile (${parts.join(', ')})`)
 
   const { compileConcurrency } = readConfig()
@@ -178,16 +526,66 @@ export async function compileSources(root: string, concurrency?: number, onProgr
 
   let done = 0
   const inFlight = new Set<string>()
+  const sourceStepByName = new Map<string, string>()
+  const stepBaseByName = new Map<string, string>()
+  const stepTickByName = new Map<string, ReturnType<typeof setInterval>>()
   const spinner = onProgress ? null : ora(`Compiling sources [0/${newFiles.length}]`).start()
 
-  const updateSpinner = () => {
-    if (onProgress) {
-      const files = [...inFlight].join(', ')
-      onProgress(`Compiling sources [${done}/${newFiles.length}]${files ? ` → ${files}` : ''}`)
-    } else if (spinner) {
-      const files = [...inFlight].map(f => pc.cyan(f)).join(pc.gray(', '))
-      spinner.text = `Compiling sources [${done}/${newFiles.length}]\n  ${pc.gray('→')} ${files}`
+  const clearStepTick = (fileBasename: string) => {
+    const id = stepTickByName.get(fileBasename)
+    if (id !== undefined) {
+      clearInterval(id)
+      stepTickByName.delete(fileBasename)
     }
+    stepBaseByName.delete(fileBasename)
+  }
+
+  const updateSpinner = () => {
+    const header = `Compiling sources [${done}/${newFiles.length}]`
+    const names = [...inFlight]
+    if (onProgress) {
+      const files = names.join(', ')
+      onProgress(`${header}${files ? ` → ${files}` : ''}`)
+    } else if (spinner) {
+      const arrowLine =
+        names.length === 0
+          ? ''
+          : `\n  ${pc.gray('→')} ${names.map(f => pc.cyan(f)).join(pc.gray(', '))}`
+      const stepLines = names
+        .map(n => {
+          const s = sourceStepByName.get(n)
+          return s ? `\n    ${pc.dim(s)}` : ''
+        })
+        .join('')
+      spinner.text = `${header}${arrowLine}${stepLines}`
+    }
+  }
+
+  const emitSourceStep = (fileBasename: string, step: string) => {
+    clearStepTick(fileBasename)
+    stepBaseByName.set(fileBasename, step)
+    sourceStepByName.set(fileBasename, step)
+    onProgress?.(`  · ${fileBasename}: ${step}`)
+    if (spinner) updateSpinner()
+
+    const started = Date.now()
+    let lastWebPulse = 0
+    const id = setInterval(() => {
+      const base = stepBaseByName.get(fileBasename)
+      if (!base) return
+      const sec = Math.max(1, Math.floor((Date.now() - started) / 1000))
+      const withElapsed = `${base} · ${sec}s`
+      sourceStepByName.set(fileBasename, withElapsed)
+      if (spinner) updateSpinner()
+      if (onProgress) {
+        const now = Date.now()
+        if (sec >= 3 && now - lastWebPulse >= 5000) {
+          lastWebPulse = now
+          onProgress(`  · ${fileBasename}: ${withElapsed}`)
+        }
+      }
+    }, 1000)
+    stepTickByName.set(fileBasename, id)
   }
 
   await Promise.all(
@@ -198,15 +596,28 @@ export async function compileSources(root: string, concurrency?: number, onProgr
         updateSpinner()
 
         const ingestTag = getTagForFile(name)
-        switch (classifyFile(file)) {
-          case 'text': await compileTextFile(file, paths, ingestTag); break
-          case 'pdf': await compilePdfFile(file, paths, ingestTag); break
-          case 'image': await compileImageFile(file, paths, ingestTag); break
+        try {
+          switch (classifyFile(file)) {
+            case 'text': await compileTextFile(file, paths, ingestTag); break
+            case 'pdf': await compilePdfFile(file, paths, ingestTag); break
+            case 'image': await compileImageFile(file, paths, ingestTag); break
+            case 'audio':
+              await compileAudioFile(file, paths, ingestTag, step => emitSourceStep(name, step))
+              break
+            case 'video':
+              await compileVideoFile(file, paths, ingestTag, step => emitSourceStep(name, step))
+              break
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          console.error(pc.red(`Compile failed for ${name}: ${msg}`))
+        } finally {
+          clearStepTick(name)
+          sourceStepByName.delete(name)
+          inFlight.delete(name)
+          done++
+          updateSpinner()
         }
-
-        inFlight.delete(name)
-        done++
-        updateSpinner()
       })
     )
   )

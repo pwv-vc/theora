@@ -12,6 +12,8 @@ export interface ModelConfig {
   chart?: string
   lint?: string
   rank?: string
+  /** OpenAI Audio API model (e.g. whisper-1); always uses official OpenAI, not openai-compatible chat URL */
+  transcribe?: string
 }
 
 export interface LocalModelPricingConfig {
@@ -32,6 +34,20 @@ export interface KbConfig {
   conceptSummaryChars: number
   conceptMin: number
   conceptMax: number
+  /** Max bytes for audio, images, and non-video media ingest */
+  mediaMaxFileBytes?: number
+  /** Max bytes for video files (local + URL video/*); default 100 MiB */
+  videoMaxFileBytes?: number
+  /** Target frame density for video vision (see media-ffmpeg frame schedule) */
+  videoFramesPerMinute?: number
+  videoMinFrames?: number
+  videoMaxFrames?: number
+  videoFrameVisionMaxEdgePx?: number
+  videoFrameJpegQuality?: number
+  compileMediaTranscriptMaxChars?: number
+  whisperPreprocessAudio?: boolean
+  whisperAudioTargetSampleRateHz?: number
+  whisperAudioMono?: boolean
 }
 
 const OPENAI_ACTION_MODELS: ModelConfig = {
@@ -44,6 +60,7 @@ const OPENAI_ACTION_MODELS: ModelConfig = {
   chart: 'gpt-4o',
   slides: 'gpt-4o',
   lint: 'gpt-4o-mini',
+  transcribe: 'whisper-1',
 }
 
 function createSingleModelActionConfig(model: string): ModelConfig {
@@ -57,6 +74,7 @@ function createSingleModelActionConfig(model: string): ModelConfig {
     chart: model,
     lint: model,
     rank: model,
+    transcribe: 'whisper-1',
   }
 }
 
@@ -83,6 +101,34 @@ export function getDefaultLocalModelPricing(): LocalModelPricingConfig {
   return JSON.parse(JSON.stringify(DEFAULT_LOCAL_MODEL_PRICING)) as LocalModelPricingConfig
 }
 
+/** Defaults for audio/video ingest and compile (merged in readConfig) */
+export const DEFAULT_MEDIA_CONFIG: Pick<
+  KbConfig,
+  | 'mediaMaxFileBytes'
+  | 'videoMaxFileBytes'
+  | 'videoFramesPerMinute'
+  | 'videoMinFrames'
+  | 'videoMaxFrames'
+  | 'videoFrameVisionMaxEdgePx'
+  | 'videoFrameJpegQuality'
+  | 'compileMediaTranscriptMaxChars'
+  | 'whisperPreprocessAudio'
+  | 'whisperAudioTargetSampleRateHz'
+  | 'whisperAudioMono'
+> = {
+  mediaMaxFileBytes: 50 * 1024 * 1024,
+  videoMaxFileBytes: 100 * 1024 * 1024,
+  videoFramesPerMinute: 12,
+  videoMinFrames: 2,
+  videoMaxFrames: 24,
+  videoFrameVisionMaxEdgePx: 768,
+  videoFrameJpegQuality: 6,
+  compileMediaTranscriptMaxChars: 50000,
+  whisperPreprocessAudio: true,
+  whisperAudioTargetSampleRateHz: 16000,
+  whisperAudioMono: true,
+}
+
 const DEFAULT_CONFIG: KbConfig = {
   name: 'knowledge-base',
   created: new Date().toISOString(),
@@ -94,6 +140,7 @@ const DEFAULT_CONFIG: KbConfig = {
   conceptSummaryChars: 3000,
   conceptMin: 5,
   conceptMax: 10,
+  ...DEFAULT_MEDIA_CONFIG,
 }
 
 function mergeLocalModelPricing(
@@ -117,7 +164,11 @@ export function readConfig(): KbConfig {
   const model = typeof raw.model === 'string' && raw.model.trim() ? raw.model : DEFAULT_MODELS[provider]
   const mergedModels = { ...getDefaultActionModels(provider, model), ...raw.models }
   const localModelPricing = mergeLocalModelPricing(raw.localModelPricing)
-  return { ...DEFAULT_CONFIG, ...raw, models: mergedModels, localModelPricing }
+  const mediaMerged = { ...DEFAULT_MEDIA_CONFIG }
+  for (const key of Object.keys(DEFAULT_MEDIA_CONFIG) as (keyof typeof DEFAULT_MEDIA_CONFIG)[]) {
+    if (raw[key] !== undefined) (mediaMerged as Record<string, unknown>)[key] = raw[key]
+  }
+  return { ...DEFAULT_CONFIG, ...raw, ...mediaMerged, models: mergedModels, localModelPricing }
 }
 
 export function writeConfig(config: KbConfig): void {

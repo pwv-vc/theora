@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import pc from 'picocolors'
 
 interface DepCheck {
@@ -11,6 +11,15 @@ interface DepCheck {
 export function hasMarpCli(): boolean {
   try {
     execSync('marp --version', { stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function hasFfmpeg(): boolean {
+  try {
+    execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' })
     return true
   } catch {
     return false
@@ -60,6 +69,13 @@ export function checkDeps(): void {
       },
       install: 'pip3 install matplotlib',
       feature: '--output chart',
+    },
+    {
+      name: 'ffmpeg',
+      check: hasFfmpeg,
+      install:
+        'macOS: brew install ffmpeg (https://brew.sh) — Linux: sudo apt install ffmpeg or sudo dnf install ffmpeg',
+      feature: 'video compile + optional audio preprocessing for Whisper (includes ffprobe)',
     },
   ]
 
