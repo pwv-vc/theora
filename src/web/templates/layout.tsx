@@ -5,7 +5,7 @@ import { Footer } from './ui/footer.js'
 
 interface LayoutProps {
   title: string
-  active: 'home' | 'concepts' | 'queries' | 'search' | 'ask' | 'compile' | 'ingest' | 'stats' | 'settings'
+  active: 'home' | 'concepts' | 'queries' | 'search' | 'ask' | 'compile' | 'ingest' | 'stats-usage' | 'stats-logs' | 'settings'
   children: Child
 }
 
