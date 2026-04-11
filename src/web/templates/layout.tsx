@@ -7,7 +7,7 @@ import { MERMAID_THEME_PRESETS } from '../../lib/mermaid-theme.js'
 
 interface LayoutProps {
   title: string
-  active: 'home' | 'concepts' | 'queries' | 'search' | 'ask' | 'compile' | 'ingest' | 'stats-usage' | 'stats-logs' | 'settings'
+  active: 'home' | 'concepts' | 'queries' | 'search' | 'ask' | 'compile' | 'ingest' | 'stats-usage' | 'stats-logs' | 'settings' | 'error'
   children: Child
 }
 

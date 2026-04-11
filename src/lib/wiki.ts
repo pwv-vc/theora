@@ -127,7 +127,7 @@ export function writeArticle(destPath: string, meta: ArticleMeta, body: string):
   }
 
   if (meta.ontology?.length) {
-    frontmatter.ontology = meta.ontology.map(o => `[[${o}]]`)
+    frontmatter.ontology = [...meta.ontology]
     frontmatter.schema_url = meta.ontology.map(o => ONTOLOGY_SCHEMA_URLS[o])
   }
   if (meta.sourceFile) frontmatter.source_file = meta.sourceFile

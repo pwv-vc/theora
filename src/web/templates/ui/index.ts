@@ -1,4 +1,5 @@
 export * from './layout.js'
+export * from './logo-icon.js'
 export * from './cards.js'
 export * from './badges.js'
 export * from './tags.js'

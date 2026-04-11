@@ -2,6 +2,8 @@ import { readFileSync, writeFileSync, existsSync, rmSync, mkdirSync, statSync } 
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
+import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { serve } from '@hono/node-server'
 import { streamSSE } from 'hono/streaming'
 import { secureHeaders } from 'hono/secure-headers'
@@ -20,6 +22,7 @@ import { readManifest, writeManifest } from '../lib/manifest.js'
 import { ingestWebFile, ingestWebUrl } from '../lib/ingest.js'
 import { escapeHtml } from '../lib/utils.js'
 import { Layout } from './templates/layout.js'
+import { errorPageHtml } from './templates/error.js'
 import { HomePage } from './templates/home.js'
 import { ArticlePage } from './templates/article.js'
 import { SearchPage, SearchResults } from './templates/search.js'
@@ -49,6 +52,18 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   },
   allowedSchemes: ['http', 'https', 'mailto'],
   disallowedTagsMode: 'discard',
+}
+
+function normalizeHttpErrorStatus(status: unknown): number {
+  const n = typeof status === 'number' && Number.isFinite(status) ? Math.trunc(status) : 500
+  if (n >= 100 && n <= 599) return n
+  return 500
+}
+
+/** Hono `c.html` rejects contentless status codes; map those to 500 for error bodies. */
+function toContentfulErrorStatus(status: number): ContentfulStatusCode {
+  if (status === 101 || status === 204 || status === 205 || status === 304) return 500
+  return status as ContentfulStatusCode
 }
 
 function parseMarkdown(content: string): string {
@@ -594,6 +609,20 @@ export function startServer(port: number): void {
         await new Promise(resolve => setTimeout(resolve, 1000))
       }
     })
+  })
+
+  app.notFound((c) => {
+    return c.html(errorPageHtml(404, c.req.path), 404)
+  })
+
+  app.onError((err, c) => {
+    console.error('[web]', err)
+    if (err instanceof HTTPException) {
+      const status = normalizeHttpErrorStatus(err.status)
+      const path = status === 404 ? c.req.path : undefined
+      return c.html(errorPageHtml(status, path), toContentfulErrorStatus(status))
+    }
+    return c.html(errorPageHtml(500), 500)
   })
 
   serve({ fetch: app.fetch, port }, (info) => {
