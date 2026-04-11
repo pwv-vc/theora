@@ -11,7 +11,7 @@ import { llm, llmVision, transcribeAudioFile } from './llm.js'
 import type { ImageInput } from './llm.js'
 import { listWikiArticles, writeArticle, sanitizeLlmOutput, readWikiIndex, getWikiStats, ONTOLOGY_TYPES, ONTOLOGY_SCHEMA_URLS } from './wiki.js'
 import type { ArticleMeta, OntologyType } from './wiki.js'
-import { getTagForFile, getUrlForFile } from './manifest.js'
+import { getTagForFile } from './manifest.js'
 import { slugify, titleFromFilename, normalizeTag } from './utils.js'
 import { readConfig } from './config.js'
 import {
@@ -24,7 +24,6 @@ import {
   buildVideoFramePrompt,
 } from './prompts/compile.js'
 import { hasFfmpeg } from './deps.js'
-import { parseYouTubeTranscriptMarkdown, sanitizeExistingYouTubeTranscriptMarkdown } from './youtube.js'
 import {
   computeFrameSchedule,
   extractAudioForWhisper,
@@ -101,122 +100,27 @@ function listRawFilesUnder(rawDir: string): string[] {
 
 // --- File compilers ---
 
-function buildYouTubeCompileMetadata(content: string): {
-  articleTitle: string
-  sourceUrl?: string
-  sourcePublishedDate?: string
-  sourceVideoId?: string
-  sourceChannelId?: string
-  sourceThumbnailUrl?: string
-  metadataPrompt: string
-  metadataSection: string
-  datePeriodSection: string
-} | null {
-  const parsed = parseYouTubeTranscriptMarkdown(content)
-  if (!parsed) return null
-
-  const promptLines = [
-    `Title: ${parsed.title}`,
-    `Video ID: ${parsed.videoId ?? 'Unknown'}`,
-    `Channel: ${parsed.channel ?? 'Unknown'}`,
-    `Channel ID: ${parsed.channelId ?? 'Unknown'}`,
-    `Original URL: ${parsed.url ?? 'Unknown'}`,
-    `Thumbnail URL: ${parsed.thumbnailUrl ?? 'Unknown'}`,
-    `Published: ${parsed.publishedDate ?? 'Unknown'}`,
-    `Duration: ${parsed.duration ?? 'Unknown'}`,
-    `Description: ${parsed.description ?? 'Unknown'}`,
-    'Source type: YouTube captions transcript',
-  ]
-
-  const metadataLines = [
-    '## Video Metadata',
-    '',
-    `- Title: ${parsed.title}`,
-    `- Video ID: ${parsed.videoId ?? 'Unknown'}`,
-    `- Channel: ${parsed.channel ?? 'Unknown'}`,
-    `- Channel ID: ${parsed.channelId ?? 'Unknown'}`,
-    `- Published: ${parsed.publishedDate ?? 'Unknown'}`,
-    `- Duration: ${parsed.duration ?? 'Unknown'}`,
-    `- URL: ${parsed.url ?? 'Unknown'}`,
-    `- Thumbnail URL: ${parsed.thumbnailUrl ?? 'Unknown'}`,
-  ]
-
-  if (parsed.description) {
-    metadataLines.push('', '### Original Description', '', parsed.description)
-  }
-
-  metadataLines.push('')
-
-  const datePeriodSection =
-    `Published: ${parsed.publishedDate ?? 'Unknown'} — source: exact YouTube metadata. Coverage period unknown unless stated in the transcript or description.`
-
-  return {
-    articleTitle: parsed.title,
-    sourceUrl: parsed.url ?? undefined,
-    sourcePublishedDate: parsed.publishedDate ?? undefined,
-    sourceVideoId: parsed.videoId ?? undefined,
-    sourceChannelId: parsed.channelId ?? undefined,
-    sourceThumbnailUrl: parsed.thumbnailUrl ?? undefined,
-    metadataPrompt: promptLines.join('\n'),
-    metadataSection: metadataLines.join('\n'),
-    datePeriodSection,
-  }
-}
-
-function replaceExactSection(body: string, heading: string, replacement: string): string {
-  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const re = new RegExp(`## ${escaped}\\n[\\s\\S]*?(?=\\n## |$)`)
-  const section = `## ${heading}\n${replacement.trim()}`
-  if (re.test(body)) {
-    return body.replace(re, section)
-  }
-  return `${body.trimEnd()}\n\n${section}\n`
-}
-
 async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
-  const name = basename(file, extname(file))
   const slug = getSourceSlug(file)
-  let content = readFileSync(file, 'utf-8').slice(0, 50000)
-  if (content.includes('**Source:** YouTube captions')) {
-    content = sanitizeExistingYouTubeTranscriptMarkdown(content)
-  }
-  const youtubeMeta = buildYouTubeCompileMetadata(content)
-  const sourceUrl = getUrlForFile(basename(file)) ?? youtubeMeta?.sourceUrl
-
+  const content = readFileSync(file, 'utf-8').slice(0, 50000)
   const ext = extname(file).toLowerCase().slice(1)
-  const raw = await llm(
-    buildSourcePrompt(basename(file), content, ingestTag, youtubeMeta?.metadataPrompt),
-    { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: ext },
-  )
+  const raw = await llm(buildSourcePrompt(basename(file), content, ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: ext })
   const { body, tags, entities } = sanitizeLlmOutput(raw)
-  const bodyWithExactDatePeriod = youtubeMeta
-    ? replaceExactSection(body, 'Date & Period', youtubeMeta.datePeriodSection)
-    : body
-  const finalBody = youtubeMeta
-    ? `${bodyWithExactDatePeriod.trimEnd()}\n\n---\n\n${youtubeMeta.metadataSection}`
-    : bodyWithExactDatePeriod
 
   const meta: ArticleMeta = {
-    title: youtubeMeta?.articleTitle ?? titleFromFilename(file),
+    title: titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
-    sourceUrl: sourceUrl ?? undefined,
-    sourcePublishedDate: youtubeMeta?.sourcePublishedDate,
-    sourceVideoId: youtubeMeta?.sourceVideoId,
-    sourceChannelId: youtubeMeta?.sourceChannelId,
-    sourceThumbnailUrl: youtubeMeta?.sourceThumbnailUrl,
     sourceType: 'text',
     tags: mergeTags(ingestTag, tags),
     entities,
   }
 
-  writeArticle(join(paths.wikiSources, `${slug}.md`), meta, finalBody)
+  writeArticle(join(paths.wikiSources, `${slug}.md`), meta, body)
 }
 
 async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
-  const name = basename(file, extname(file))
   const slug = getSourceSlug(file)
-  const sourceUrl = getUrlForFile(basename(file))
 
   const buffer = readFileSync(file)
   let text: string
@@ -236,7 +140,6 @@ async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, i
     title: titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
-    sourceUrl: sourceUrl ?? undefined,
     sourceType: 'pdf',
     tags: mergeTags(ingestTag, tags),
     entities,
@@ -249,7 +152,6 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
   const name = basename(file, extname(file))
   const slug = getSourceSlug(file)
   const ext = extname(file).toLowerCase()
-  const sourceUrl = getUrlForFile(basename(file))
 
   const mediaType = MEDIA_TYPES[ext]
   if (!mediaType) return
@@ -269,7 +171,6 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
     title: titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
-    sourceUrl: sourceUrl ?? undefined,
     sourceType: 'image',
     tags: mergeTags(ingestTag, tags),
     entities,
@@ -361,7 +262,6 @@ async function compileAudioFile(
   const slug = getSourceSlug(file)
   const ext = extname(file).toLowerCase().slice(1)
   const cfg = readConfig()
-  const sourceUrl = getUrlForFile(basename(file))
 
   let pathForWhisper = file
   let cleanup: (() => void) | null = null
@@ -430,7 +330,6 @@ async function compileAudioFile(
     title: titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
-    sourceUrl: sourceUrl ?? undefined,
     sourceType: 'audio',
     tags: mergeTags(ingestTag, tags),
     entities,
@@ -454,7 +353,6 @@ async function compileVideoFile(
   const name = basename(file, extname(file))
   const slug = getSourceSlug(file)
   const cfg = readConfig()
-  const sourceUrl = getUrlForFile(basename(file))
   const tmpDir = mkdtempSync(join(tmpdir(), 'theora-video-'))
 
   try {
@@ -594,7 +492,6 @@ async function compileVideoFile(
       title: titleFromFilename(file),
       type: 'source',
       sourceFile: relative(paths.raw, file),
-      sourceUrl: sourceUrl ?? undefined,
       sourceType: 'video',
       tags: mergeTags(ingestTag, tags),
       entities,

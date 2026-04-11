@@ -13,11 +13,6 @@ vi.mock('./llm.js', () => ({
   transcribeAudioFile: vi.fn(),
 }))
 
-vi.mock('./youtube.js', () => ({
-  parseYouTubeTranscriptMarkdown: vi.fn(() => null),
-  sanitizeExistingYouTubeTranscriptMarkdown: vi.fn((content: string) => content),
-}))
-
 import { compileTargetedSource, resolveRawSourceTarget } from './compiler.js'
 
 const ORIGINAL_CWD = process.cwd()
