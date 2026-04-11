@@ -306,6 +306,11 @@ export function encodeRawUrlPath(path: string): string {
     .join('/')
 }
 
+/** Wiki markdown uses `../../raw/...` from `wiki/sources/`; web URLs are `/raw/<path-under-raw>`. */
+function pathUnderRawFromRelativeMarkdown(relPath: string): string {
+  return relPath.replace(/^(?:\.\.\/)+raw\//, '')
+}
+
 export function normalizeLinksForWeb(text: string, articles: WikiArticle[]): string {
   const bySlug = new Map(articles.map(a => [basename(a.path, '.md'), a]))
 
@@ -325,7 +330,8 @@ export function normalizeLinksForWeb(text: string, articles: WikiArticle[]): str
   result = result.replace(
     /!\[([^\]]*)\]\(<((?:\.\.\/)+raw\/[^>]+)>\)/g,
     (match, altText: string, rawPath: string) => {
-      return `![${altText}](/raw/${encodeRawUrlPath(rawPath)})`
+      const underRaw = pathUnderRawFromRelativeMarkdown(rawPath)
+      return `![${altText}](/raw/${encodeRawUrlPath(underRaw)})`
     },
   )
 
@@ -333,7 +339,8 @@ export function normalizeLinksForWeb(text: string, articles: WikiArticle[]): str
   result = result.replace(
     /!\[([^\]]*)\]\(((?:\.\.\/)+raw\/[^)]+)\)/g,
     (match, altText: string, rawPath: string) => {
-      return `![${altText}](/raw/${encodeRawUrlPath(rawPath)})`
+      const underRaw = pathUnderRawFromRelativeMarkdown(rawPath)
+      return `![${altText}](/raw/${encodeRawUrlPath(underRaw)})`
     },
   )
 
