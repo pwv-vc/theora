@@ -23,7 +23,7 @@ export function AskPage({ tagsWithCounts, config }: AskPageProps) {
             class="flex-1"
             id="question-input"
             type="text"
-            placeholder="What are the key themes in this research?"
+            placeholder="Tell me about this knowledge base"
             onkeydown="if(event.key==='Enter')askQuestion()"
           />
           <PrimaryButton onclick="askQuestion()" id="ask-btn">Ask</PrimaryButton>
@@ -46,7 +46,7 @@ export function AskPage({ tagsWithCounts, config }: AskPageProps) {
       </div>
 
       <div id="answer-wrapper" class="hidden">
-        <div class="border border-zinc-800 rounded-lg p-5 no-scanline">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-5 no-scanline">
           <div class="flex items-center justify-between mb-4">
             <SectionLabel>Answer</SectionLabel>
             <GhostButton onclick="clearAnswer()">clear</GhostButton>

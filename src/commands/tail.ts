@@ -4,6 +4,7 @@ import { open } from 'node:fs/promises'
 import { watchFile, unwatchFile } from 'node:fs'
 import pc from 'picocolors'
 import { readLlmLogs, type LlmCallLog } from '../lib/llm-stats.js'
+import { formatDuration } from '../lib/utils.js'
 
 function formatLogEntry(log: LlmCallLog): string {
   const timestamp = new Date(log.timestamp).toLocaleTimeString()
@@ -13,7 +14,7 @@ function formatLogEntry(log: LlmCallLog): string {
   const model = pc.gray(log.model.slice(0, 28).padEnd(28))
   const tokens = `${log.inputTokens}+${log.outputTokens}`.padStart(10)
   const cost = pc.yellow(`$${log.estimatedCostUsd.toFixed(4)}`.padStart(8))
-  const duration = `${log.durationMs}ms`.padStart(6)
+  const duration = formatDuration(log.durationMs).padStart(10)
 
   return `${pc.gray(timestamp)}  ${action}  ${meta}  ${provider}  ${model}  ${tokens} tok  ${cost}  ${duration}`
 }
@@ -21,7 +22,7 @@ function formatLogEntry(log: LlmCallLog): string {
 function formatLogEntryCompact(log: LlmCallLog): string {
   const timestamp = new Date(log.timestamp).toLocaleTimeString()
   const meta = log.meta ? ` [${log.meta}]` : ''
-  return `${timestamp}  ${log.action}${meta}  ${log.provider} / ${log.model}  ${log.inputTokens}+${log.outputTokens} tok  $${log.estimatedCostUsd.toFixed(4)}  ${log.durationMs}ms`
+  return `${timestamp}  ${log.action}${meta}  ${log.provider} / ${log.model}  ${log.inputTokens}+${log.outputTokens} tok  $${log.estimatedCostUsd.toFixed(4)}  ${formatDuration(log.durationMs)}`
 }
 
 export const tailCommand = new Command('tail')

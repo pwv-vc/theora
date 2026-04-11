@@ -1,4 +1,5 @@
 # wiki
+- In wiki articles, format references as linked titles rather than bold text — use `[Title](path)` instead of `**Title**` or redundant combinations like `[Title](path) **path**`. Confidence: 0.75
 - The wiki page IS the sources view — "wiki" and "sources" are the same section. Concepts and queries are separate subpages under wiki (e.g., /wiki/concepts, /wiki/queries), not mixed into the sources list. Confidence: 0.80
 - Concepts and queries must be browsable as navigable links on the wiki — not hidden or non-obvious. Surface them as clickable links/cards so users can clearly see they can browse both. Confidence: 0.80
 - The navbar wiki menu should include links to all wiki subsections: sources (wiki home), concepts, and queries — so users can navigate directly to any of the three from the nav. Confidence: 0.80
@@ -17,3 +18,5 @@
 - Concept extraction source truncation limit should be a config option (default: 3,000 chars per source article). Confidence: 0.90
 - Concept extraction min/max concept count should be config options (default: min 5, max 10 concepts per compile run). Confidence: 0.90
 - Use all-caps section headers with item counts (e.g., "SOURCE (12)") for wiki page sections — apply this style consistently across wiki home, concepts, and queries pages. Confidence: 0.85
+- In wiki article web view headers, display entities as visual pills showing type and name (e.g., "organization/supabase") rather than raw JSON blobs. Confidence: 0.75
+- When building entities during compile, use slug-style labels (e.g., `people/philip-glass`, `organizations/tower-records`) instead of path-style labels (e.g., `people/Philip Glass`, `organizations/Tower Records`). Confidence: 0.90

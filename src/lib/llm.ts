@@ -190,6 +190,7 @@ async function openaiComplete(
     outputText,
   )
   const reportedModel = response.model ?? model
+  const costEstimate = estimateCost(reportedModel, inputTokens, outputTokens, provider, localModelPricing, durationMs)
 
   logLlmCall({
     timestamp: new Date().toISOString(),
@@ -200,7 +201,8 @@ async function openaiComplete(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, provider, localModelPricing, durationMs),
+    estimatedCostUsd: costEstimate.costUsd,
+    costSource: costEstimate.source,
   })
 
   return outputText
@@ -242,6 +244,7 @@ async function openaiStream(
   // Estimate tokens for streaming (OpenAI doesn't return usage in stream mode)
   const inputTokens = Math.ceil(prompt.length / 4) + Math.ceil(system.length / 4)
   const outputTokens = Math.ceil(full.length / 4)
+  const costEstimate = estimateCost(model, inputTokens, outputTokens, provider, localModelPricing, durationMs)
 
   logLlmCall({
     timestamp: new Date().toISOString(),
@@ -252,7 +255,8 @@ async function openaiStream(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, provider, localModelPricing, durationMs),
+    estimatedCostUsd: costEstimate.costUsd,
+    costSource: costEstimate.source,
   })
 
   return full
@@ -296,6 +300,7 @@ async function anthropicComplete(
   const inputTokens = usage?.input_tokens ?? estimateTextTokens(`${system}\n${prompt}`)
   const outputTokens = usage?.output_tokens ?? estimateTextTokens(blockText(response.content[0]))
   const reportedModel = response.model ?? model
+  const costEstimate = estimateCost(reportedModel, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs)
 
   logLlmCall({
     timestamp: new Date().toISOString(),
@@ -306,7 +311,8 @@ async function anthropicComplete(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs),
+    estimatedCostUsd: costEstimate.costUsd,
+    costSource: costEstimate.source,
   })
 
   const block = response.content[0]
@@ -347,6 +353,7 @@ async function anthropicStream(
   // Estimate tokens for streaming (Anthropic doesn't return usage in stream mode)
   const inputTokens = Math.ceil(prompt.length / 4) + Math.ceil(system.length / 4)
   const outputTokens = Math.ceil(full.length / 4)
+  const costEstimate = estimateCost(model, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs)
 
   logLlmCall({
     timestamp: new Date().toISOString(),
@@ -357,7 +364,8 @@ async function anthropicStream(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs),
+    estimatedCostUsd: costEstimate.costUsd,
+    costSource: costEstimate.source,
   })
 
   return full
@@ -408,6 +416,7 @@ async function openaiVision(
     outputText,
   )
   const reportedModel = response.model ?? model
+  const costEstimate = estimateCost(reportedModel, inputTokens, outputTokens, provider, localModelPricing, durationMs)
 
   logLlmCall({
     timestamp: new Date().toISOString(),
@@ -418,7 +427,8 @@ async function openaiVision(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(reportedModel, inputTokens, outputTokens, provider, localModelPricing, durationMs),
+    estimatedCostUsd: costEstimate.costUsd,
+    costSource: costEstimate.source,
   })
 
   return outputText
@@ -455,6 +465,7 @@ async function anthropicVision(
   const usage = response.usage
   const inputTokens = usage?.input_tokens ?? 0
   const outputTokens = usage?.output_tokens ?? 0
+  const costEstimate = estimateCost(model, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs)
 
   logLlmCall({
     timestamp: new Date().toISOString(),
@@ -465,7 +476,8 @@ async function anthropicVision(
     inputTokens,
     outputTokens,
     durationMs,
-    estimatedCostUsd: estimateCost(model, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs),
+    estimatedCostUsd: costEstimate.costUsd,
+    costSource: costEstimate.source,
   })
 
   const block = response.content[0]

@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import pc from 'picocolors'
 import { readLlmLogs, summarizeStats } from '../lib/llm-stats.js'
+import { formatDuration } from '../lib/utils.js'
 
 export const statsCommand = new Command('stats')
   .description('Show LLM usage statistics')
@@ -41,7 +42,31 @@ export const statsCommand = new Command('stats')
     console.log(`  Total calls:    ${summary.totalCalls.toLocaleString()}`)
     console.log(`  Tokens:         ${formatTokens(summary.totalInputTokens)} in / ${formatTokens(summary.totalOutputTokens)} out`)
     console.log(`  AI time:        ${formatDuration(summary.totalDurationMs)}`)
-    console.log(`  Est. cost:      ${formatCost(summary.totalCostUsd)}`)
+
+    // Cost breakdown by source
+    const costParts: string[] = []
+    if (summary.totalActualCostUsd > 0) costParts.push(`${formatCost(summary.totalActualCostUsd)} actual`)
+    if (summary.totalEstimatedCostUsd > 0) costParts.push(`${formatCost(summary.totalEstimatedCostUsd)} est.`)
+    if (summary.totalFreeCostUsd > 0) costParts.push(`${formatCost(summary.totalFreeCostUsd)} free`)
+
+    if (costParts.length > 1) {
+      console.log(`  Cost:           ${formatCost(summary.totalCostUsd)} (${costParts.join(' + ')})`)
+    } else {
+      console.log(`  Cost:           ${formatCost(summary.totalCostUsd)}`)
+    }
+
+    // Call source breakdown
+    const estimatedCalls = filteredLogs.filter(l => l.costSource === 'estimated').length
+    const actualCalls = filteredLogs.filter(l => l.costSource === 'actual').length
+    const freeCalls = filteredLogs.filter(l => l.costSource === 'free').length
+
+    if (estimatedCalls > 0 || actualCalls > 0 || freeCalls > 0) {
+      const callParts: string[] = []
+      if (actualCalls > 0) callParts.push(`${actualCalls} actual`)
+      if (estimatedCalls > 0) callParts.push(`${estimatedCalls} est.`)
+      if (freeCalls > 0) callParts.push(`${freeCalls} free`)
+      console.log(`  Calls:          ${summary.totalCalls.toLocaleString()} (${callParts.join(' + ')})`)
+    }
 
     if (Object.keys(summary.byAction).length > 0) {
       console.log(`\n${pc.bold('By Action')}`)
@@ -91,12 +116,6 @@ export const statsCommand = new Command('stats')
 
     console.log()
   })
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
-  return `${(ms / 60000).toFixed(1)}m`
-}
 
 function formatTokens(n: number): string {
   if (n < 1000) return `${n}`

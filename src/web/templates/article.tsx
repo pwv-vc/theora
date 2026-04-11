@@ -13,6 +13,7 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
   const dateCompiled = String(fm.date_compiled ?? fm.date ?? '')
   const sourceFile = fm.source_file ? String(fm.source_file) : null
   const ontology = Array.isArray(fm.ontology) ? fm.ontology.map(String) : []
+  const entities = fm.entities && typeof fm.entities === 'object' ? fm.entities as Record<string, string[]> : {}
 
   const typeLabel = type === 'source' ? 'source' : type === 'concept' ? 'concept' : type === 'query' ? 'query' : ''
 
@@ -25,11 +26,16 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
       </div>
 
       <div class="mb-6 pb-6 border-b border-zinc-800">
-        <div class="flex items-center gap-2 mb-3">
+        <div class="flex items-center gap-2 mb-3 flex-wrap">
           {typeLabel && <Pill variant="type">{typeLabel}</Pill>}
           {ontology.map(o => (
             <Pill key={o} variant="ontology">{o}</Pill>
           ))}
+          {Object.entries(entities).flatMap(([entityType, names]) =>
+            names.map(name => (
+              <Pill key={`${entityType}-${name}`} variant="entity">{entityType}/{name}</Pill>
+            ))
+          )}
         </div>
 
         <h1 class="text-2xl font-bold text-zinc-100 mb-3">{article.title}</h1>

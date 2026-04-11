@@ -4,13 +4,15 @@ import { estimateCost, summarizeStats } from './llm-stats.js'
 
 describe('estimateCost', () => {
   it('uses configurable duration-based fallback pricing for unknown openai-compatible models', () => {
-    expect(
-      estimateCost('llama3.2', 1000, 500, 'openai-compatible', getDefaultLocalModelPricing(), 60_000),
-    ).toBeCloseTo(0.0064583333, 8)
+    const result = estimateCost('llama3.2', 1000, 500, 'openai-compatible', getDefaultLocalModelPricing(), 60_000)
+    expect(result.costUsd).toBeCloseTo(0.0064583333, 8)
+    expect(result.source).toBe('estimated')
   })
 
   it('keeps known pricing for recognized models on compatible providers', () => {
-    expect(estimateCost('gpt-4o', 1000, 500, 'openai-compatible')).toBe(0.0075)
+    const result = estimateCost('gpt-4o', 1000, 500, 'openai-compatible')
+    expect(result.costUsd).toBe(0.0075)
+    expect(result.source).toBe('estimated')
   })
 
   it('lets users tune duration-based local pricing', () => {
@@ -19,16 +21,18 @@ describe('estimateCost', () => {
     localModelPricing.electricityUsdPerKwh = 0.2
     localModelPricing.hardwareUsdPerHour = 0.5
 
-    expect(
-      estimateCost('gemma-4-E2B-it', 1000, 500, 'openai-compatible', localModelPricing, 120_000),
-    ).toBeCloseTo(0.0193333333, 8)
+    const result = estimateCost('gemma-4-E2B-it', 1000, 500, 'openai-compatible', localModelPricing, 120_000)
+    expect(result.costUsd).toBeCloseTo(0.0193333333, 8)
+    expect(result.source).toBe('estimated')
   })
 
   it('can disable fallback local model pricing', () => {
     const localModelPricing = getDefaultLocalModelPricing()
     localModelPricing.mode = 'zero'
 
-    expect(estimateCost('llama3.2', 1000, 500, 'openai-compatible', localModelPricing, 60_000)).toBe(0)
+    const result = estimateCost('llama3.2', 1000, 500, 'openai-compatible', localModelPricing, 60_000)
+    expect(result.costUsd).toBe(0)
+    expect(result.source).toBe('free')
   })
 })
 
@@ -44,6 +48,7 @@ describe('summarizeStats', () => {
         outputTokens: 50,
         durationMs: 250,
         estimatedCostUsd: 0.001,
+        costSource: 'estimated',
       },
       {
         timestamp: '2026-04-10T11:00:00.000Z',
@@ -54,6 +59,7 @@ describe('summarizeStats', () => {
         outputTokens: 40,
         durationMs: 200,
         estimatedCostUsd: 0,
+        costSource: 'free',
       },
     ])
 

@@ -39,3 +39,18 @@ export function normalizeTag(tag: string): string {
     .replace(/-+/g, '-') // collapse multiple hyphens
     .replace(/^-|-$/g, '') // trim leading/trailing hyphens
 }
+
+/**
+ * Format duration in milliseconds to human-readable string.
+ * - Under 5000ms: shows as ms (e.g., "1234ms")
+ * - 5000ms to 60s: shows as seconds with 3 decimal places (e.g., "5.123s")
+ * - Over 60s: shows as minutes:seconds with 3 decimal places (e.g., "1:23.456")
+ */
+export function formatDuration(ms: number): string {
+  if (ms < 5000) return `${ms}ms`
+  const secs = ms / 1000
+  if (secs < 60) return `${secs.toFixed(3)}s`
+  const mins = Math.floor(secs / 60)
+  const remainSecs = (secs % 60).toFixed(3)
+  return `${mins}m ${remainSecs}s`
+}
