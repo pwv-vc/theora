@@ -451,7 +451,7 @@ export function startServer(port: number): void {
     for (const url of urls) {
       const result = await ingestWebUrl(url, destDir, existingNames)
       if (result.status === 'ingested') {
-        ingestedEntries.push({ name: result.name, tag, url })
+        ingestedEntries.push({ name: result.name, tag, url: result.url ?? url })
         ingestedNames.push(result.name)
       } else if (result.status === 'error') {
         if (result.error) errors.push(result.error)
@@ -596,4 +596,3 @@ export function startServer(port: number): void {
     console.log(`  http://localhost:${info.port}`)
   })
 }
-

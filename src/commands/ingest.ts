@@ -1,11 +1,11 @@
 import { Command } from 'commander'
-import { copyFileSync, existsSync, mkdirSync, statSync, readdirSync } from 'node:fs'
-import { join, basename, resolve } from 'node:path'
+import { existsSync, mkdirSync, statSync, readdirSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import pc from 'picocolors'
 import ora from 'ora'
 import { kbPaths, requireKbRoot, safeJoin } from '../lib/paths.js'
 import { readManifest, writeManifest } from '../lib/manifest.js'
-import { VALID_EXTS, isUrl, isValidFile, fetchUrl, maxIngestBytesForFilename } from '../lib/ingest.js'
+import { VALID_EXTS, ingestLocalFile, ingestUrlSource, isUrl, isValidFile } from '../lib/ingest.js'
 function collectFiles(dir: string): string[] {
   const results: string[] = []
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -41,22 +41,21 @@ export const ingestCommand = new Command('ingest')
     for (const source of sources) {
       if (isUrl(source)) {
         const spinner = ora(`Fetching: ${source}`).start()
-        try {
-          const { name } = await fetchUrl(source, destDir)
-
-          if (existingNames.has(name)) {
-            spinner.warn(`Already ingested: ${name}`)
-            skippedDupe++
-            continue
-          }
-
-          existingNames.add(name)
-          entries.push({ name, ingested: new Date().toISOString(), tag: options.tag ?? null, url: source })
+        const result = await ingestUrlSource(source, destDir, existingNames)
+        if (result.status === 'ingested') {
+          entries.push({
+            name: result.name,
+            ingested: new Date().toISOString(),
+            tag: options.tag ?? null,
+            url: result.url ?? source,
+          })
           ingested++
-          spinner.succeed(`Fetched: ${name}`)
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          spinner.fail(`Failed to fetch ${source}: ${msg}`)
+          spinner.succeed(`Fetched: ${result.name}`)
+        } else if (result.status === 'skipped_dupe') {
+          skippedDupe++
+          spinner.warn(`Already ingested: ${result.name}`)
+        } else {
+          spinner.fail(`Failed to fetch ${source}: ${result.error ?? 'Unknown error'}`)
         }
         continue
       }
@@ -70,22 +69,18 @@ export const ingestCommand = new Command('ingest')
       const filesToIngest = statSync(src).isDirectory() ? collectFiles(src) : [src]
 
       for (const file of filesToIngest) {
-        if (!isValidFile(file)) { skippedType++; continue }
-
-        const name = basename(file)
-        if (existingNames.has(name)) { skippedDupe++; continue }
-
-        const maxBytes = maxIngestBytesForFilename(name)
-        if (statSync(file).size > maxBytes) {
+        const result = ingestLocalFile(file, destDir, existingNames)
+        if (result.status === 'ingested') {
+          entries.push({ name: result.name, ingested: new Date().toISOString(), tag: options.tag ?? null })
+          ingested++
+        } else if (result.status === 'skipped_type') {
+          skippedType++
+        } else if (result.status === 'skipped_dupe') {
+          skippedDupe++
+        } else if (result.status === 'skipped_size') {
           skippedSize++
-          console.log(pc.yellow(`Skipped (too large): ${name}`))
-          continue
+          console.log(pc.yellow(`Skipped (too large): ${result.name}`))
         }
-
-        copyFileSync(file, join(destDir, name))
-        existingNames.add(name)
-        entries.push({ name, ingested: new Date().toISOString(), tag: options.tag ?? null })
-        ingested++
       }
     }
 

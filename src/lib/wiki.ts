@@ -46,6 +46,7 @@ export interface ArticleMeta {
   type: 'source' | 'concept'
   ontology?: OntologyType[]
   sourceFile?: string
+  sourceUrl?: string
   sourceType?: 'text' | 'pdf' | 'image' | 'audio' | 'video'
   tags: string[]
   relatedSources?: string[]
@@ -134,6 +135,7 @@ export function writeArticle(destPath: string, meta: ArticleMeta, body: string):
     frontmatter.schema_url = meta.ontology.map(o => ONTOLOGY_SCHEMA_URLS[o])
   }
   if (meta.sourceFile) frontmatter.source_file = meta.sourceFile
+  if (meta.sourceUrl) frontmatter.source_url = meta.sourceUrl
   if (meta.sourceType) frontmatter.source_type = meta.sourceType
   if (meta.relatedSources?.length) frontmatter.related_sources = meta.relatedSources.map(s => `[[${s}]]`)
   if (meta.entities && Object.keys(meta.entities).length > 0) {
@@ -145,6 +147,9 @@ export function writeArticle(destPath: string, meta: ArticleMeta, body: string):
   }
 
   let finalBody = body
+  if (meta.type === 'source' && meta.sourceUrl) {
+    finalBody = finalBody.trimEnd() + `\n\n---\n\n**Original URL:** ${meta.sourceUrl}\n`
+  }
   if (meta.type === 'concept' && meta.relatedSources?.length) {
     const links = meta.relatedSources.map(s => `- [[${s}]]`).join('\n')
     finalBody = finalBody.trimEnd() + '\n\n## Related Sources\n\n' + links + '\n'

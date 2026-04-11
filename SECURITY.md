@@ -24,6 +24,12 @@ Theora passes document content directly to an LLM. A malicious document could co
 
 **Mitigation:** Only ingest URLs from sources you trust.
 
+### YouTube Captions Ingestion
+
+Supported YouTube hosts (`youtube.com`, `www.youtube.com`, `m.youtube.com`, `youtu.be`) are handled with a captions-first path. Theora invokes `yt-dlp` with fixed argv arrays, `--no-playlist`, and caption-only flags, then stores the returned caption text as markdown in `raw/`. Video bytes are not downloaded in this path. Captions and metadata are still remote, untrusted content and are treated with the same prompt-injection trust model as any other ingested source.
+
+**Mitigation:** Only ingest YouTube videos you trust, and treat fetched captions as untrusted text input.
+
 ### Web Server Authentication
 
 The `theora web` server has no authentication. Anyone who can reach the server port can read your wiki, trigger LLM calls (at your API cost), and upload files. The server is intended for local use only.
@@ -45,6 +51,7 @@ The `theora web` server has no authentication. Anyone who can reach the server p
 | Shell injection in slides | `execFileSync` with argument array instead of `execSync` with shell string |
 | Chart code execution | Import allowlist + disallowed pattern check + 30s timeout |
 | SSRF via URL fetch | Private IP range check before fetch; `mediaMaxFileBytes` / `videoMaxFileBytes` cap by content type |
+| YouTube caption ingest | `yt-dlp` invoked with argv arrays only; host allowlist; `--no-playlist`; captions only, no video download |
 | ffmpeg / ffprobe | Invoked with `execFileSync` and fixed argv; paths are KB `raw/` files or OS temp dirs only |
 | Whisper transcription | Optional `OPENAI_TRANSCRIBE_API_KEY` vs `OPENAI_API_KEY`; audio sent only to OpenAI’s transcription endpoint |
 | Prompt injection | XML delimiters around source content; explicit instruction to treat as data |

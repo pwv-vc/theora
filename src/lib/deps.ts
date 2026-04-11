@@ -1,4 +1,4 @@
-import { execFileSync, execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import pc from 'picocolors'
 
 interface DepCheck {
@@ -8,41 +8,36 @@ interface DepCheck {
   feature: string
 }
 
-export function hasMarpCli(): boolean {
+export const YT_DLP_INSTALL_HINT = 'brew install yt-dlp'
+
+function canExec(bin: string, args: string[]): boolean {
   try {
-    execSync('marp --version', { stdio: 'ignore' })
+    execFileSync(bin, args, { stdio: 'ignore' })
     return true
   } catch {
     return false
   }
 }
 
+export function hasMarpCli(): boolean {
+  return canExec('marp', ['--version'])
+}
+
 export function hasFfmpeg(): boolean {
-  try {
-    execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' })
-    return true
-  } catch {
-    return false
-  }
+  return canExec('ffmpeg', ['-version'])
+}
+
+export function hasYtDlp(): boolean {
+  return canExec('yt-dlp', ['--version'])
 }
 
 export function findPython(): string | null {
   const candidates = ['python3', 'python3.13', 'python3.12', 'python3.11', 'python3.10', 'python']
   for (const bin of candidates) {
-    try {
-      execSync(`${bin} -c "import matplotlib"`, { stdio: 'ignore' })
-      return bin
-    } catch {
-      continue
-    }
+    if (canExec(bin, ['-c', 'import matplotlib'])) return bin
   }
   for (const bin of candidates) {
-    try {
-      execSync(`${bin} --version`, { stdio: 'ignore' })
-      return bin
-    } catch {
-      continue
-    }
+    if (canExec(bin, ['--version'])) return bin
   }
   return null
 }
@@ -57,7 +52,7 @@ export function checkDeps(): void {
     },
     {
       name: 'python3',
-      check: () => { try { execSync('python3 --version', { stdio: 'ignore' }); return true } catch { return false } },
+      check: () => canExec('python3', ['--version']),
       install: 'brew install python',
       feature: '--output chart',
     },
@@ -65,10 +60,16 @@ export function checkDeps(): void {
       name: 'matplotlib',
       check: () => {
         const pythons = ['python3', 'python3.13', 'python3.12', 'python3.11', 'python3.10', 'python']
-        return pythons.some(p => { try { execSync(`${p} -c "import matplotlib"`, { stdio: 'ignore' }); return true } catch { return false } })
+        return pythons.some(p => canExec(p, ['-c', 'import matplotlib']))
       },
       install: 'pip3 install matplotlib',
       feature: '--output chart',
+    },
+    {
+      name: 'yt-dlp',
+      check: hasYtDlp,
+      install: YT_DLP_INSTALL_HINT,
+      feature: 'captions-first YouTube ingest',
     },
     {
       name: 'ffmpeg',

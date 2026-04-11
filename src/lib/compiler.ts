@@ -11,7 +11,7 @@ import { llm, llmVision, transcribeAudioFile } from './llm.js'
 import type { ImageInput } from './llm.js'
 import { listRawFiles, listWikiArticles, writeArticle, sanitizeLlmOutput, readWikiIndex, getWikiStats, ONTOLOGY_TYPES, ONTOLOGY_SCHEMA_URLS } from './wiki.js'
 import type { ArticleMeta, OntologyType } from './wiki.js'
-import { getTagForFile } from './manifest.js'
+import { getTagForFile, getUrlForFile } from './manifest.js'
 import { slugify, titleFromFilename, normalizeTag } from './utils.js'
 import { readConfig } from './config.js'
 import {
@@ -83,6 +83,7 @@ function getExistingSourceSlugs(root: string): Set<string> {
 async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
   const name = basename(file, extname(file))
   const slug = slugify(name)
+  const sourceUrl = getUrlForFile(basename(file))
 
   const content = readFileSync(file, 'utf-8').slice(0, 50000)
   const ext = extname(file).toLowerCase().slice(1)
@@ -93,6 +94,7 @@ async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, 
     title: titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
+    sourceUrl: sourceUrl ?? undefined,
     sourceType: 'text',
     tags: mergeTags(ingestTag, tags),
     entities,
@@ -104,6 +106,7 @@ async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, 
 async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
   const name = basename(file, extname(file))
   const slug = slugify(name)
+  const sourceUrl = getUrlForFile(basename(file))
 
   const buffer = readFileSync(file)
   let text: string
@@ -123,6 +126,7 @@ async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, i
     title: titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
+    sourceUrl: sourceUrl ?? undefined,
     sourceType: 'pdf',
     tags: mergeTags(ingestTag, tags),
     entities,
@@ -135,6 +139,7 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
   const name = basename(file, extname(file))
   const slug = slugify(name)
   const ext = extname(file).toLowerCase()
+  const sourceUrl = getUrlForFile(basename(file))
 
   const mediaType = MEDIA_TYPES[ext]
   if (!mediaType) return
@@ -154,6 +159,7 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
     title: titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
+    sourceUrl: sourceUrl ?? undefined,
     sourceType: 'image',
     tags: mergeTags(ingestTag, tags),
     entities,
@@ -245,6 +251,7 @@ async function compileAudioFile(
   const slug = slugify(name)
   const ext = extname(file).toLowerCase().slice(1)
   const cfg = readConfig()
+  const sourceUrl = getUrlForFile(basename(file))
 
   let pathForWhisper = file
   let cleanup: (() => void) | null = null
@@ -313,6 +320,7 @@ async function compileAudioFile(
     title: titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
+    sourceUrl: sourceUrl ?? undefined,
     sourceType: 'audio',
     tags: mergeTags(ingestTag, tags),
     entities,
@@ -336,6 +344,7 @@ async function compileVideoFile(
   const name = basename(file, extname(file))
   const slug = slugify(name)
   const cfg = readConfig()
+  const sourceUrl = getUrlForFile(basename(file))
   const tmpDir = mkdtempSync(join(tmpdir(), 'theora-video-'))
 
   try {
@@ -475,6 +484,7 @@ async function compileVideoFile(
       title: titleFromFilename(file),
       type: 'source',
       sourceFile: relative(paths.raw, file),
+      sourceUrl: sourceUrl ?? undefined,
       sourceType: 'video',
       tags: mergeTags(ingestTag, tags),
       entities,
@@ -835,4 +845,3 @@ ${queries.length > 0 ? `\n## Previous Queries (${queries.length})\n\n${queries.m
   if (spinner) spinner.succeed('Index rebuilt')
   else onProgress?.('✓ Index rebuilt')
 }
-
