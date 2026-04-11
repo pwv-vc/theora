@@ -343,6 +343,15 @@ theora ask "summarize the main findings across all papers"
 theora ask "what open questions remain in this research area?"
 ```
 
+In **zsh**, `?`, `*`, and `[` in an unquoted question are treated as globs, which can fail before `theora` runs (for example `theora ask what is pi?`). Quote the question, or pass it on **stdin** with `--stdin` so the shell never expands those characters:
+
+```bash
+theora ask --stdin <<< 'what is pi?'
+printf '%s\n' 'Any question with ? * or [chars]?' | theora ask --stdin
+```
+
+`--stdin` reads the full question from stdin (trimmed of trailing newlines). Do not pass a positional question when using `--stdin`. Other flags such as `--no-file`, `--tag`, and `--output` work the same as with a normal `ask`.
+
 Each `ask` builds context in two distinct tiers before calling the LLM:
 
 **Tier 1 — Ranked wiki articles (sources + concepts)**
