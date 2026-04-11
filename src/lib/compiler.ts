@@ -162,8 +162,8 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
   writeArticle(join(paths.wikiSources, `${slug}.md`), meta, body)
 }
 
-/** Written next to video during compile; verbatim wiki is emitted in the same pass — do not compile via LLM again. */
-function isVideoCompanionTranscriptRaw(filePath: string): boolean {
+/** Written next to video/audio during compile; verbatim wiki is emitted in the same pass — do not compile via LLM again. */
+function isCompanionTranscriptRaw(filePath: string): boolean {
   return basename(filePath).toLowerCase().endsWith('.transcript.md')
 }
 
@@ -207,13 +207,18 @@ function buildVideoFrameGridMarkdown(
   return lines.join('\n')
 }
 
-function formatVideoTranscriptMarkdown(videoBasename: string, videoSlug: string, transcript: string): string {
+function formatCompanionTranscriptMarkdown(
+  mediaBasename: string,
+  mainArticleSlug: string,
+  transcript: string,
+  mediaKind: 'video' | 'audio',
+): string {
   return [
     `# Transcript (Whisper)`,
     '',
-    `Companion video source: \`${videoBasename}\``,
+    `Companion ${mediaKind} source: \`${mediaBasename}\``,
     '',
-    `Wiki article: [[${videoSlug}]]`,
+    `Wiki article: [[${mainArticleSlug}]]`,
     '',
     '_Automated transcription; may contain errors._',
     '',
@@ -230,7 +235,12 @@ function ffmpegInstallHint(): string {
     : ' Install ffmpeg (e.g. sudo apt install ffmpeg or sudo dnf install ffmpeg).'
 }
 
-async function compileAudioFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
+async function compileAudioFile(
+  file: string,
+  paths: ReturnType<typeof kbPaths>,
+  ingestTag: string | null,
+  onStep?: (step: string) => void,
+): Promise<void> {
   const name = basename(file, extname(file))
   const slug = slugify(name)
   const ext = extname(file).toLowerCase().slice(1)
@@ -240,6 +250,7 @@ async function compileAudioFile(file: string, paths: ReturnType<typeof kbPaths>,
   let cleanup: (() => void) | null = null
 
   if (cfg.whisperPreprocessAudio && hasFfmpeg()) {
+    onStep?.('Normalizing audio for Whisper (ffmpeg)')
     try {
       const tmpDir = mkdtempSync(join(tmpdir(), 'theora-whisper-'))
       const wav = join(tmpDir, 'whisper.wav')
@@ -247,12 +258,14 @@ async function compileAudioFile(file: string, paths: ReturnType<typeof kbPaths>,
       pathForWhisper = wav
       cleanup = () => rmSync(tmpDir, { recursive: true, force: true })
     } catch {
+      onStep?.('Preprocess skipped — using original file for Whisper')
       console.warn(
         pc.yellow(`Preprocess skipped for ${basename(file)} — ffmpeg failed; sending original to Whisper.`),
       )
     }
   }
 
+  onStep?.('Transcribing audio (Whisper)')
   let transcript = ''
   try {
     transcript = await transcribeAudioFile(pathForWhisper, { action: 'transcribe', meta: ext })
@@ -263,6 +276,7 @@ async function compileAudioFile(file: string, paths: ReturnType<typeof kbPaths>,
   const cap = cfg.compileMediaTranscriptMaxChars ?? 50000
   transcript = transcript.slice(0, cap)
 
+  onStep?.('Writing wiki article from transcript (LLM)')
   const raw = await llm(buildAudioPrompt(basename(file), transcript, ingestTag), {
     system: COMPILE_SYSTEM,
     maxTokens: 4096,
@@ -271,6 +285,30 @@ async function compileAudioFile(file: string, paths: ReturnType<typeof kbPaths>,
   })
   const { body, tags, entities } = sanitizeLlmOutput(raw)
 
+  const hasTranscriptArtifact = transcript.trim().length > 0
+  let bodyOut = body.trimEnd()
+  let related: string[] | undefined
+
+  if (hasTranscriptArtifact) {
+    const transcriptSlug = slugify(`${name}.transcript`)
+    const transcriptAbs = join(dirname(file), `${name}.transcript.md`)
+    const transcriptMd = formatCompanionTranscriptMarkdown(basename(file), slug, transcript, 'audio')
+    writeFileSync(transcriptAbs, transcriptMd, 'utf-8')
+
+    const transcriptMeta: ArticleMeta = {
+      title: `Transcript: ${titleFromFilename(file)}`,
+      type: 'source',
+      sourceFile: relative(paths.raw, transcriptAbs),
+      sourceType: 'text',
+      tags: mergeTags(ingestTag, ['transcript']),
+      relatedSources: [slug],
+    }
+    writeArticle(join(paths.wikiSources, `${transcriptSlug}.md`), transcriptMeta, transcriptMd)
+
+    bodyOut += `\n\n---\n\n**Transcript:** [[${transcriptSlug}]] (verbatim Whisper)\n`
+    related = [transcriptSlug]
+  }
+
   const meta: ArticleMeta = {
     title: titleFromFilename(file),
     type: 'source',
@@ -278,9 +316,10 @@ async function compileAudioFile(file: string, paths: ReturnType<typeof kbPaths>,
     sourceType: 'audio',
     tags: mergeTags(ingestTag, tags),
     entities,
+    relatedSources: related,
   }
 
-  writeArticle(join(paths.wikiSources, `${slug}.md`), meta, body)
+  writeArticle(join(paths.wikiSources, `${slug}.md`), meta, bodyOut)
 }
 
 async function compileVideoFile(
@@ -414,7 +453,7 @@ async function compileVideoFile(
       const transcriptStem = `${name}.transcript`
       const transcriptSlug = slugify(transcriptStem)
       const transcriptAbs = join(dirname(file), `${name}.transcript.md`)
-      const transcriptMd = formatVideoTranscriptMarkdown(basename(file), slug, transcript)
+      const transcriptMd = formatCompanionTranscriptMarkdown(basename(file), slug, transcript, 'video')
       writeFileSync(transcriptAbs, transcriptMd, 'utf-8')
 
       const transcriptTitle = `Transcript: ${titleFromFilename(file)}`
@@ -456,7 +495,7 @@ export async function compileSources(root: string, concurrency?: number, onProgr
   const existingSlugs = getExistingSourceSlugs(root)
 
   const newFiles = rawFiles.filter(f => {
-    if (isVideoCompanionTranscriptRaw(f)) return false
+    if (isCompanionTranscriptRaw(f)) return false
     if (isRawVideoExtractedFramePath(f)) return false
     const kind = classifyFile(f)
     if (kind === 'unknown') return false
@@ -562,7 +601,9 @@ export async function compileSources(root: string, concurrency?: number, onProgr
             case 'text': await compileTextFile(file, paths, ingestTag); break
             case 'pdf': await compilePdfFile(file, paths, ingestTag); break
             case 'image': await compileImageFile(file, paths, ingestTag); break
-            case 'audio': await compileAudioFile(file, paths, ingestTag); break
+            case 'audio':
+              await compileAudioFile(file, paths, ingestTag, step => emitSourceStep(name, step))
+              break
             case 'video':
               await compileVideoFile(file, paths, ingestTag, step => emitSourceStep(name, step))
               break
