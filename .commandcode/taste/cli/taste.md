@@ -1,4 +1,5 @@
 # Cli
+
 - The CLI for this project is named `theora` (not `kb`) — named after Theora Jones from Max Headroom, and a play on "the oracle" of knowledge. Use `theora` in all command examples, error messages, and documentation. Confidence: 0.95
 - The project's local data directory is `.theora` (not `.kb`) — use `.theora` in `init`, directory detection, and all file path references throughout the codebase. Confidence: 0.90
 - Use pnpm as the package manager for CLI projects. Confidence: 1.00
@@ -15,11 +16,10 @@
 - Version command should output only the version number with no ASCII art, banner, or additional information. Confidence: 0.90
 - Read CLI version from package.json instead of hardcoding it in the source code. Confidence: 0.75
 - Always use ora for loading spinners in CLI projects. Confidence: 0.95
-- For batch progress spinners with parallel execution, use a two-line ora spinner: line 1 shows the count (e.g., "Compiling sources [3/40]"), line 2 shows all currently in-flight item names with a gray "→" prefix and cyan filenames (e.g., "  → file1.md, file2.pdf"). Track in-flight items with a Set, updating the spinner on both task start and task completion. Confidence: 0.85
+- For batch progress spinners with parallel execution, use a two-line ora spinner: line 1 shows the count (e.g., "Compiling sources [3/40]"), line 2 shows all currently in-flight item names with a gray "→" prefix and cyan filenames (e.g., " → file1.md, file2.pdf"). Track in-flight items with a Set, updating the spinner on both task start and task completion. Confidence: 0.85
 - Use picocolors for terminal string coloring in CLI projects. Confidence: 0.90
-- Use terminui (https://github.com/ahmadawais/terminui) for building interactive full-screen TUI dashboards in this project (e.g., `kb dashboard`). Confidence: 0.75
-- Use Ink for building interactive CLI UIs in CommandCode projects. Confidence: 0.80
-- Use ink-spinner for loading animations in Ink-based CLIs. Confidence: 0.70
+- Add Ink or terminui only when building full-screen or rich TUI features — not as default CLI dependencies. Confidence: 0.80
+- Use ink-spinner for loading animations when an Ink-based CLI is in use. Confidence: 0.70
 - Hide internal flags from help: .addOption(new Option('--local').hideHelp()). Confidence: 0.90
 - Use pnpm.onlyBuiltDependencies in package.json to pre-approve native binary builds. Confidence: 0.60
 - Use ANSI Shadow font for ASCII art at large terminal widths and ANSI Compact for small widths. Confidence: 0.85

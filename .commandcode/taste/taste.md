@@ -22,7 +22,7 @@ See [cli/taste.md](cli/taste.md)
 # output-formats
 - Slide deck output should produce PDF as the final deliverable; Marp markdown is an intermediate step, not the end product. Confidence: 0.75
 - Always pass `--no-stdin` when invoking marp programmatically (e.g., via execSync) — without it, marp v4+ hangs waiting for stdin input instead of processing the file argument. Confidence: 0.90
-- Support per-KB customizable theme stylesheets (e.g., .kb/theme.css) for slide/PDF output so users can customize fonts, colors, and styling. Confidence: 0.70
+- Support per-KB customizable theme stylesheets (e.g., .theora/theme.css) for slide/PDF output so users can customize fonts, colors, and styling. Confidence: 0.70
 - Support `--output chart` to generate matplotlib PNG charts: LLM generates a self-contained Python script with data inlined as literals (no pandas, no external files), execute it with python3, save both .png and .py to output/. Confidence: 0.70
 - Chart generation must support multiple series for line and bar charts (one series per company, topic, or concept when multiple are present); x-axis dates must be properly formatted using matplotlib date formatting (e.g., mdates). Confidence: 0.75
 
@@ -56,7 +56,7 @@ See [web/taste.md](web/taste.md)
 # code-style
 - Always ensure files end with a newline character (EOF newline). Confidence: 0.90
 - Define variables, constants, and functions before they are used (no forward references). Confidence: 0.85
-- Use shared library utility functions rather than duplicating logic inline — if a function exists in lib/utils.js or similar shared location, import and use it instead of creating a duplicate implementation. Confidence: 0.80
+- Use shared library utility functions rather than duplicating logic inline — if a function exists in `src/lib/` or a similar shared module, import and use it instead of creating a duplicate implementation. Confidence: 0.80
 
 # documentation
 See [documentation/taste.md](documentation/taste.md)
