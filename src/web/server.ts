@@ -134,6 +134,7 @@ export function startServer(port: number): void {
         'webp': 'image/webp',
         'svg': 'image/svg+xml',
         'pdf': 'application/pdf',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'txt': 'text/plain',
         'md': 'text/markdown',
         'json': 'application/json',

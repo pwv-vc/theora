@@ -11,9 +11,9 @@ import {
 } from "./ui/index.js";
 
 const VALID_EXTS_LIST =
-  ".md .mdx .txt .html .json .csv .xml .yaml .yml .pdf .png .jpg .jpeg .gif .webp .mp3 .wav .ogg .flac .m4a .mp4 .mov .avi .mkv .webm";
+  ".md .mdx .txt .html .json .csv .xml .yaml .yml .pdf .docx .png .jpg .jpeg .gif .webp .mp3 .wav .ogg .flac .m4a .mp4 .mov .avi .mkv .webm";
 const VALID_EXTS_ACCEPT =
-  ".md,.mdx,.txt,.html,.json,.csv,.xml,.yaml,.yml,.pdf,.png,.jpg,.jpeg,.gif,.webp,.mp3,.wav,.ogg,.flac,.m4a,.mp4,.mov,.avi,.mkv,.webm";
+  ".md,.mdx,.txt,.html,.json,.csv,.xml,.yaml,.yml,.pdf,.docx,.png,.jpg,.jpeg,.gif,.webp,.mp3,.wav,.ogg,.flac,.m4a,.mp4,.mov,.avi,.mkv,.webm";
 
 interface IngestPageProps {
   tagsWithCounts?: TagWithCount[];
@@ -180,7 +180,7 @@ export function IngestPage({ tagsWithCounts = [], config }: IngestPageProps) {
       <script
         dangerouslySetInnerHTML={{
           __html: `
-        const VALID_EXTS = new Set(['.md','.mdx','.txt','.html','.json','.csv','.xml','.yaml','.yml','.pdf','.png','.jpg','.jpeg','.gif','.webp','.mp3','.wav','.ogg','.flac','.m4a','.mp4','.mov','.avi','.mkv','.webm']);
+        const VALID_EXTS = new Set(['.md','.mdx','.txt','.html','.json','.csv','.xml','.yaml','.yml','.pdf','.docx','.png','.jpg','.jpeg','.gif','.webp','.mp3','.wav','.ogg','.flac','.m4a','.mp4','.mov','.avi','.mkv','.webm']);
         const VIDEO_EXTS = new Set(['.mp4','.mov','.avi','.mkv','.webm']);
         const MAX_MEDIA_SIZE = ${mediaMaxBytes};
         const MAX_VIDEO_SIZE = ${videoMaxBytes};

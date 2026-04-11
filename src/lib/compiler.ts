@@ -4,8 +4,10 @@ import { join, basename, dirname, extname, relative, sep } from 'node:path'
 import ora from 'ora'
 import pLimit from 'p-limit'
 import pc from 'picocolors'
+import mammoth from 'mammoth'
 import { normalizeLinks } from './wiki.js'
 import { PDFParse } from 'pdf-parse'
+import { sanitizeExtractedDocumentText } from './extracted-text.js'
 import { kbPaths } from './paths.js'
 import { llm, llmVision, transcribeAudioFile } from './llm.js'
 import type { ImageInput } from './llm.js'
@@ -18,6 +20,7 @@ import {
   COMPILE_SYSTEM,
   buildSourcePrompt,
   buildPdfPrompt,
+  buildDocxPrompt,
   buildImagePrompt,
   buildAudioPrompt,
   buildVideoPrompt,
@@ -40,16 +43,18 @@ import { CONCEPT_SYSTEM, buildConceptPrompt } from './prompts/concept.js'
 const TEXT_EXTS = new Set(['.md', '.mdx', '.txt', '.html', '.json', '.csv', '.xml', '.yaml', '.yml'])
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp'])
 const PDF_EXTS = new Set(['.pdf'])
+const DOCX_EXTS = new Set(['.docx'])
 const AUDIO_EXTS = new Set(['.mp3', '.wav', '.ogg', '.flac', '.m4a'])
 const VIDEO_EXTS = new Set(['.mp4', '.mov', '.avi', '.mkv', '.webm'])
 
-type FileKind = 'text' | 'image' | 'pdf' | 'audio' | 'video' | 'unknown'
+type FileKind = 'text' | 'image' | 'pdf' | 'docx' | 'audio' | 'video' | 'unknown'
 
 function classifyFile(path: string): FileKind {
   const ext = extname(path).toLowerCase()
   if (TEXT_EXTS.has(ext)) return 'text'
   if (IMAGE_EXTS.has(ext)) return 'image'
   if (PDF_EXTS.has(ext)) return 'pdf'
+  if (DOCX_EXTS.has(ext)) return 'docx'
   if (AUDIO_EXTS.has(ext)) return 'audio'
   if (VIDEO_EXTS.has(ext)) return 'video'
   return 'unknown'
@@ -124,6 +129,36 @@ async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, i
     type: 'source',
     sourceFile: relative(paths.raw, file),
     sourceType: 'pdf',
+    tags: mergeTags(ingestTag, tags),
+    entities,
+  }
+
+  writeArticle(join(paths.wikiSources, `${slug}.md`), meta, body)
+}
+
+async function compileDocxFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
+  const name = basename(file, extname(file))
+  const slug = slugify(name)
+
+  const buffer = readFileSync(file)
+  let text: string
+  try {
+    const { value } = await mammoth.extractRawText({ buffer })
+    text = sanitizeExtractedDocumentText(value)
+  } catch {
+    return
+  }
+
+  if (!text) return
+
+  const raw = await llm(buildDocxPrompt(basename(file), text.slice(0, 50000), ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: 'docx' })
+  const { body, tags, entities } = sanitizeLlmOutput(raw)
+
+  const meta: ArticleMeta = {
+    title: titleFromFilename(file),
+    type: 'source',
+    sourceFile: relative(paths.raw, file),
+    sourceType: 'docx',
     tags: mergeTags(ingestTag, tags),
     entities,
   }
@@ -507,7 +542,7 @@ export async function compileSources(root: string, concurrency?: number, onProgr
     return
   }
 
-  const byKind = { text: 0, image: 0, pdf: 0, audio: 0, video: 0 }
+  const byKind = { text: 0, image: 0, pdf: 0, docx: 0, audio: 0, video: 0 }
   for (const f of newFiles) {
     const kind = classifyFile(f)
     if (kind !== 'unknown') byKind[kind]++
@@ -516,6 +551,7 @@ export async function compileSources(root: string, concurrency?: number, onProgr
   const parts = []
   if (byKind.text > 0) parts.push(`${byKind.text} text`)
   if (byKind.pdf > 0) parts.push(`${byKind.pdf} PDF`)
+  if (byKind.docx > 0) parts.push(`${byKind.docx} Word`)
   if (byKind.image > 0) parts.push(`${byKind.image} image`)
   if (byKind.audio > 0) parts.push(`${byKind.audio} audio`)
   if (byKind.video > 0) parts.push(`${byKind.video} video`)
@@ -600,6 +636,7 @@ export async function compileSources(root: string, concurrency?: number, onProgr
           switch (classifyFile(file)) {
             case 'text': await compileTextFile(file, paths, ingestTag); break
             case 'pdf': await compilePdfFile(file, paths, ingestTag); break
+            case 'docx': await compileDocxFile(file, paths, ingestTag); break
             case 'image': await compileImageFile(file, paths, ingestTag); break
             case 'audio':
               await compileAudioFile(file, paths, ingestTag, step => emitSourceStep(name, step))

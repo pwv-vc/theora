@@ -46,7 +46,7 @@ export interface ArticleMeta {
   type: 'source' | 'concept'
   ontology?: OntologyType[]
   sourceFile?: string
-  sourceType?: 'text' | 'pdf' | 'image' | 'audio' | 'video'
+  sourceType?: 'text' | 'pdf' | 'docx' | 'image' | 'audio' | 'video'
   tags: string[]
   relatedSources?: string[]
   entities?: Record<string, string[]>

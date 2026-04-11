@@ -251,12 +251,15 @@ Supported file types:
 |------|-----------|-------------------|
 | Text | `.md` `.mdx` `.txt` `.html` `.json` `.csv` `.xml` `.yaml` | Read as text, summarized by LLM |
 | PDF | `.pdf` | Text extracted, then summarized by LLM |
+| Word (Open XML) | `.docx` | Text extracted with [mammoth](https://www.npmjs.com/package/mammoth), normalized for safe plain-text use, then summarized by LLM. Legacy binary `.doc` is not supported — open in Word, LibreOffice, or Google Docs and save or download as `.docx`, then ingest. |
 | Image | `.png` `.jpg` `.jpeg` `.gif` `.webp` | Analyzed via LLM vision, described and indexed |
 | Audio | `.mp3` `.wav` `.ogg` `.flac` `.m4a` | Transcribed with OpenAI Whisper (`whisper-1`), then summarized like text |
 | Video | `.mp4` `.mov` `.avi` `.mkv` `.webm` | Requires **ffmpeg** (on macOS, install with [Homebrew](https://brew.sh): `brew install ffmpeg`). Audio transcribed with Whisper; evenly sampled frames analyzed with vision; one merged wiki article |
 | URL (page) | `http://` `https://` | Fetched as HTML, compiled as text |
 | URL (image) | `http://` `https://` | Downloaded, analyzed via LLM vision |
 | URL (audio/video) | `http://` `https://` | Streamed to disk; video uses `videoMaxFileBytes`, other media `mediaMaxFileBytes` (same rules as local ingest) |
+
+**Google Docs:** use **File → Download → Microsoft Word (.docx)** and ingest the downloaded file (there is no Google Docs API integration).
 
 **Whisper and API keys:** Transcription always uses the **OpenAI** audio API (`models.transcribe`, default `whisper-1`). Set `OPENAI_API_KEY`, or use `OPENAI_TRANSCRIBE_API_KEY` if you want a separate key. Chat/vision still follow `provider` in `.theora/config.json` (e.g. Anthropic for compile/vision).
 

@@ -7,7 +7,7 @@ import { readConfig } from './config.js'
 
 export const VALID_EXTS = new Set([
   '.md', '.mdx', '.txt', '.html', '.json', '.csv', '.xml', '.yaml', '.yml',
-  '.pdf',
+  '.pdf', '.docx',
   '.png', '.jpg', '.jpeg', '.gif', '.webp',
   '.mp3', '.wav', '.ogg', '.flac', '.m4a',
   '.mp4', '.mov', '.avi', '.mkv', '.webm',
@@ -17,6 +17,8 @@ export const CONTENT_TYPE_EXT: Record<string, string> = {
   'text/html': '.html',
   'text/plain': '.txt',
   'application/json': '.json',
+  'application/pdf': '.pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
   'image/png': '.png',
   'image/jpeg': '.jpg',
   'image/gif': '.gif',
@@ -70,8 +72,11 @@ function maxBytesForMime(mimeBase: string): number {
   return mediaMaxBytes()
 }
 
-function isBinaryStreamMime(mimeBase: string): boolean {
-  return mimeBase.startsWith('image/') || mimeBase.startsWith('audio/') || mimeBase.startsWith('video/')
+function isBinaryResponseMime(mimeBase: string): boolean {
+  if (mimeBase.startsWith('image/') || mimeBase.startsWith('audio/') || mimeBase.startsWith('video/')) return true
+  if (mimeBase === 'application/pdf') return true
+  if (mimeBase === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return true
+  return false
 }
 
 export function isUrl(source: string): boolean {
@@ -144,7 +149,7 @@ export async function fetchUrl(url: string, destDir: string): Promise<{ name: st
   const name = filenameFromUrl(url, contentType)
   const destPath = safeJoin(destDir, name)
 
-  const binaryStream = isBinaryStreamMime(mimeBase)
+  const binaryStream = isBinaryResponseMime(mimeBase)
 
   if (binaryStream) {
     const chunks: Buffer[] = []

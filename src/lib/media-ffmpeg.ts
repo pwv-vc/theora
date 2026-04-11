@@ -1,4 +1,4 @@
-import { execFile, execFileSync } from 'node:child_process'
+import { execFile, execFileSync, type ExecFileOptions } from 'node:child_process'
 import { promisify } from 'node:util'
 import { join } from 'node:path'
 
@@ -85,7 +85,7 @@ export async function extractAudioForWhisper(
     args.push('-ac', '1')
   }
   args.push('-ar', String(cfg.whisperAudioTargetSampleRateHz ?? 16000), '-f', 'wav', outWavPath)
-  await execFileAsync('ffmpeg', args, { stdio: 'ignore' })
+  await execFileAsync('ffmpeg', args, { stdio: 'ignore' } as ExecFileOptions)
 }
 
 /** Evenly spaced sample times in seconds (see plan §3.5) */
@@ -157,7 +157,7 @@ export async function extractVisionFramesJpeg(
         q,
         outPath,
       ],
-      { stdio: 'ignore' },
+      { stdio: 'ignore' } as ExecFileOptions,
     )
     results.push({ path: outPath, timeSec: t })
   }

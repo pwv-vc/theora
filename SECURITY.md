@@ -24,6 +24,12 @@ Theora passes document content directly to an LLM. A malicious document could co
 
 **Mitigation:** Only ingest URLs from sources you trust.
 
+### Word documents (.docx)
+
+Theora extracts plain text from `.docx` files using [mammoth](https://www.npmjs.com/package/mammoth), which does not sanitize OOXML. Before compile, extracted text is passed through **plain-text normalization** (control characters, bidi embedding characters, excessive blank lines). That reduces odd terminal/log behavior and some trivial obfuscation; it does **not** remove malicious *semantic* content or prompt-injection prose — the same delimiter and “treat as data” rules as other sources apply (see Prompt Injection above).
+
+**Mitigation:** Only ingest documents you trust; prefer `.docx` from known sources. Legacy `.doc` is not ingested.
+
 ### Web Server Authentication
 
 The `theora web` server has no authentication. Anyone who can reach the server port can read your wiki, trigger LLM calls (at your API cost), and upload files. The server is intended for local use only.
@@ -48,6 +54,7 @@ The `theora web` server has no authentication. Anyone who can reach the server p
 | ffmpeg / ffprobe | Invoked with `execFileSync` and fixed argv; paths are KB `raw/` files or OS temp dirs only |
 | Whisper transcription | Optional `OPENAI_TRANSCRIBE_API_KEY` vs `OPENAI_API_KEY`; audio sent only to OpenAI’s transcription endpoint |
 | Prompt injection | XML delimiters around source content; explicit instruction to treat as data |
+| Word .docx extraction | mammoth + plain-text sanitization before LLM; trust model same as other ingested files |
 | YAML frontmatter injection | Quotes and newlines escaped in user question before YAML embedding |
 | Filesystem path disclosure to LLM | Only filename (not full path) sent to chart prompt |
 | Missing HTTP security headers | Hono `secureHeaders()` middleware: CSP, X-Frame-Options, X-Content-Type-Options |
