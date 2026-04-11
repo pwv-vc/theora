@@ -140,6 +140,14 @@ pip3 install matplotlib
 
 Needed for `--output chart`. Requires Python 3 (`brew install python` if not installed).
 
+**Optional — YouTube captions-first ingest**
+
+```bash
+brew install yt-dlp
+```
+
+Needed for `theora ingest <youtube-url>`. Theora fetches captions and metadata only, then saves a transcript-backed markdown source into `raw/` without downloading the video file.
+
 ### Install
 
 ```bash
@@ -237,6 +245,13 @@ theora ingest https://arxiv.org/abs/2310.01234 --tag transformers
 theora ingest https://example.com/diagram.png --tag architecture
 ```
 
+YouTube URLs take a captions-first path: Theora uses `yt-dlp` to fetch metadata plus captions, then stores the transcript as a normal markdown source in `raw/` so compile can treat it like any other text document:
+
+```bash
+theora ingest https://www.youtube.com/watch?v=VIDEO_ID --tag research
+theora compile
+```
+
 You can mix files, directories, and URLs in a single command:
 
 ```bash
@@ -257,6 +272,7 @@ Supported file types:
 | URL (page) | `http://` `https://` | Fetched as HTML, compiled as text |
 | URL (image) | `http://` `https://` | Downloaded, analyzed via LLM vision |
 | URL (audio/video) | `http://` `https://` | Streamed to disk; video uses `videoMaxFileBytes`, other media `mediaMaxFileBytes` (same rules as local ingest) |
+| URL (YouTube) | `https://www.youtube.com/watch?...` `https://youtu.be/...` | Requires **yt-dlp**. Fetches metadata + captions only, then saves `raw/youtube-<video-id>.md` without downloading video |
 
 **Whisper and API keys:** Transcription always uses the **OpenAI** audio API (`models.transcribe`, default `whisper-1`). Set `OPENAI_API_KEY`, or use `OPENAI_TRANSCRIBE_API_KEY` if you want a separate key. Chat/vision still follow `provider` in `.theora/config.json` (e.g. Anthropic for compile/vision).
 
@@ -264,7 +280,7 @@ Supported file types:
 
 #### Audio and video: ingest and compile flows
 
-**Ingest** copies or streams files into `raw/` (same extensions as in the table above). Size limits depend on type: audio uses `mediaMaxFileBytes`; video files and `video/*` URL responses use `videoMaxFileBytes`. URL ingest runs an SSRF guard before fetch. Companion files produced at compile time (`*.transcript.md`, `{stem}.frames/`) are not separate ingest targets—they are created when you compile.
+**Ingest** copies or streams files into `raw/` (same extensions as in the table above). Size limits depend on type: audio uses `mediaMaxFileBytes`; video files and `video/*` URL responses use `videoMaxFileBytes`. URL ingest runs an SSRF guard before fetch. Supported YouTube URLs are a captions-first exception: Theora shells out to `yt-dlp`, fetches metadata plus captions, and writes a markdown transcript source instead of downloading media. Companion files produced at compile time (`*.transcript.md`, `{stem}.frames/`) are not separate ingest targets—they are created when you compile.
 
 ```mermaid
 flowchart TD
@@ -322,6 +338,7 @@ The LLM reads every new source in `raw/`, writes a summary article for each, ext
 
 ```bash
 theora compile --sources-only    # skip concept extraction
+theora compile --source foo.md   # recompile one raw source, skip concepts, rebuild the index
 theora compile --concepts-only   # delete and regenerate all concept articles from existing sources
 theora compile --reindex         # just rebuild the index
 theora compile --force           # delete existing articles and recompile everything from scratch
@@ -330,6 +347,8 @@ theora compile --concurrency 1   # sequential (useful for debugging or strict ra
 ```
 
 Use `--concepts-only` to regenerate all concept articles without re-summarizing sources — useful after adding new sources or when you want concepts to reflect the latest wiki content. It clears `wiki/concepts/` and re-extracts from your already-compiled source articles.
+
+Use `--source <raw-file>` when you want to refresh exactly one raw source article without running a full source pass. It accepts either a bare filename (for example `foo.md`) or a path relative to `raw/` (for example `tag/foo.md`), overwrites the matching `wiki/sources/<slug>.md`, refreshes source-specific companion artifacts, skips concept extraction, and still rebuilds `wiki/index.md`. It is intentionally incompatible with `--force`, `--concepts-only`, and `--reindex`.
 
 Use `--force` when you want to reprocess all sources with updated prompts or settings. It clears `wiki/sources/` and `wiki/concepts/` then runs a full compile. Your `raw/` files are never touched.
 
