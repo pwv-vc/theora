@@ -1,0 +1,19 @@
+<!-- Broadcast tower B: three-tier stack; middle = three Max-poster-style color fields (magenta / yellow / green). -->
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="3" width="58" height="58" rx="4" fill="#050508" stroke="#d90429" stroke-width="2"/>
+  <rect x="7" y="7" width="50" height="9" rx="1" fill="#1a1a2e"/>
+  <rect x="9" y="9" width="8" height="5" fill="#ff00aa"/>
+  <rect x="19" y="9" width="8" height="5" fill="#00bbff"/>
+  <rect x="29" y="9" width="8" height="5" fill="#00ff00"/>
+  <rect x="7" y="18" width="50" height="30" rx="2" fill="#050508"/>
+  <rect x="7" y="18" width="16" height="30" fill="#ff00aa"/>
+  <rect x="23" y="18" width="18" height="30" fill="#ffdd00"/>
+  <rect x="41" y="18" width="16" height="30" fill="#00ff00"/>
+  <line x1="23" y1="18" x2="23" y2="48" stroke="#050508" stroke-width="1" opacity="0.35"/>
+  <line x1="41" y1="18" x2="41" y2="48" stroke="#050508" stroke-width="1" opacity="0.35"/>
+  <rect x="7" y="18" width="50" height="30" rx="2" fill="none" stroke="#e8e8ff" stroke-width="1" opacity="0.28"/>
+  <rect x="7" y="50" width="50" height="11" rx="1" fill="#0a0a14"/>
+  <rect x="13" y="51" width="8" height="9" rx="1" fill="#ff00aa"/>
+  <rect x="28" y="51" width="8" height="9" rx="1" fill="#00ff00"/>
+  <rect x="43" y="51" width="8" height="9" rx="1" fill="#00bbff"/>
+</svg>

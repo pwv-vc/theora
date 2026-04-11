@@ -29,8 +29,8 @@ export function IngestPage({ tagsWithCounts = [], config }: IngestPageProps) {
   return (
     <div>
       <PageHeader
-        title="Ingest"
-        subtitle={`Upload files into the ${config.name} wiki.`}
+        title="Upload"
+        subtitle={`Add files to the ${config.name} wiki.`}
       />
 
       <Panel class="mb-6">
@@ -65,7 +65,9 @@ export function IngestPage({ tagsWithCounts = [], config }: IngestPageProps) {
                 </div>
                 <div class="text-zinc-600 text-xs mt-1">{VALID_EXTS_LIST}</div>
                 <div class="text-zinc-700 text-xs mt-0.5">
-                  Max ~{maxMbMedia} MB per file (~{maxMbVideo} MB for video); see `mediaMaxFileBytes` and `videoMaxFileBytes` in `.theora/config.json`
+                  Max ~{maxMbMedia} MB per file (~{maxMbVideo} MB for video);
+                  see `mediaMaxFileBytes` and `videoMaxFileBytes` in
+                  `.theora/config.json`
                 </div>
               </div>
             </div>

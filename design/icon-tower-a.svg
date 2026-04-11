@@ -1,0 +1,17 @@
+<!-- Broadcast tower A: three-tier stack + red frame (N23-style proportions). Geometric only  no numerals. -->
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="3" width="58" height="58" rx="4" fill="#050508" stroke="#d90429" stroke-width="2"/>
+  <!-- Top band: narrow "callsign" strip -->
+  <rect x="7" y="7" width="50" height="9" rx="1" fill="#141428"/>
+  <line x1="9" y1="10" x2="55" y2="10" stroke="#e8e8ff" stroke-width="1" opacity="0.9"/>
+  <line x1="9" y1="13" x2="40" y2="13" stroke="#7878b8" stroke-width="1"/>
+  <!-- Middle: dominant hero field + block T -->
+  <rect x="7" y="18" width="50" height="30" rx="2" fill="#e8e8ff"/>
+  <rect x="17" y="22" width="30" height="7" rx="1" fill="#050508"/>
+  <rect x="28" y="22" width="8" height="23" rx="1" fill="#050508"/>
+  <!-- Bottom: three vertical pillars -->
+  <rect x="7" y="50" width="50" height="11" rx="1" fill="#0a0a14"/>
+  <rect x="14" y="51" width="8" height="9" rx="1" fill="#e8e8ff"/>
+  <rect x="28" y="51" width="8" height="9" rx="1" fill="#e8e8ff"/>
+  <rect x="42" y="51" width="8" height="9" rx="1" fill="#e8e8ff"/>
+</svg>

@@ -171,6 +171,41 @@ input, textarea, button, select, pre {
     0 0 14px var(--th-glow);
 }
 
+/* ── Logo Pixel Animation ─────────────────────────────────
+   Accent pixels in the header logo cycle through the brand
+   palette on a staggered loop. Hover speeds it up for a
+   CRT-glitch feel. Respects prefers-reduced-motion.
+   ─────────────────────────────────────────────────────────── */
+@keyframes logo-pixel-cycle {
+  0%, 100% { fill: #ff00aa; }
+  25%      { fill: #33ff33; }
+  50%      { fill: #00bbff; }
+  75%      { fill: #ffdd00; }
+}
+
+.logo-pixel {
+  animation: logo-pixel-cycle 8s ease-in-out infinite;
+}
+.logo-pixel--b { animation-delay: -2s; }
+.logo-pixel--c { animation-delay: -4s; }
+.logo-pixel--d { animation-delay: -6s; }
+
+.logo-text {
+  color: #fff;
+}
+
+[data-theme="broadcast"] .logo-text {
+  color: var(--color-zinc-100);
+}
+
+.logo-link:hover .logo-pixel {
+  animation-duration: 1.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-pixel { animation: none; }
+}
+
 /* ── Theme Swatch Active State ──────────────────────────────
    Pure CSS active indicator — the selected swatch gets an
    outline matching the current theme's primary text color.

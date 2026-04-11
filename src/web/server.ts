@@ -28,8 +28,7 @@ import { CompilePage } from './templates/compile.js'
 import { ConceptsPage } from './templates/concepts.js'
 import { QueriesPage } from './templates/queries.js'
 import { IngestPage } from './templates/ingest.js'
-import { StatsPage } from './templates/stats.js'
-import { AboutPage } from './templates/about.js'
+import { StatsLogsPage, StatsUsagePage } from './templates/stats.js'
 import { readLlmLogs, summarizeStats } from '../lib/llm-stats.js'
 import { settingsRoutes } from './routes/settings.js'
 
@@ -517,6 +516,11 @@ export function startServer(port: number): void {
   })
 
   app.get('/stats', (c) => {
+    const search = new URL(c.req.url).search
+    return c.redirect(`/stats/usage${search}`, 301)
+  })
+
+  app.get('/stats/usage', (c) => {
     const logs = readLlmLogs()
     const days = parseInt(c.req.query('days') ?? '30', 10)
 
@@ -531,14 +535,29 @@ export function startServer(port: number): void {
       ? JSON.parse(readFileSync(configPath, 'utf-8'))
       : { name: 'Knowledge Base' }
 
-    // Get last 10 logs for initial display
+    return c.html(
+      Layout({
+        title: `Usage — ${config.name ?? 'Knowledge Base'}`,
+        active: 'stats-usage',
+        children: StatsUsagePage({ summary, days, config }),
+      }).toString()
+    )
+  })
+
+  app.get('/stats/logs', (c) => {
+    const logs = readLlmLogs()
+    const configPath = join(requireKbRoot(), '.theora', 'config.json')
+    const config = existsSync(configPath)
+      ? JSON.parse(readFileSync(configPath, 'utf-8'))
+      : { name: 'Knowledge Base' }
+
     const recentLogs = logs.slice(-10)
 
     return c.html(
       Layout({
-        title: `Stats — ${config.name ?? 'Knowledge Base'}`,
-        active: 'stats',
-        children: StatsPage({ summary, days, recentLogs, config }),
+        title: `Logs — ${config.name ?? 'Knowledge Base'}`,
+        active: 'stats-logs',
+        children: StatsLogsPage({ recentLogs, config }),
       }).toString()
     )
   })
@@ -575,21 +594,6 @@ export function startServer(port: number): void {
         await new Promise(resolve => setTimeout(resolve, 1000))
       }
     })
-  })
-
-  app.get('/about', (c) => {
-    const configPath = join(requireKbRoot(), '.theora', 'config.json')
-    const config = existsSync(configPath)
-      ? JSON.parse(readFileSync(configPath, 'utf-8'))
-      : { name: 'Knowledge Base' }
-
-    return c.html(
-      Layout({
-        title: `About — ${config.name ?? 'Knowledge Base'}`,
-        active: 'home',
-        children: AboutPage({ config }),
-      }).toString()
-    )
   })
 
   serve({ fetch: app.fetch, port }, (info) => {
