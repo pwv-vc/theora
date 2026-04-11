@@ -2,6 +2,7 @@
 import type { Child } from 'hono/jsx'
 import { Header } from './ui/header.js'
 import { Footer } from './ui/footer.js'
+import { getPkgVersion } from '../../lib/pkg-version.js'
 
 interface LayoutProps {
   title: string
@@ -17,15 +18,16 @@ const themes = [
 ]
 
 export function Layout({ title, active, children }: LayoutProps) {
+  const v = getPkgVersion()
   return (
     <html lang="en" data-theme="broadcast">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{title} — Theora</title>
-        <link rel="stylesheet" href="/static/styles.css" />
-        <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
-        <link rel="shortcut icon" href="/static/logo.svg" />
+        <link rel="stylesheet" href={`/static/styles.css?v=${v}`} />
+        <link rel="icon" type="image/svg+xml" href={`/static/logo.svg?v=${v}`} />
+        <link rel="shortcut icon" href={`/static/logo.svg?v=${v}`} />
         {/* Runs before first paint to avoid flash of wrong theme */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theora-theme')||'broadcast';document.documentElement.setAttribute('data-theme',t);})();` }} />
         <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous" defer />

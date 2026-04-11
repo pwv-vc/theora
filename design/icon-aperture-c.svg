@@ -1,0 +1,17 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="apcc-sq"><rect x="9" y="9" width="46" height="46" rx="15" ry="15"/></clipPath>
+  </defs>
+  <rect width="64" height="64" fill="#050508"/>
+  <rect x="9" y="9" width="46" height="46" rx="15" ry="15" fill="#0a0a14" stroke="#050508" stroke-width="2"/>
+  <g clip-path="url(#apcc-sq)">
+    <rect x="13" y="11" width="10" height="20" fill="#ff00aa"/>
+    <rect x="13" y="33" width="10" height="20" fill="#ff00aa"/>
+    <rect x="24" y="9" width="4" height="46" fill="#050508"/>
+    <rect x="28" y="13" width="10" height="20" fill="#00ff00"/>
+    <rect x="28" y="31" width="10" height="20" fill="#00ff00"/>
+    <rect x="39" y="9" width="4" height="46" fill="#050508"/>
+    <rect x="43" y="11" width="10" height="20" fill="#00bbff"/>
+    <rect x="43" y="33" width="10" height="20" fill="#00bbff"/>
+  </g>
+</svg>

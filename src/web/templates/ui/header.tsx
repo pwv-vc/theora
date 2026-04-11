@@ -1,9 +1,11 @@
 /** @jsxImportSource hono/jsx */
-import type { Child } from 'hono/jsx'
+import { getPkgVersion } from '../../../lib/pkg-version.js'
 
 interface HeaderProps {
   active: 'home' | 'concepts' | 'queries' | 'search' | 'ask' | 'compile' | 'ingest' | 'stats-usage' | 'stats-logs' | 'settings'
 }
+
+const assetVersion = getPkgVersion()
 
 const wikiKeys = new Set(['home', 'concepts', 'queries'])
 const ingestNavKeys = new Set(['ingest', 'compile'])
@@ -52,8 +54,8 @@ function MobileMenu({ active }: MobileMenuProps) {
         {/* Mobile menu header */}
         <div class="flex items-center justify-between mb-8">
           <a href="/" class="flex items-center gap-2" onclick="closeMobileMenu()">
-            <img src="/static/logo.svg" width="28" height="28" alt="theora logo" />
-            <span class="text-red-500 font-bold text-sm tracking-widest uppercase glow">theora</span>
+            <img src={`/static/logo.svg?v=${assetVersion}`} width="28" height="28" alt="theora logo" />
+            <span class="text-zinc-100 font-bold text-sm tracking-widest uppercase">theora</span>
           </a>
           <button
             type="button"
@@ -147,8 +149,8 @@ export function Header({ active }: HeaderProps) {
     <header class="border-b border-zinc-800 bg-zinc-950 sticky top-0 z-[20000]">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4 sm:gap-8">
         <a href="/" class="flex items-center gap-2 shrink-0">
-          <img src="/static/logo.svg" width="28" height="28" alt="theora logo" />
-          <span class="text-red-500 font-bold text-sm tracking-widest uppercase glow hidden sm:inline">theora</span>
+          <img src={`/static/logo.svg?v=${assetVersion}`} width="28" height="28" alt="theora logo" />
+          <span class="text-zinc-100 font-bold text-sm tracking-widest uppercase hidden sm:inline">theora</span>
         </a>
 
         {/* Mobile menu button */}
