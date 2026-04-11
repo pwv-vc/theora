@@ -12,6 +12,21 @@ export interface GlobalConfig {
   knownKbs?: KnownKb[]
 }
 
+function normalizeKbName(name: string): string {
+  return name.trim().toLowerCase()
+}
+
+export function hasConflictingKbName(
+  config: GlobalConfig,
+  candidate: KnownKb,
+): KnownKb | null {
+  const candidateName = normalizeKbName(candidate.name)
+
+  return (config.knownKbs ?? []).find((entry) =>
+    entry.path !== candidate.path && normalizeKbName(entry.name) === candidateName,
+  ) ?? null
+}
+
 function getUserHomeDir(): string {
   return process.env.HOME?.trim() ? resolve(process.env.HOME) : resolve(homedir())
 }
@@ -84,4 +99,37 @@ export function writeGlobalConfig(config: GlobalConfig): void {
   }
 
   writeFileSync(configPath, JSON.stringify(nextConfig, null, 2) + '\n')
+}
+
+export function findKnownKbByPath(config: GlobalConfig, inputPath: string): KnownKb | null {
+  const resolvedPath = resolve(inputPath)
+  return (config.knownKbs ?? []).find((entry) => entry.path === resolvedPath) ?? null
+}
+
+export function findKnownKbByName(config: GlobalConfig, name: string): KnownKb | null {
+  const matches = (config.knownKbs ?? [])
+    .filter((entry) => normalizeKbName(entry.name) === normalizeKbName(name))
+
+  if (matches.length === 0) return null
+  if (matches.length === 1) return matches[0]
+
+  const paths = matches.map((entry) => entry.path).join(', ')
+  throw new Error(`Saved KB name is ambiguous: "${name}". Matching paths: ${paths}`)
+}
+
+export function removeKnownKb(config: GlobalConfig, reference: string): GlobalConfig {
+  const byPath = findKnownKbByPath(config, reference)
+  const target = byPath ?? findKnownKbByName(config, reference)
+
+  if (!target) {
+    throw new Error(`Saved KB not found: "${reference}"`)
+  }
+
+  const knownKbs = (config.knownKbs ?? []).filter((entry) => entry.path !== target.path)
+  const activeKb = config.activeKb === target.path ? undefined : config.activeKb
+
+  return {
+    activeKb,
+    knownKbs,
+  }
 }

@@ -3,7 +3,14 @@ import { existsSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import pc from 'picocolors'
 import { readConfigAtRoot } from '../lib/config.js'
-import { readGlobalConfig, writeGlobalConfig } from '../lib/global-config.js'
+import {
+  hasConflictingKbName,
+  findKnownKbByName,
+  findKnownKbByPath,
+  readGlobalConfig,
+  removeKnownKb,
+  writeGlobalConfig,
+} from '../lib/global-config.js'
 import { isKbRoot } from '../lib/paths.js'
 
 function validateKbPath(inputPath: string): string {
@@ -28,17 +35,52 @@ function getKbDisplayName(root: string): string {
   return readConfigAtRoot(root).name
 }
 
+function resolveKbReference(reference: string): { root: string; name: string; source: 'path' | 'saved' } {
+  const config = readGlobalConfig()
+  const savedByPath = findKnownKbByPath(config, reference)
+  if (savedByPath) {
+    return { root: savedByPath.path, name: savedByPath.name, source: 'saved' }
+  }
+
+  const resolvedPath = resolve(reference)
+  if (existsSync(resolvedPath) && isKbRoot(resolvedPath)) {
+    const root = validateKbPath(reference)
+    return { root, name: getKbDisplayName(root), source: 'path' }
+  }
+
+  const savedByName = findKnownKbByName(config, reference)
+  if (savedByName) {
+    return { root: savedByName.path, name: savedByName.name, source: 'saved' }
+  }
+
+  if (existsSync(resolvedPath)) {
+    validateKbPath(reference)
+  }
+
+  throw new Error(`Saved KB or path not found: "${reference}"`)
+}
+
 export const kbCommand = new Command('kb')
   .description('Manage saved knowledge bases')
 
 kbCommand
   .command('use')
   .description('Set the active knowledge base')
-  .argument('<path>', 'path to a Theora knowledge base')
-  .action((inputPath: string) => {
-    const root = validateKbPath(inputPath)
-    const name = getKbDisplayName(root)
+  .argument('<reference>', 'saved KB name or path to a Theora knowledge base')
+  .action((reference: string) => {
+    const { root, name, source } = resolveKbReference(reference)
+
+    if (source === 'saved' && !isKbRoot(root)) {
+      throw new Error(`Saved KB is no longer valid: ${root}. Remove it with \`theora kb remove ${name}\` or re-save it with \`theora kb use <path>\`.`)
+    }
+
     const config = readGlobalConfig()
+    const conflictingKb = hasConflictingKbName(config, { name, path: root })
+    if (conflictingKb) {
+      throw new Error(
+        `Saved KB name already exists: "${name}" is already used for ${conflictingKb.path}. Remove or rename that KB before saving another with the same name.`,
+      )
+    }
 
     const otherKbs = (config.knownKbs ?? []).filter((entry) => entry.path !== root)
     const knownKbs = [...otherKbs, { name, path: root }]
@@ -49,7 +91,8 @@ kbCommand
       knownKbs,
     })
 
-    console.log(pc.green('✓') + ` Active KB set to ${pc.white(name)}`)
+    const sourceNote = source === 'saved' ? ` ${pc.gray('(saved name)')}` : ''
+    console.log(pc.green('✓') + ` Active KB set to ${pc.white(name)}${sourceNote}`)
     console.log(`  Path: ${pc.gray(root)}`)
   })
 
@@ -79,4 +122,28 @@ kbCommand
     }
 
     console.log()
+  })
+
+kbCommand
+  .command('remove')
+  .description('Remove a saved knowledge base by name or path')
+  .argument('<reference>', 'saved KB name or path')
+  .action((reference: string) => {
+    const config = readGlobalConfig()
+    const byPath = findKnownKbByPath(config, reference)
+    const target = byPath ?? findKnownKbByName(config, reference)
+
+    if (!target) {
+      throw new Error(`Saved KB not found: "${reference}"`)
+    }
+
+    const nextConfig = removeKnownKb(config, reference)
+    writeGlobalConfig(nextConfig)
+
+    console.log(pc.green('✓') + ` Removed saved KB ${pc.white(target.name)}`)
+    console.log(`  Path: ${pc.gray(target.path)}`)
+
+    if (config.activeKb === target.path) {
+      console.log(pc.gray('  Active KB cleared'))
+    }
   })

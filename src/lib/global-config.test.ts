@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { getGlobalConfigPath, readGlobalConfig, writeGlobalConfig } from './global-config.js'
+import {
+  findKnownKbByName,
+  getGlobalConfigPath,
+  hasConflictingKbName,
+  readGlobalConfig,
+  removeKnownKb,
+  writeGlobalConfig,
+} from './global-config.js'
 
 const ORIGINAL_ENV = { ...process.env }
 
@@ -50,6 +57,68 @@ describe('global config', () => {
     expect(readGlobalConfig()).toEqual({
       activeKb: kbPath,
       knownKbs: [{ name: 'KB A', path: kbPath }],
+    })
+  })
+
+  it('finds a saved KB by name case-insensitively', () => {
+    const config = {
+      activeKb: '/tmp/alpha',
+      knownKbs: [
+        { name: 'Alpha KB', path: '/tmp/alpha' },
+        { name: 'Beta KB', path: '/tmp/beta' },
+      ],
+    }
+
+    expect(findKnownKbByName(config, 'alpha kb')).toEqual({
+      name: 'Alpha KB',
+      path: '/tmp/alpha',
+    })
+  })
+
+  it('throws when a saved KB name is ambiguous', () => {
+    const config = {
+      knownKbs: [
+        { name: 'Research', path: '/tmp/research-a' },
+        { name: 'research', path: '/tmp/research-b' },
+      ],
+    }
+
+    expect(() => findKnownKbByName(config, 'research')).toThrow(
+      'Saved KB name is ambiguous: "research". Matching paths: /tmp/research-a, /tmp/research-b',
+    )
+  })
+
+  it('detects conflicting saved KB names case-insensitively', () => {
+    const conflict = hasConflictingKbName(
+      {
+        knownKbs: [
+          { name: 'Research KB', path: '/tmp/research-a' },
+        ],
+      },
+      { name: 'research kb', path: '/tmp/research-b' },
+    )
+
+    expect(conflict).toEqual({
+      name: 'Research KB',
+      path: '/tmp/research-a',
+    })
+  })
+
+  it('removes saved KBs by name and clears activeKb when needed', () => {
+    const nextConfig = removeKnownKb(
+      {
+        activeKb: '/tmp/alpha',
+        knownKbs: [
+          { name: 'Alpha KB', path: '/tmp/alpha' },
+          { name: 'Beta KB', path: '/tmp/beta' },
+        ],
+      },
+      'Alpha KB',
+    )
+
+    expect(nextConfig).toEqual({
+      activeKb: undefined,
+      knownKbs: [{ name: 'Beta KB', path: '/tmp/beta' }],
     })
   })
 })

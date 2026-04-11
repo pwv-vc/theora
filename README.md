@@ -199,6 +199,8 @@ You can make Theora work from any directory by selecting a global active KB:
 ```bash
 theora kb use ~/research/my-kb
 theora kb list
+theora kb use my-kb
+theora kb remove my-kb
 ```
 
 After that, KB-aware commands like `theora ask` and `theora compile` will use:
