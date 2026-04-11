@@ -47,6 +47,7 @@ The `theora web` server has no authentication. Anyone who can reach the server p
 | SSRF via URL fetch | Private IP range check before fetch; `mediaMaxFileBytes` / `videoMaxFileBytes` cap by content type |
 | ffmpeg / ffprobe | Invoked with `execFileSync` and fixed argv; paths are KB `raw/` files or OS temp dirs only |
 | Whisper transcription | Optional `OPENAI_TRANSCRIBE_API_KEY` vs `OPENAI_API_KEY`; audio sent only to OpenAI’s transcription endpoint |
+| Context compression | Optional **Token Company** HTTPS call (`TTC_API_KEY`) to a fixed vendor URL, or **Caveman** local Python (`execFileSync`, argv only) from a repo path you configure. Both transform text before chat/vision (and optionally after Whisper). Only enable with providers and models you trust. |
 | Prompt injection | XML delimiters around source content; explicit instruction to treat as data |
 | YAML frontmatter injection | Quotes and newlines escaped in user question before YAML embedding |
 | Filesystem path disclosure to LLM | Only filename (not full path) sent to chart prompt |

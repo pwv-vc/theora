@@ -591,6 +591,78 @@ API keys can live in either the knowledge base `.env` or the global `~/.theora/.
 
 ---
 
+## Context compression (optional)
+
+Before each **chat** and **vision** call, Theora can send the **user** message (the large context blob: ranked wiki text, compile payloads, ask context, etc.) through an optional compressor. You can also compress **Whisper transcript text** after transcription and before it is passed into compile. **Default is off** — omit `contextCompression` or set `provider` to `none`.
+
+| Backend | What it is |
+|---------|------------|
+| **Token Company** | Hosted HTTPS API ([thetokencompany.com](https://thetokencompany.com)). Set `TTC_API_KEY`. Check their documentation for which **downstream** chat models accept compressed user text; your normal `model` in config is still the chat model you call. |
+| **Caveman** | Local [Caveman Compression](https://github.com/wilpel/caveman-compression) (Python). Semantic “strip grammar, keep facts” style compression. You install their dependencies (see their README: NLP, MLM, or LLM variant), then point Theora at the repo root on disk. |
+
+**Length gate:** Compression runs only when the input string is at least **`minChars`** long (default **4096** Unicode code units), so short prompts (e.g. lint, small compile chunks) are not sent to a compressor.
+
+### Configure with `.env`
+
+Variables can live in the KB `.env` or `~/.theora/.env`. These **override** the same fields in `.theora/config.json` when set.
+
+| Variable | Purpose |
+|----------|---------|
+| `CONTEXT_COMPRESSION_PROVIDER` | `none` (default), `token-company`, `caveman-nlp`, `caveman-mlm`, `caveman-llm`. Alias: `ttc` → Token Company. |
+| `CONTEXT_COMPRESSION_MIN_CHARS` | Non-negative integer; default `4096`. |
+| `CONTEXT_COMPRESSION_APPLY_TO_TRANSCRIPTS` | `true`, `1`, or `yes` to run the same compressor on **raw Whisper output** before returning it to the pipeline. Default off. |
+| `TTC_API_KEY` | Bearer token for Token Company. |
+| `TTC_MODEL` | Token Company compressor model (default `bear-1.2`). |
+| `TTC_AGGRESSIVENESS` | Compression aggressiveness, float (default `0.1`). |
+| `CAVEMAN_COMPRESSION_ROOT` | Absolute path to a local clone of `wilpel/caveman-compression` (directory that contains `caveman_compress_nlp.py`, etc.). Can be omitted if you set `contextCompression.caveman.root` in config instead. |
+
+### Configure with `.theora/config.json`
+
+Merge a `contextCompression` object into your KB config:
+
+```json
+{
+  "contextCompression": {
+    "provider": "caveman-nlp",
+    "minChars": 4096,
+    "applyToTranscripts": false,
+    "caveman": {
+      "root": "/absolute/path/to/caveman-compression",
+      "language": "en"
+    },
+    "tokenCompany": {
+      "model": "bear-1.2",
+      "aggressiveness": 0.1
+    }
+  }
+}
+```
+
+- **`caveman.root`**: Path to the Caveman repo (required for Caveman providers unless `CAVEMAN_COMPRESSION_ROOT` is set).
+- **`caveman.language`**: Optional; passed to the NLP script as `-l` (e.g. `en`, `es`).
+- **`caveman.mlmK`**: Optional; for `caveman-mlm`, passed as `-k`.
+
+### Caveman setup (quick)
+
+1. Clone [wilpel/caveman-compression](https://github.com/wilpel/caveman-compression).
+2. Create a venv and install the variant you want (`requirements-nlp.txt`, `requirements-mlm.txt`, or `requirements.txt` per their README), including spaCy models if required.
+3. Put the **absolute** repo path in `CAVEMAN_COMPRESSION_ROOT` or `contextCompression.caveman.root`.
+4. Set `CONTEXT_COMPRESSION_PROVIDER` to `caveman-nlp`, `caveman-mlm`, or `caveman-llm`. Ensure `python3` is on your `PATH` (Theora does not bundle Python).
+
+The `caveman-llm` variant uses OpenAI inside Caveman’s own tooling; configure keys the way their project expects (e.g. `.env` in that repo when using their LLM script).
+
+### Token Company setup (quick)
+
+1. Obtain an API key from Token Company.
+2. Set `CONTEXT_COMPRESSION_PROVIDER=token-company` (or `ttc`) and `TTC_API_KEY=...`.
+3. Optionally set `TTC_MODEL` and `TTC_AGGRESSIVENESS`.
+
+### Logs and observability
+
+When a compressor runs, log lines in `.theora/llm-calls.jsonl` include `contextCompressionProvider`, `contextCompressionPreChars`, and `contextCompressionPostChars`. **`theora tail`** and the wiki **Stats** page show a **Notes** column with the same details (plus transcribe byte/duration/character fields for Whisper). See [SECURITY.md](SECURITY.md) for trust boundaries (third-party HTTPS vs local Python).
+
+---
+
 ## Tags
 
 Tags are how you tell the wiki what things are about. Without tags, the LLM guesses — and it's decent at guessing. But when you're researching multiple topics at once, tags keep everything organized and findable.

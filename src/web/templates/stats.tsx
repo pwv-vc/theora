@@ -22,6 +22,29 @@ function formatCostWithSource(usd: number, source?: CostSource): string {
   return formatCost(usd, source)
 }
 
+function formatLogNotes(log: LlmCallLog): string {
+  const parts: string[] = []
+  if (log.transcribeInputBytes != null && log.transcribeInputBytes > 0) {
+    parts.push(`${Math.round(log.transcribeInputBytes / 1024)}KiB`)
+  }
+  if (log.transcribeDurationSec != null && log.transcribeDurationSec > 0) {
+    parts.push(`${log.transcribeDurationSec.toFixed(1)}s audio`)
+  }
+  if (log.transcribeOutputChars != null) {
+    parts.push(`${log.transcribeOutputChars}ch out`)
+  }
+  if (
+    log.contextCompressionPreChars != null &&
+    log.contextCompressionPostChars != null &&
+    log.contextCompressionProvider
+  ) {
+    parts.push(
+      `${log.contextCompressionProvider}: ${log.contextCompressionPreChars}\u2192${log.contextCompressionPostChars}chr`,
+    )
+  }
+  return parts.join(' \u00b7 ')
+}
+
 function formatLogEntry(log: LlmCallLog) {
   const time = new Date(log.timestamp).toLocaleTimeString()
   return (
@@ -34,6 +57,9 @@ function formatLogEntry(log: LlmCallLog) {
       <td class="text-right py-2 text-zinc-300">{log.inputTokens}+{log.outputTokens}</td>
       <td class="text-right py-2 text-zinc-300">{formatCostWithSource(log.estimatedCostUsd, log.costSource)}</td>
       <td class="text-right py-2 text-zinc-300">{formatDuration(log.durationMs)}</td>
+      <td class="py-2 text-zinc-500 text-xs max-w-56 truncate" title={formatLogNotes(log)}>
+        {formatLogNotes(log)}
+      </td>
     </tr>
   )
 }
@@ -301,6 +327,7 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
                 <th class="text-right py-2 text-zinc-400 font-medium">Tokens</th>
                 <th class="text-right py-2 text-zinc-400 font-medium">Cost</th>
                 <th class="text-right py-2 text-zinc-400 font-medium">Duration</th>
+                <th class="text-left py-2 text-zinc-400 font-medium">Notes</th>
               </tr>
             </thead>
             <tbody id="log-tbody">
@@ -328,6 +355,23 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
               return mins + 'm ' + secs + 's';
             }
 
+            function formatLogNotes(log) {
+              const parts = [];
+              if (log.transcribeInputBytes != null && log.transcribeInputBytes > 0) {
+                parts.push(Math.round(log.transcribeInputBytes / 1024) + 'KiB');
+              }
+              if (log.transcribeDurationSec != null && log.transcribeDurationSec > 0) {
+                parts.push(Number(log.transcribeDurationSec).toFixed(1) + 's audio');
+              }
+              if (log.transcribeOutputChars != null) {
+                parts.push(String(log.transcribeOutputChars) + 'ch out');
+              }
+              if (log.contextCompressionPreChars != null && log.contextCompressionPostChars != null && log.contextCompressionProvider) {
+                parts.push(String(log.contextCompressionProvider) + ': ' + log.contextCompressionPreChars + '\u2192' + log.contextCompressionPostChars + 'chr');
+              }
+              return parts.join(' \u00b7 ');
+            }
+
             function addLogEntry(log) {
               const row = document.createElement('tr');
               row.className = 'border-b last:border-0 border-zinc-800 animate-fade-in';
@@ -341,6 +385,7 @@ export function StatsPage({ summary, days, recentLogs, config }: StatsPageProps)
                 { text: String(log.inputTokens) + '+' + String(log.outputTokens), cls: 'text-right py-2 text-zinc-300' },
                 { text: formatCost(log.estimatedCostUsd), cls: 'text-right py-2 text-zinc-300' },
                 { text: formatDuration(log.durationMs), cls: 'text-right py-2 text-zinc-300' },
+                { text: formatLogNotes(log), cls: 'py-2 text-zinc-500 text-xs max-w-56 truncate' },
               ];
               cells.forEach(function(cell) {
                 const td = document.createElement('td');

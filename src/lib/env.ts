@@ -82,6 +82,13 @@ OPENAI_API_KEY=
 
 # Anthropic
 # ANTHROPIC_API_KEY=
+
+# Optional: context compression for LLM user messages (see SECURITY.md)
+# CONTEXT_COMPRESSION_PROVIDER=none
+# CONTEXT_COMPRESSION_MIN_CHARS=4096
+# CONTEXT_COMPRESSION_APPLY_TO_TRANSCRIPTS=false
+# Token Company: TTC_API_KEY=  TTC_MODEL=bear-1.2  TTC_AGGRESSIVENESS=0.1
+# Caveman (local Python): CAVEMAN_COMPRESSION_ROOT=/path/to/caveman-compression
 `
 
   writeFileSync(globalEnvPath, template)

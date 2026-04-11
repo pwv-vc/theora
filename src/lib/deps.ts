@@ -1,6 +1,20 @@
 import { execFileSync, execSync } from 'node:child_process'
 import pc from 'picocolors'
 
+/** Python interpreter for optional tools (e.g. Caveman) that do not need matplotlib. */
+export function findPythonBinary(): string | null {
+  const candidates = ['python3', 'python3.13', 'python3.12', 'python3.11', 'python3.10', 'python']
+  for (const bin of candidates) {
+    try {
+      execFileSync(bin, ['--version'], { stdio: 'ignore' })
+      return bin
+    } catch {
+      continue
+    }
+  }
+  return null
+}
+
 interface DepCheck {
   name: string
   check: () => boolean

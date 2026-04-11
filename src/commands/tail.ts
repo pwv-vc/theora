@@ -6,6 +6,29 @@ import pc from 'picocolors'
 import { readLlmLogs, type LlmCallLog } from '../lib/llm-stats.js'
 import { formatDuration } from '../lib/utils.js'
 
+function formatLogNotes(log: LlmCallLog): string {
+  const parts: string[] = []
+  if (log.transcribeInputBytes != null && log.transcribeInputBytes > 0) {
+    parts.push(`${Math.round(log.transcribeInputBytes / 1024)}KiB`)
+  }
+  if (log.transcribeDurationSec != null && log.transcribeDurationSec > 0) {
+    parts.push(`${log.transcribeDurationSec.toFixed(1)}s`)
+  }
+  if (log.transcribeOutputChars != null) {
+    parts.push(`${log.transcribeOutputChars}ch`)
+  }
+  if (
+    log.contextCompressionPreChars != null &&
+    log.contextCompressionPostChars != null &&
+    log.contextCompressionProvider
+  ) {
+    parts.push(
+      `${log.contextCompressionProvider} ${log.contextCompressionPreChars}\u2192${log.contextCompressionPostChars}`,
+    )
+  }
+  return parts.length ? pc.dim(`  ${parts.join(' \u00b7 ')}`) : ''
+}
+
 function formatLogEntry(log: LlmCallLog): string {
   const timestamp = new Date(log.timestamp).toLocaleTimeString()
   const action = pc.cyan(log.action.padEnd(10))
@@ -15,14 +38,16 @@ function formatLogEntry(log: LlmCallLog): string {
   const tokens = `${log.inputTokens}+${log.outputTokens}`.padStart(10)
   const cost = pc.yellow(`$${log.estimatedCostUsd.toFixed(4)}`.padStart(8))
   const duration = formatDuration(log.durationMs).padStart(10)
+  const notes = formatLogNotes(log)
 
-  return `${pc.gray(timestamp)}  ${action}  ${meta}  ${provider}  ${model}  ${tokens} tok  ${cost}  ${duration}`
+  return `${pc.gray(timestamp)}  ${action}  ${meta}  ${provider}  ${model}  ${tokens} tok  ${cost}  ${duration}${notes}`
 }
 
 function formatLogEntryCompact(log: LlmCallLog): string {
   const timestamp = new Date(log.timestamp).toLocaleTimeString()
   const meta = log.meta ? ` [${log.meta}]` : ''
-  return `${timestamp}  ${log.action}${meta}  ${log.provider} / ${log.model}  ${log.inputTokens}+${log.outputTokens} tok  $${log.estimatedCostUsd.toFixed(4)}  ${formatDuration(log.durationMs)}`
+  const notes = formatLogNotes(log).replace(/\x1b\[[0-9;]*m/g, '')
+  return `${timestamp}  ${log.action}${meta}  ${log.provider} / ${log.model}  ${log.inputTokens}+${log.outputTokens} tok  $${log.estimatedCostUsd.toFixed(4)}  ${formatDuration(log.durationMs)}${notes}`
 }
 
 export const tailCommand = new Command('tail')

@@ -1,9 +1,15 @@
-import { createReadStream } from 'node:fs'
+import { createReadStream, statSync } from 'node:fs'
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { readConfig } from './config.js'
+import {
+  getEffectiveContextCompression,
+  maybeCompressContext,
+  type ContextCompressionStats,
+} from './context-compression.js'
 import { loadEnv } from './env.js'
 import { logLlmCall, estimateCost, estimateWhisperTranscriptionCostUsd } from './llm-stats.js'
+import type { LlmCallLog } from './llm-stats.js'
 import { getFfprobeDurationSeconds } from './media-ffmpeg.js'
 import type { KbConfig, LocalModelPricingConfig } from './config.js'
 
@@ -139,6 +145,20 @@ export function normalizeOpenAiUsage(
   return { inputTokens, outputTokens }
 }
 
+function compressionLogFields(
+  compression: ContextCompressionStats | null,
+): Pick<
+  LlmCallLog,
+  'contextCompressionProvider' | 'contextCompressionPreChars' | 'contextCompressionPostChars'
+> {
+  if (!compression) return {}
+  return {
+    contextCompressionProvider: compression.provider,
+    contextCompressionPreChars: compression.preChars,
+    contextCompressionPostChars: compression.postChars,
+  }
+}
+
 // --- OpenAI ---
 
 const openAiClients: Partial<Record<OpenAiFamilyProvider, OpenAI>> = {}
@@ -180,6 +200,7 @@ export async function transcribeAudioFile(filePath: string, options: LlmOptions 
   const client = getTranscriptionOpenAI()
   const durationSec = (await getFfprobeDurationSeconds(filePath)) ?? 0
   const startTime = Date.now()
+  const inputBytes = statSync(filePath).size
 
   const fileStream = createReadStream(filePath)
   const response = await client.audio.transcriptions.create({
@@ -189,12 +210,19 @@ export async function transcribeAudioFile(filePath: string, options: LlmOptions 
   })
 
   const durationMs = Date.now() - startTime
-  const text =
+  let text =
     response && typeof response === 'object' && 'text' in response && typeof response.text === 'string'
       ? response.text
       : ''
 
   const whisperCost = estimateWhisperTranscriptionCostUsd(durationSec)
+
+  let transcriptCompression: ContextCompressionStats | null = null
+  if (getEffectiveContextCompression(config).applyToTranscripts) {
+    const { text: compressed, compression } = await maybeCompressContext(text, config)
+    text = compressed
+    transcriptCompression = compression
+  }
 
   logLlmCall({
     timestamp: new Date().toISOString(),
@@ -207,6 +235,10 @@ export async function transcribeAudioFile(filePath: string, options: LlmOptions 
     durationMs,
     estimatedCostUsd: whisperCost,
     costSource: 'estimated',
+    transcribeInputBytes: inputBytes,
+    transcribeDurationSec: durationSec,
+    transcribeOutputChars: text.length,
+    ...compressionLogFields(transcriptCompression),
   })
 
   return text
@@ -237,7 +269,9 @@ async function openaiComplete(
   action: string = 'unknown',
   meta?: string | null,
   localModelPricing?: LocalModelPricingConfig,
+  kbConfig: KbConfig = readConfig(),
 ): Promise<string> {
+  const { text: userContent, compression } = await maybeCompressContext(prompt, kbConfig)
   const client = getOpenAI(provider)
   const startTime = Date.now()
   const response = await client.chat.completions.create({
@@ -245,7 +279,7 @@ async function openaiComplete(
     max_tokens: maxTokens,
     messages: [
       { role: 'system', content: system },
-      { role: 'user', content: prompt },
+      { role: 'user', content: userContent },
     ],
   })
   const durationMs = Date.now() - startTime
@@ -253,7 +287,7 @@ async function openaiComplete(
   const outputText = extractTextContent(response.choices[0]?.message?.content)
   const { inputTokens, outputTokens } = normalizeOpenAiUsage(
     response.usage as Record<string, unknown> | undefined,
-    `${system}\n${prompt}`,
+    `${system}\n${userContent}`,
     outputText,
   )
   const reportedModel = response.model ?? model
@@ -270,6 +304,7 @@ async function openaiComplete(
     durationMs,
     estimatedCostUsd: costEstimate.costUsd,
     costSource: costEstimate.source,
+    ...compressionLogFields(compression),
   })
 
   return outputText
@@ -285,7 +320,9 @@ async function openaiStream(
   action: string = 'unknown',
   meta?: string | null,
   localModelPricing?: LocalModelPricingConfig,
+  kbConfig: KbConfig = readConfig(),
 ): Promise<string> {
+  const { text: userContent, compression } = await maybeCompressContext(prompt, kbConfig)
   const client = getOpenAI(provider)
   const startTime = Date.now()
   const stream = await client.chat.completions.create({
@@ -294,7 +331,7 @@ async function openaiStream(
     stream: true,
     messages: [
       { role: 'system', content: system },
-      { role: 'user', content: prompt },
+      { role: 'user', content: userContent },
     ],
   })
 
@@ -309,7 +346,7 @@ async function openaiStream(
 
   const durationMs = Date.now() - startTime
   // Estimate tokens for streaming (OpenAI doesn't return usage in stream mode)
-  const inputTokens = Math.ceil(prompt.length / 4) + Math.ceil(system.length / 4)
+  const inputTokens = Math.ceil(userContent.length / 4) + Math.ceil(system.length / 4)
   const outputTokens = Math.ceil(full.length / 4)
   const costEstimate = estimateCost(model, inputTokens, outputTokens, provider, localModelPricing, durationMs)
 
@@ -324,6 +361,7 @@ async function openaiStream(
     durationMs,
     estimatedCostUsd: costEstimate.costUsd,
     costSource: costEstimate.source,
+    ...compressionLogFields(compression),
   })
 
   return full
@@ -352,19 +390,21 @@ async function anthropicComplete(
   action: string = 'unknown',
   meta?: string | null,
   localModelPricing?: LocalModelPricingConfig,
+  kbConfig: KbConfig = readConfig(),
 ): Promise<string> {
+  const { text: userContent, compression } = await maybeCompressContext(prompt, kbConfig)
   const client = getAnthropic()
   const startTime = Date.now()
   const response = await client.messages.create({
     model,
     max_tokens: maxTokens,
     system,
-    messages: [{ role: 'user', content: prompt }],
+    messages: [{ role: 'user', content: userContent }],
   })
   const durationMs = Date.now() - startTime
 
   const usage = response.usage
-  const inputTokens = usage?.input_tokens ?? estimateTextTokens(`${system}\n${prompt}`)
+  const inputTokens = usage?.input_tokens ?? estimateTextTokens(`${system}\n${userContent}`)
   const outputTokens = usage?.output_tokens ?? estimateTextTokens(blockText(response.content[0]))
   const reportedModel = response.model ?? model
   const costEstimate = estimateCost(reportedModel, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs)
@@ -380,6 +420,7 @@ async function anthropicComplete(
     durationMs,
     estimatedCostUsd: costEstimate.costUsd,
     costSource: costEstimate.source,
+    ...compressionLogFields(compression),
   })
 
   const block = response.content[0]
@@ -398,14 +439,16 @@ async function anthropicStream(
   action: string = 'unknown',
   meta?: string | null,
   localModelPricing?: LocalModelPricingConfig,
+  kbConfig: KbConfig = readConfig(),
 ): Promise<string> {
+  const { text: userContent, compression } = await maybeCompressContext(prompt, kbConfig)
   const client = getAnthropic()
   const startTime = Date.now()
   const stream = client.messages.stream({
     model,
     max_tokens: maxTokens,
     system,
-    messages: [{ role: 'user', content: prompt }],
+    messages: [{ role: 'user', content: userContent }],
   })
 
   let full = ''
@@ -418,7 +461,7 @@ async function anthropicStream(
 
   const durationMs = Date.now() - startTime
   // Estimate tokens for streaming (Anthropic doesn't return usage in stream mode)
-  const inputTokens = Math.ceil(prompt.length / 4) + Math.ceil(system.length / 4)
+  const inputTokens = Math.ceil(userContent.length / 4) + Math.ceil(system.length / 4)
   const outputTokens = Math.ceil(full.length / 4)
   const costEstimate = estimateCost(model, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs)
 
@@ -433,6 +476,7 @@ async function anthropicStream(
     durationMs,
     estimatedCostUsd: costEstimate.costUsd,
     costSource: costEstimate.source,
+    ...compressionLogFields(compression),
   })
 
   return full
@@ -455,7 +499,9 @@ async function openaiVision(
   action: string = 'vision',
   meta?: string | null,
   localModelPricing?: LocalModelPricingConfig,
+  kbConfig: KbConfig = readConfig(),
 ): Promise<string> {
+  const { text: userContent, compression } = await maybeCompressContext(prompt, kbConfig)
   const client = getOpenAI(provider)
   const startTime = Date.now()
   const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
@@ -463,7 +509,7 @@ async function openaiVision(
       type: 'image_url',
       image_url: { url: `data:${img.mediaType};base64,${img.base64}` },
     })),
-    { type: 'text', text: prompt },
+    { type: 'text', text: userContent },
   ]
 
   const response = await client.chat.completions.create({
@@ -479,7 +525,7 @@ async function openaiVision(
   const outputText = extractTextContent(response.choices[0]?.message?.content)
   const { inputTokens, outputTokens } = normalizeOpenAiUsage(
     response.usage as Record<string, unknown> | undefined,
-    `${system}\n${prompt}`,
+    `${system}\n${userContent}`,
     outputText,
   )
   const reportedModel = response.model ?? model
@@ -496,6 +542,7 @@ async function openaiVision(
     durationMs,
     estimatedCostUsd: costEstimate.costUsd,
     costSource: costEstimate.source,
+    ...compressionLogFields(compression),
   })
 
   return outputText
@@ -510,7 +557,9 @@ async function anthropicVision(
   action: string = 'vision',
   meta?: string | null,
   localModelPricing?: LocalModelPricingConfig,
+  kbConfig: KbConfig = readConfig(),
 ): Promise<string> {
+  const { text: userContent, compression } = await maybeCompressContext(prompt, kbConfig)
   const client = getAnthropic()
   const startTime = Date.now()
   const content: Anthropic.Messages.ContentBlockParam[] = [
@@ -518,7 +567,7 @@ async function anthropicVision(
       type: 'image',
       source: { type: 'base64', media_type: img.mediaType, data: img.base64 },
     })),
-    { type: 'text', text: prompt },
+    { type: 'text', text: userContent },
   ]
 
   const response = await client.messages.create({
@@ -545,6 +594,7 @@ async function anthropicVision(
     durationMs,
     estimatedCostUsd: costEstimate.costUsd,
     costSource: costEstimate.source,
+    ...compressionLogFields(compression),
   })
 
   const block = response.content[0]
@@ -574,9 +624,9 @@ export async function llmVision(
   const localModelPricing = config.localModelPricing
 
   if (provider === 'anthropic') {
-    return anthropicVision(prompt, images, system, model, maxTokens, action, meta, localModelPricing)
+    return anthropicVision(prompt, images, system, model, maxTokens, action, meta, localModelPricing, config)
   }
-  return openaiVision(prompt, images, system, model, maxTokens, provider, action, meta, localModelPricing)
+  return openaiVision(prompt, images, system, model, maxTokens, provider, action, meta, localModelPricing, config)
 }
 
 export async function llm(prompt: string, options: LlmOptions = {}): Promise<string> {
@@ -589,9 +639,9 @@ export async function llm(prompt: string, options: LlmOptions = {}): Promise<str
   const localModelPricing = config.localModelPricing
 
   if (provider === 'anthropic') {
-    return anthropicComplete(prompt, system, model, maxTokens, action, meta, localModelPricing)
+    return anthropicComplete(prompt, system, model, maxTokens, action, meta, localModelPricing, config)
   }
-  return openaiComplete(prompt, system, model, maxTokens, provider, action, meta, localModelPricing)
+  return openaiComplete(prompt, system, model, maxTokens, provider, action, meta, localModelPricing, config)
 }
 
 export async function llmStream(
@@ -608,7 +658,7 @@ export async function llmStream(
   const localModelPricing = config.localModelPricing
 
   if (provider === 'anthropic') {
-    return anthropicStream(prompt, system, model, maxTokens, onText, action, meta, localModelPricing)
+    return anthropicStream(prompt, system, model, maxTokens, onText, action, meta, localModelPricing, config)
   }
-  return openaiStream(prompt, system, model, maxTokens, provider, onText, action, meta, localModelPricing)
+  return openaiStream(prompt, system, model, maxTokens, provider, onText, action, meta, localModelPricing, config)
 }

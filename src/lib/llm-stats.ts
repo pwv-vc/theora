@@ -111,6 +111,16 @@ export interface LlmCallLog {
   durationMs: number
   estimatedCostUsd: number
   costSource: CostSource
+  /** When context compression ran on the user message or transcript */
+  contextCompressionProvider?: string
+  contextCompressionPreChars?: number
+  contextCompressionPostChars?: number
+  /** Whisper: source file size in bytes */
+  transcribeInputBytes?: number
+  /** Whisper: media duration from ffprobe (seconds) */
+  transcribeDurationSec?: number
+  /** Whisper: character length of returned transcript (after optional compression) */
+  transcribeOutputChars?: number
 }
 
 export interface StatsSummary {

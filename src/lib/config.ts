@@ -23,6 +23,37 @@ export interface LocalModelPricingConfig {
   hardwareUsdPerHour: number
 }
 
+export type ContextCompressionProvider =
+  | 'none'
+  | 'token-company'
+  | 'caveman-nlp'
+  | 'caveman-mlm'
+  | 'caveman-llm'
+
+export interface ContextCompressionCavemanConfig {
+  /** Absolute path to a clone of https://github.com/wilpel/caveman-compression */
+  root: string
+  /** NLP variant: spaCy language code (e.g. en, es) */
+  language?: string
+  /** MLM variant: top-k predictability threshold */
+  mlmK?: number
+}
+
+export interface ContextCompressionTokenCompanyConfig {
+  model?: string
+  aggressiveness?: number
+}
+
+export interface ContextCompressionConfig {
+  provider?: ContextCompressionProvider
+  /** Skip compression when input is shorter than this (Unicode code units). Default 4096. */
+  minChars?: number
+  /** Run the same compressor on Whisper transcript text before returning. Default false. */
+  applyToTranscripts?: boolean
+  caveman?: ContextCompressionCavemanConfig
+  tokenCompany?: ContextCompressionTokenCompanyConfig
+}
+
 export interface KbConfig {
   name: string
   created: string
@@ -48,6 +79,8 @@ export interface KbConfig {
   whisperPreprocessAudio?: boolean
   whisperAudioTargetSampleRateHz?: number
   whisperAudioMono?: boolean
+  /** Optional user-message / transcript compression before LLM or after Whisper */
+  contextCompression?: ContextCompressionConfig
 }
 
 const OPENAI_ACTION_MODELS: ModelConfig = {
