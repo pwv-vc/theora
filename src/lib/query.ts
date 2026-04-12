@@ -34,12 +34,12 @@ export async function findRelevantArticles(
   const response = await llm(
     `Given this question: "${question}"
 
-And these wiki articles (with their extracted entities like people, organizations, events, dates, products, and places):
+And these wiki articles (with their extracted entities like people, actors, organizations, tv-series, movies, events, dates, products, and places):
 ${articleList}
 
 Return a JSON array of the indices (numbers) of the most relevant articles to answer this question. Consider both the title/tags and the extracted entities when determining relevance. Select up to 15 articles. Return only the JSON array, no other text.`,
     {
-      system: 'You are a search relevance ranker. Consider article titles, tags, and extracted entities (people, organizations, dates, events) when ranking. Return only a JSON array of numbers.',
+      system: 'You are a search relevance ranker. Consider article titles, tags, and extracted entities (people, actors, organizations, tv-series, movies, dates, events, products, places) when ranking. Return only a JSON array of numbers.',
       maxTokens: 256,
       action: 'rank',
     },

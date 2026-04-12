@@ -134,9 +134,10 @@ async function promptMapOptions(
     if (p.isCancel(tag)) return null
     center = { type: 'tag', tag }
   } else {
-    const ot = await p.select({
+    const ot = await p.select<OntologyType>({
       message: 'Ontology type',
-      options: ONTOLOGY_TYPES.map((t) => ({ value: t, label: t })),
+      // Clack infers a fixed union per option value; dynamic list from ONTOLOGY_TYPES needs a loose cast.
+      options: ONTOLOGY_TYPES.map((t) => ({ value: t, label: t })) as any,
     })
     if (p.isCancel(ot)) return null
     const concepts = articles.filter((a) => {

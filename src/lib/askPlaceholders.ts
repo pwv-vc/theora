@@ -38,13 +38,39 @@ function ontologyList(fm: Record<string, unknown>): string[] {
 function introForConceptArticle(fm: Record<string, unknown>): IntroFn {
   const o = ontologyList(fm)
 
-  if (o.includes('person')) return (s) => `Who is ${s}?`
+  if (
+    o.includes('person') ||
+    o.includes('actor') ||
+    o.includes('musician') ||
+    o.includes('visual-artist')
+  ) {
+    return (s) => `Who is ${s}?`
+  }
   if (o.includes('place')) return (s) => `Where is ${s}?`
+  if (o.includes('educational-organization') || o.includes('government-organization')) {
+    return (s) => `What is ${s}?`
+  }
   if (o.includes('organization')) return (s) => `What does ${s} do?`
-  if (o.includes('product')) return (s) => `What is ${s}?`
-  if (o.includes('event')) return (s) => `Tell me about ${s}`
+  if (o.includes('sports-team')) return (s) => `Who are ${s}?`
+  if (o.includes('recipe')) return (s) => `How do you make ${s}?`
+  if (o.includes('dataset')) return (s) => `What does the ${s} dataset cover?`
   if (o.includes('technology')) return (s) => `How does ${s} work?`
-  if (o.includes('creative-work')) return (s) => `What is ${s}?`
+  if (o.includes('event')) return (s) => `Tell me about ${s}`
+  if (o.includes('product')) return (s) => `What is ${s}?`
+  if (o.includes('website')) return (s) => `What is ${s}?`
+  if (o.includes('medical-condition') || o.includes('drug')) return (s) => `What is ${s}?`
+  if (o.includes('scholarly-article')) return (s) => `What is ${s}?`
+  if (o.includes('tv-series')) return (s) => `Tell me about the TV series ${s}`
+  if (
+    o.includes('movie') ||
+    o.includes('music-album') ||
+    o.includes('song') ||
+    o.includes('book') ||
+    o.includes('visual-artwork') ||
+    o.includes('creative-work')
+  ) {
+    return (s) => `What is ${s}?`
+  }
 
   return Math.random() < 0.5
     ? (s) => `Explain ${s}`
@@ -57,7 +83,9 @@ function introForEntityCategory(category: string): IntroFn | null {
 
   if (c === 'dates') return null
 
-  if (c === 'people' || c === 'person') return (s) => `Who is ${s}?`
+  if (c === 'people' || c === 'person' || c === 'actors' || c === 'actor') {
+    return (s) => `Who is ${s}?`
+  }
   if (c === 'places' || c === 'place' || c === 'locations' || c === 'location')
     return (s) => `Where is ${s}?`
   if (
@@ -68,6 +96,12 @@ function introForEntityCategory(category: string): IntroFn | null {
   )
     return (s) => `What does ${s} do?`
   if (c === 'products' || c === 'product') return (s) => `What is ${s}?`
+  if (c === 'tv-series' || c === 'tv_series' || c === 'tvshows' || c === 'tv-shows') {
+    return (s) => `Tell me about the TV series ${s}`
+  }
+  if (c === 'movies' || c === 'movie' || c === 'films' || c === 'film') {
+    return (s) => `What is the film ${s}?`
+  }
   if (c === 'events' || c === 'event') return (s) => `Tell me about ${s}`
 
   if (c.includes('tech')) return (s) => `How does ${s} work?`

@@ -9,7 +9,15 @@ import { PDFParse } from 'pdf-parse'
 import { kbPaths, safeJoin } from './paths.js'
 import { llm, llmVision, transcribeAudioFile } from './llm.js'
 import type { ImageInput } from './llm.js'
-import { listWikiArticles, writeArticle, sanitizeLlmOutput, readWikiIndex, getWikiStats, ONTOLOGY_TYPES, ONTOLOGY_SCHEMA_URLS } from './wiki.js'
+import {
+  listWikiArticles,
+  writeArticle,
+  sanitizeLlmOutput,
+  readWikiIndex,
+  getWikiStats,
+  ONTOLOGY_TYPES,
+  buildConceptOntologyExtractionGuidance,
+} from './wiki.js'
 import type { ArticleMeta, OntologyType } from './wiki.js'
 import { getTagForFile, getUrlForFile } from './manifest.js'
 import { slugify, titleFromFilename, normalizeTag } from './utils.js'
@@ -903,14 +911,7 @@ export async function extractConcepts(root: string, concurrency?: number, onProg
 
 ${summaries}
 
-Return a JSON array of objects with:
-- "slug": kebab-case filename
-- "title": human-readable title
-- "description": one-sentence description
-- "related_sources": array of source slugs that mention this concept
-- "ontology": array of schema.org-aligned types that apply to this concept — pick one or more:
-${ONTOLOGY_TYPES.map(t => `  "${t}" (${ONTOLOGY_SCHEMA_URLS[t as OntologyType]})`).join('\n')}
-  A concept can have multiple types (e.g. a person who is also an author: ["person", "creative-work"])
+${buildConceptOntologyExtractionGuidance()}
 
 Only return the JSON array, no other text. Identify ${conceptMin}-${conceptMax} of the most important concepts.`,
     { system: 'You are a knowledge base organizer. Extract key concepts from source summaries. Return valid JSON only.', maxTokens: 4096, action: 'concepts' },
