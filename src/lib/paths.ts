@@ -96,5 +96,6 @@ export function kbPaths(root: string) {
     configFile: join(root, '.theora', 'config.json'),
     theme: join(root, '.theora', 'theme.css'),
     llmLog: join(root, '.theora', 'llm-calls.jsonl'),
+    searchIndex: join(root, '.theora', 'search-index.json'),
   }
 }

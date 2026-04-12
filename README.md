@@ -351,21 +351,30 @@ Images are especially useful for diagrams, charts, screenshots, and figures from
 theora compile
 ```
 
-The LLM reads every new source in `raw/`, writes a summary article for each, extracts key concepts into their own articles with backlinks, and rebuilds the master index. Run it again after ingesting new sources — it only processes what's new.
+The LLM reads every new source in `raw/`, writes a summary article for each, extracts key concepts into their own articles with backlinks, and rebuilds **`wiki/index.md`** plus the **lexical search index** (`.theora/search-index.json`). Run it again after ingesting new sources — it only processes what's new.
 
 ```bash
 theora compile --sources-only    # skip concept extraction
-theora compile --source foo.md   # recompile one raw source, skip concepts, rebuild the index
+theora compile --source foo.md   # recompile one raw source, skip concepts; rebuild wiki index + search index
 theora compile --concepts-only   # delete and regenerate all concept articles from existing sources
-theora compile --reindex         # just rebuild the index
+theora compile --reindex         # rebuild wiki/index.md and .theora/search-index.json only (no LLM)
 theora compile --force           # delete existing articles and recompile everything from scratch
 theora compile --concurrency 5   # run 5 parallel LLM calls (faster, uses more API quota)
 theora compile --concurrency 1   # sequential (useful for debugging or strict rate limits)
 ```
 
+#### Reindexing
+
+After **every** compile path that finishes successfully (full compile, `--sources-only`, `--source`, `--concepts-only`, or `--reindex` alone), Theora rebuilds:
+
+1. **`wiki/index.md`** — master Obsidian-style index: sources, concepts, optional mind maps / previous-queries sections, and the **Tags** grouping.
+2. **`.theora/search-index.json`** — persisted **BM25** inverted index used by CLI `theora search` and the web wiki **Search** page.
+
+Reindexing does **not** call the LLM; it only walks markdown on disk. Use **`theora compile --reindex`** when you edited wiki or `output/` files by hand, added mind maps or filed answers, or search/index feel out of date — without re-running source or concept passes.
+
 Use `--concepts-only` to regenerate all concept articles without re-summarizing sources — useful after adding new sources or when you want concepts to reflect the latest wiki content. It clears `wiki/concepts/` and re-extracts from your already-compiled source articles.
 
-Use `--source <raw-file>` when you want to refresh exactly one raw source article without running a full source pass. It accepts either a bare filename (for example `foo.md`) or a path relative to `raw/` (for example `tag/foo.md`), overwrites the matching `wiki/sources/<slug>.md`, refreshes source-specific companion artifacts, skips concept extraction, and still rebuilds `wiki/index.md`. It is intentionally incompatible with `--force`, `--concepts-only`, and `--reindex`.
+Use `--source <raw-file>` when you want to refresh exactly one raw source article without running a full source pass. It accepts either a bare filename (for example `foo.md`) or a path relative to `raw/` (for example `tag/foo.md`), overwrites the matching `wiki/sources/<slug>.md`, refreshes source-specific companion artifacts, skips concept extraction, and still rebuilds **`wiki/index.md`** and **`.theora/search-index.json`**. It is intentionally incompatible with `--force`, `--concepts-only`, and `--reindex`.
 
 Use `--force` when you want to reprocess all sources with updated prompts or settings. It clears `wiki/sources/` and `wiki/concepts/` then runs a full compile. Your `raw/` files are never touched.
 
@@ -438,7 +447,7 @@ See [Charts](#charts) below.
 
 ### Search
 
-Full-text search across every compiled wiki article — sources and concepts:
+**Lexical search** over compiled markdown: everything under **`wiki/`** (sources and concepts) and **`output/`** (filed answers, mind maps, and other generated markdown). This is **not** semantic Q&A — for that, use **`theora ask`**, which ranks articles with an LLM and synthesizes an answer.
 
 ```bash
 theora search "attention mechanism"
@@ -447,15 +456,21 @@ theora search "encoder" --tag transformers    # filter by tag
 theora search anything --tags                 # list all tags
 ```
 
-Search reads every article in `wiki/` and scores them using term frequency with bonuses:
+The **web wiki** (`theora web`) exposes the same engine on the **Search** page.
 
-| Signal                                       | Score    |
-| -------------------------------------------- | -------- |
-| Each occurrence of the term in title or body | +1       |
-| Term appears in the article title            | +5 bonus |
-| A tag matches a query term                   | +3 bonus |
+#### How search works
 
-Results are ranked by score and show the article title, tags, file path, score, and a snippet of the first matching line.
+1. **Index** — On each [reindex](#reindexing) (including any full compile that finishes with index rebuild), Theora writes **`.theora/search-index.json`**: stemmed tokens, per-field term counts, and BM25 corpus statistics. If that file is missing (for example an older KB created before this feature), run **`theora compile --reindex`** once.
+
+2. **Tokenization** — Queries and documents are split on Unicode word boundaries; **English Porter stemming** is applied by default (configurable; changing **`search.stemming`** requires a reindex).
+
+3. **Ranking** — **BM25** is computed separately for **title**, **body**, and **tags**, then combined using configurable **`search.fieldWeights`**. The combined score is multiplied by **recency** (from front matter `date`, `date_compiled`, or file mtime) and by **`search.outputWeight`** for articles under **`output/`**, so filed answers do not drown out sources and concepts.
+
+4. **Snippets** — The UI shows a short excerpt from the line that best matches the query stems; literal highlighting uses **escaped** substrings so characters like `$` or `(` do not break matching.
+
+5. **“Did you mean”** — If there are no hits or the top score is below **`search.weakScoreThreshold`**, optional **fuzzy** suggestions (Levenshtein on title/tag vocabulary) propose an alternate query. The CLI prints a line; the web UI links to the suggested search.
+
+Optional tuning lives under **`search`** in **`.theora/config.json`** (merged with defaults on read). Useful keys: **`fieldWeights`** (`title`, `body`, `tags`), **`outputWeight`**, **`recencyHalfLifeDays`** (`0` disables recency decay), **`stemming`**, **`fuzzy`**, **`fuzzyMaxEdits`**, **`fuzzyMinTokenLength`**, **`weakScoreThreshold`**.
 
 Use `--tag` to pre-filter articles before scoring — only articles with that tag are searched:
 
@@ -510,7 +525,7 @@ theora map --overview --depth 4 --max-nodes 64
 theora map --around my-slug --expand-level 3 --graph-json
 ```
 
-Saved files use YAML front matter like other filed output: **`title`** (`{focus} Mind Map`), **`type: mind-map`**, **`date`**, and optional **`markmap`** settings. They appear in the wiki listing and search like other `output/` articles. After adding or regenerating maps, run **`theora compile --reindex`** so `wiki/index.md` picks them up under **Mind maps** (separate from **Previous Queries**).
+Saved files use YAML front matter like other filed output: **`title`** (`{focus} Mind Map`), **`type: mind-map`**, **`date`**, and optional **`markmap`** settings. They appear in the wiki listing and search like other `output/` articles. After adding or regenerating maps, run **`theora compile --reindex`** so **`wiki/index.md`** lists them under **Mind maps** (separate from **Previous Queries**) and **`.theora/search-index.json`** includes them for search.
 
 The web wiki exposes the same graph as an interactive view at **`/wiki/map`**.
 
@@ -629,7 +644,12 @@ Or edit the KB-local `.theora/config.json` directly:
   "compileConcurrency": 3,
   "conceptSummaryChars": 3000,
   "conceptMin": 5,
-  "conceptMax": 10
+  "conceptMax": 10,
+  "search": {
+    "fieldWeights": { "title": 2.5, "body": 1, "tags": 1.5 },
+    "outputWeight": 0.75,
+    "recencyHalfLifeDays": 180
+  }
 }
 ```
 
@@ -639,6 +659,7 @@ Or edit the KB-local `.theora/config.json` directly:
 | `conceptSummaryChars` | `3000`  | Characters of each source article passed to the concept identification pass — higher values give the LLM more context but increase token usage |
 | `conceptMin`          | `5`     | Minimum number of concepts to extract per compile run                                                                                          |
 | `conceptMax`          | `10`    | Maximum number of concepts to extract per compile run                                                                                          |
+| `search`              | (see defaults) | Optional BM25 / snippet tuning — full keys and behavior in [Search](#search)                                                                  |
 
 ### Per-Action Model Defaults
 
@@ -697,7 +718,7 @@ Tags are the cross-cutting links in your wiki. The directory structure gives you
 
 - **Filter search results**: `theora search "performance" --tag transformers` — only show results tagged "transformers"
 - **See all tags**: `theora search anything --tags` — list every tag in the wiki
-- **Index grouping**: `theora compile --reindex` rebuilds the master index with a Tags section showing which articles share each tag
+- **Index grouping**: `theora compile --reindex` rebuilds **`wiki/index.md`** (including the Tags section) and the **search index** so tags and articles stay aligned
 - **Better Q&A**: when you `theora ask` a question, the LLM sees tags in the index and uses them to find relevant articles faster
 
 ### When to use tags

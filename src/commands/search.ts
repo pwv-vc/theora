@@ -29,20 +29,40 @@ export const searchCommand = new Command('search')
     const query = queryParts.join(' ')
     const limit = parseInt(options.limit, 10)
 
-    const results = searchArticles(query, options.tag).slice(0, limit)
-
-    if (results.length === 0) {
-      console.log(pc.yellow(`No results found${options.tag ? ` for tag "${options.tag}"` : ''}.`))
+    let response: ReturnType<typeof searchArticles>
+    try {
+      response = searchArticles(query, options.tag)
+    } catch (e) {
+      console.log(pc.yellow(e instanceof Error ? e.message : String(e)))
       return
     }
 
-    const tagNote = options.tag ? ` (tag: ${options.tag})` : ''
-    console.log(pc.gray(`${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"${tagNote}\n`))
+    const { results, suggestedQuery } = response
+    const limited = results.slice(0, limit)
 
-    for (const result of results) {
+    if (limited.length === 0) {
+      console.log(pc.yellow(`No results found${options.tag ? ` for tag "${options.tag}"` : ''}.`))
+      if (suggestedQuery && suggestedQuery.trim().toLowerCase() !== query.trim().toLowerCase()) {
+        console.log(pc.cyan(`Did you mean: ${suggestedQuery}`))
+      }
+      return
+    }
+
+    if (
+      suggestedQuery &&
+      suggestedQuery.trim().toLowerCase() !== query.trim().toLowerCase()
+    ) {
+      console.log(pc.cyan(`Did you mean: ${suggestedQuery}`))
+    }
+
+    const tagNote = options.tag ? ` (tag: ${options.tag})` : ''
+    console.log(pc.gray(`${limited.length} result${limited.length !== 1 ? 's' : ''} for "${query}"${tagNote}\n`))
+
+    for (const result of limited) {
       const tagStr = result.tags.length > 0 ? ` ${pc.cyan(result.tags.join(', '))}` : ''
+      const scoreLabel = Number.isFinite(result.score) ? result.score.toFixed(3) : String(result.score)
       console.log(`  ${pc.white(result.title)}${tagStr}`)
-      console.log(`  ${pc.gray(result.path)} ${pc.gray(`(score: ${result.score})`)}`)
+      console.log(`  ${pc.gray(result.path)} ${pc.gray(`(score: ${scoreLabel})`)}`)
       console.log(`  ${pc.dim(result.snippet)}`)
       console.log()
     }

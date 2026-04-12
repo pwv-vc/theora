@@ -13,7 +13,8 @@ import { listWikiArticles, writeArticle, sanitizeLlmOutput, readWikiIndex, getWi
 import type { ArticleMeta, OntologyType } from './wiki.js'
 import { getTagForFile, getUrlForFile } from './manifest.js'
 import { slugify, titleFromFilename, normalizeTag } from './utils.js'
-import { readConfig } from './config.js'
+import { readConfig, readConfigAtRoot } from './config.js'
+import { buildSearchIndex } from './searchIndex.js'
 import {
   COMPILE_SYSTEM,
   buildSourcePrompt,
@@ -1088,6 +1089,10 @@ ${mindMaps.length > 0 ? `\n## Mind maps (${mindMaps.length})\n\n${mindMaps.map(a
 `
 
   writeFileSync(paths.wikiIndex, index)
+
+  const searchOpts = readConfigAtRoot(root).search
+  buildSearchIndex(root, articles, { stemming: searchOpts.stemming })
+
   if (spinner) spinner.succeed('Index rebuilt')
   else onProgress?.('✓ Index rebuilt')
 }

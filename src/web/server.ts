@@ -527,8 +527,20 @@ export function startServer(port: number): void {
       return c.html('<div></div>')
     }
 
-    const results = searchArticles(q, tag || undefined).slice(0, 20)
-    return c.html(SearchResults({ results, q, tag }).toString())
+    try {
+      const { results, suggestedQuery } = searchArticles(q, tag || undefined)
+      return c.html(
+        SearchResults({
+          results: results.slice(0, 20),
+          q,
+          tag,
+          suggestedQuery,
+        }).toString(),
+      )
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Search failed.'
+      return c.html(`<div class="text-amber-600 text-sm py-4">${escapeHtml(msg)}</div>`)
+    }
   })
 
   app.get('/ask', (c) => {

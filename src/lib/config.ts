@@ -23,6 +23,38 @@ export interface LocalModelPricingConfig {
   hardwareUsdPerHour: number
 }
 
+export interface SearchFieldWeights {
+  title: number
+  body: number
+  tags: number
+}
+
+export interface SearchTuningConfig {
+  fieldWeights: SearchFieldWeights
+  /** Multiplier applied to BM25 score for articles under `output/` (0–1]. */
+  outputWeight: number
+  /** Half-life in days for recency decay; `0` disables recency (multiplier 1). */
+  recencyHalfLifeDays: number
+  /** When false, the search index uses raw tokens (rebuild after changing). */
+  stemming: boolean
+  fuzzy: boolean
+  fuzzyMaxEdits: number
+  fuzzyMinTokenLength: number
+  /** Suggest alternate query when top score is below this (or no hits). */
+  weakScoreThreshold: number
+}
+
+export const DEFAULT_SEARCH_TUNING: SearchTuningConfig = {
+  fieldWeights: { title: 2.5, body: 1, tags: 1.5 },
+  outputWeight: 0.75,
+  recencyHalfLifeDays: 180,
+  stemming: true,
+  fuzzy: true,
+  fuzzyMaxEdits: 2,
+  fuzzyMinTokenLength: 3,
+  weakScoreThreshold: 0.001,
+}
+
 export interface KbConfig {
   name: string
   created: string
@@ -34,6 +66,7 @@ export interface KbConfig {
   conceptSummaryChars: number
   conceptMin: number
   conceptMax: number
+  search: SearchTuningConfig
   /** Max bytes for audio, images, and non-video media ingest */
   mediaMaxFileBytes?: number
   /** Max bytes for video files (local + URL video/*); default 100 MiB */
@@ -129,6 +162,22 @@ export const DEFAULT_MEDIA_CONFIG: Pick<
   whisperAudioMono: true,
 }
 
+function mergeSearch(raw: unknown): SearchTuningConfig {
+  if (!raw || typeof raw !== 'object') {
+    return { ...DEFAULT_SEARCH_TUNING, fieldWeights: { ...DEFAULT_SEARCH_TUNING.fieldWeights } }
+  }
+  const r = raw as Record<string, unknown>
+  const fw = r.fieldWeights && typeof r.fieldWeights === 'object' ? (r.fieldWeights as SearchFieldWeights) : {}
+  return {
+    ...DEFAULT_SEARCH_TUNING,
+    ...r,
+    fieldWeights: {
+      ...DEFAULT_SEARCH_TUNING.fieldWeights,
+      ...fw,
+    },
+  } as SearchTuningConfig
+}
+
 const DEFAULT_CONFIG: KbConfig = {
   name: 'knowledge-base',
   created: new Date().toISOString(),
@@ -140,6 +189,7 @@ const DEFAULT_CONFIG: KbConfig = {
   conceptSummaryChars: 3000,
   conceptMin: 5,
   conceptMax: 10,
+  search: DEFAULT_SEARCH_TUNING,
   ...DEFAULT_MEDIA_CONFIG,
 }
 
@@ -171,7 +221,14 @@ export function readConfigAtRoot(root: string): KbConfig {
   for (const key of Object.keys(DEFAULT_MEDIA_CONFIG) as (keyof typeof DEFAULT_MEDIA_CONFIG)[]) {
     if (raw[key] !== undefined) (mediaMerged as Record<string, unknown>)[key] = raw[key]
   }
-  return { ...DEFAULT_CONFIG, ...raw, ...mediaMerged, models: mergedModels, localModelPricing }
+  return {
+    ...DEFAULT_CONFIG,
+    ...raw,
+    ...mediaMerged,
+    models: mergedModels,
+    localModelPricing,
+    search: mergeSearch(raw.search),
+  }
 }
 
 export function writeConfig(config: KbConfig): void {
