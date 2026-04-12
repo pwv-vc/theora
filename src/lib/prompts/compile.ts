@@ -25,7 +25,7 @@ const SOURCE_SECTIONS = `Write a wiki article with these exact sections:
 2–3 sentences capturing the core argument, finding, or purpose of this source. Include the document date or reporting period if identifiable.
 
 ## Date & Period
-The date this document was written or published, and the time period it covers (e.g. "Published: April 2024 — covers Q1 2024 results"). If not explicitly stated, estimate from context and note the uncertainty.
+The date this document was written or published, and the time period it covers (e.g. "Published: April 2024 — covers Q1 2024 results"). If not explicitly stated, say unknown rather than guessing.
 
 ## Key Points
 Bullet list of the most important facts, findings, or arguments — be specific, include numbers and data. For every data point, note the time period it refers to (e.g. "Revenue of $2.4M in Q1 2024").
@@ -42,11 +42,12 @@ Specific data points, quotes, examples, or evidence worth preserving verbatim or
 ## Related Concepts
 Topics, ideas, or domains this source connects to (for future cross-referencing).`
 
-export function buildSourcePrompt(file: string, content: string, ingestTag: string | null): string {
+export function buildSourcePrompt(file: string, content: string, ingestTag: string | null, sourceMetadata?: string): string {
   return `Compile this source document into a wiki article.
 
 Source file: ${file}
 ${ingestTag ? `User tag: ${ingestTag}` : ''}
+${sourceMetadata ? `Known source metadata:\n${sourceMetadata}\n\nUse the known metadata above exactly as provided. Do not override it or infer a different publish date, channel, channel id, video id, URL, thumbnail URL, description, or duration.` : ''}
 
 <source_content>
 ${content}

@@ -40,3 +40,8 @@ export function getTagForFile(fileName: string): string | null {
   const entries = readManifest()
   return entries.find(e => e.name === fileName)?.tag ?? null
 }
+
+export function getUrlForFile(fileName: string): string | null {
+  const entries = readManifest()
+  return entries.find(e => e.name === fileName)?.url ?? null
+}

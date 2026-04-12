@@ -85,7 +85,7 @@ export async function extractAudioForWhisper(
     args.push('-ac', '1')
   }
   args.push('-ar', String(cfg.whisperAudioTargetSampleRateHz ?? 16000), '-f', 'wav', outWavPath)
-  await execFileAsync('ffmpeg', args, { stdio: 'ignore' })
+  await execFileAsync('ffmpeg', args)
 }
 
 /** Evenly spaced sample times in seconds (see plan §3.5) */
@@ -141,24 +141,20 @@ export async function extractVisionFramesJpeg(
     const t = timesSec[i]!
     onFrame?.(i + 1, total)
     const outPath = join(outDir, `frame-${String(i).padStart(3, '0')}.jpg`)
-    await execFileAsync(
-      'ffmpeg',
-      [
-        '-y',
-        '-ss',
-        String(t),
-        '-i',
-        videoPath,
-        '-frames:v',
-        '1',
-        '-vf',
-        vf,
-        '-q:v',
-        q,
-        outPath,
-      ],
-      { stdio: 'ignore' },
-    )
+    await execFileAsync('ffmpeg', [
+      '-y',
+      '-ss',
+      String(t),
+      '-i',
+      videoPath,
+      '-frames:v',
+      '1',
+      '-vf',
+      vf,
+      '-q:v',
+      q,
+      outPath,
+    ])
     results.push({ path: outPath, timeSec: t })
   }
   return results

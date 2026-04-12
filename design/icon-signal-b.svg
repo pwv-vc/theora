@@ -1,0 +1,19 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="sigb-rd" clipPathUnits="userSpaceOnUse">
+      <rect x="15" y="15" width="34" height="34" rx="11" transform="rotate(45 32 32)"/>
+    </clipPath>
+  </defs>
+  <rect width="64" height="64" fill="#050508"/>
+  <rect width="64" height="64" fill="#141428" clip-path="url(#sigb-rd)"/>
+  <g clip-path="url(#sigb-rd)">
+    <rect x="0" y="8" width="64" height="10" fill="#ff00aa"/>
+    <rect x="0" y="18" width="64" height="4" fill="#050508"/>
+    <rect x="0" y="22" width="64" height="10" fill="#00ff00"/>
+    <rect x="0" y="32" width="64" height="4" fill="#050508"/>
+    <rect x="0" y="36" width="64" height="10" fill="#00bbff"/>
+    <rect x="0" y="46" width="64" height="4" fill="#050508"/>
+    <rect x="0" y="50" width="64" height="10" fill="#ff00aa"/>
+  </g>
+  <rect x="15" y="15" width="34" height="34" rx="11" transform="rotate(45 32 32)" fill="none" stroke="#050508" stroke-width="2"/>
+</svg>

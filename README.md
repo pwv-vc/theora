@@ -2,15 +2,15 @@
 
 <img width="1536" height="1024" alt="theora-card" src="https://github.com/user-attachments/assets/7586a5ee-e673-478c-8c6a-13f9a2fb1579" />
 
-> *"She's the one who actually knows how everything works."*
+> _"She's the one who actually knows how everything works."_
 
 LLM-powered knowledge base that turns raw research into a living wiki.
 
-Dump research into a folder. Let the model organise it into a wiki. Ask questions. The answers get filed back in. Every query makes the wiki smarter.
+Ingest research into a folder. Let the model organise it into a wiki. Extract concepts and links between sources. Ask questions. The answers get filed back in. Every query makes the wiki smarter.
 
 ## The Name
 
-**Theora** is named after Theora Jones — network controller and systems operator at Network 23 in *Max Headroom: 20 Minutes into the Future*. While others exploit the media landscape around her, Theora is the one who understands the infrastructure, keeps things running, and bridges systems and people. She's calm, competent, and grounded in a chaotic world.
+**Theora** is named after Theora Jones — network controller and systems operator at Network 23 in _Max Headroom: 20 Minutes into the Future_. While others exploit the media landscape around her, Theora is the one who understands the infrastructure, keeps things running, and bridges systems and people. She's calm, competent, and grounded in a chaotic world.
 
 It's also short for **the oracle** — a knowledge base that doesn't just store what you put in, but synthesises, connects, and answers. The more you feed it, the more it knows.
 
@@ -21,8 +21,6 @@ It's also short for **the oracle** — a knowledge base that doesn't just store 
 Theora was directly inspired by two X posts: [@jumperz](https://x.com/jumperz/status/2039826228224430323?s=20) and Andrej Karpathy's viral ["LLM Knowledge Bases"](https://x.com/karpathy/status/2039805659525644595) post.
 
 Karpathy described a shift away from using LLMs primarily to generate code, and toward using them to compile and maintain personal knowledge bases. The idea: dump raw source material — articles, papers, repos, datasets, images — into a `raw/` directory, then have an LLM incrementally "compile" a structured wiki of interlinked markdown files with summaries, backlinks, and concept articles. The LLM writes and maintains everything; you rarely touch the wiki directly. Once the wiki is large enough, you can ask complex questions against it, get synthesized answers, and file those answers back in — so every query compounds the knowledge base. He also described linting passes where the LLM scans for inconsistencies and suggests new articles, and output formats like Marp slides and matplotlib charts. Karpathy noted: "I think there is room here for an incredible new product instead of a hacky collection of scripts." Theora is that product.
-
-> Built with [CommandCode](https://commandcode.ai)
 
 ## Why This Works
 
@@ -140,6 +138,14 @@ pip3 install matplotlib
 
 Needed for `--output chart`. Requires Python 3 (`brew install python` if not installed).
 
+**Optional — YouTube captions-first ingest**
+
+```bash
+brew install yt-dlp
+```
+
+Needed for `theora ingest <youtube-url>`. Theora fetches captions and metadata only, then saves a transcript-backed markdown source into `raw/` without downloading the video file.
+
 ### Install
 
 ```bash
@@ -188,6 +194,7 @@ Theora loads environment files in this order:
 Later files override earlier ones. Unreadable `.env` files are skipped.
 
 This means you can:
+
 - Use `~/.theora/.env` for your main API keys (set once, use everywhere)
 - Override with a KB-specific `.env` for special cases
 - Check `theora settings` to see which .env file is active
@@ -255,6 +262,13 @@ theora ingest https://arxiv.org/abs/2310.01234 --tag transformers
 theora ingest https://example.com/diagram.png --tag architecture
 ```
 
+YouTube URLs take a captions-first path: Theora uses `yt-dlp` to fetch metadata plus captions, then stores the transcript as a normal markdown source in `raw/` so compile can treat it like any other text document:
+
+```bash
+theora ingest https://www.youtube.com/watch?v=VIDEO_ID --tag research
+theora compile
+```
+
 You can mix files, directories, and URLs in a single command:
 
 ```bash
@@ -275,6 +289,7 @@ Supported file types:
 | URL (page) | `http://` `https://` | Fetched as HTML, compiled as text |
 | URL (image) | `http://` `https://` | Downloaded, analyzed via LLM vision |
 | URL (audio/video) | `http://` `https://` | Streamed to disk; video uses `videoMaxFileBytes`, other media `mediaMaxFileBytes` (same rules as local ingest) |
+| URL (YouTube) | `https://www.youtube.com/watch?...` `https://youtu.be/...` | Requires **yt-dlp**. Fetches metadata + captions only, then saves `raw/youtube-<video-id>.md` without downloading video |
 
 **Whisper and API keys:** Transcription always uses the **OpenAI** audio API (`models.transcribe`, default `whisper-1`). Set `OPENAI_API_KEY`, or use `OPENAI_TRANSCRIBE_API_KEY` if you want a separate key. Chat/vision still follow `provider` in `.theora/config.json` (e.g. Anthropic for compile/vision).
 
@@ -282,7 +297,7 @@ Supported file types:
 
 #### Audio and video: ingest and compile flows
 
-**Ingest** copies or streams files into `raw/` (same extensions as in the table above). Size limits depend on type: audio uses `mediaMaxFileBytes`; video files and `video/*` URL responses use `videoMaxFileBytes`. URL ingest runs an SSRF guard before fetch. Companion files produced at compile time (`*.transcript.md`, `{stem}.frames/`) are not separate ingest targets—they are created when you compile.
+**Ingest** copies or streams files into `raw/` (same extensions as in the table above). Size limits depend on type: audio uses `mediaMaxFileBytes`; video files and `video/*` URL responses use `videoMaxFileBytes`. URL ingest runs an SSRF guard before fetch. Supported YouTube URLs are a captions-first exception: Theora shells out to `yt-dlp`, fetches metadata plus captions, and writes a markdown transcript source instead of downloading media. Companion files produced at compile time (`*.transcript.md`, `{stem}.frames/`) are not separate ingest targets—they are created when you compile.
 
 ```mermaid
 flowchart TD
@@ -340,6 +355,7 @@ The LLM reads every new source in `raw/`, writes a summary article for each, ext
 
 ```bash
 theora compile --sources-only    # skip concept extraction
+theora compile --source foo.md   # recompile one raw source, skip concepts, rebuild the index
 theora compile --concepts-only   # delete and regenerate all concept articles from existing sources
 theora compile --reindex         # just rebuild the index
 theora compile --force           # delete existing articles and recompile everything from scratch
@@ -348,6 +364,8 @@ theora compile --concurrency 1   # sequential (useful for debugging or strict ra
 ```
 
 Use `--concepts-only` to regenerate all concept articles without re-summarizing sources — useful after adding new sources or when you want concepts to reflect the latest wiki content. It clears `wiki/concepts/` and re-extracts from your already-compiled source articles.
+
+Use `--source <raw-file>` when you want to refresh exactly one raw source article without running a full source pass. It accepts either a bare filename (for example `foo.md`) or a path relative to `raw/` (for example `tag/foo.md`), overwrites the matching `wiki/sources/<slug>.md`, refreshes source-specific companion artifacts, skips concept extraction, and still rebuilds `wiki/index.md`. It is intentionally incompatible with `--force`, `--concepts-only`, and `--reindex`.
 
 Use `--force` when you want to reprocess all sources with updated prompts or settings. It clears `wiki/sources/` and `wiki/concepts/` then runs a full compile. Your `raw/` files are never touched.
 
@@ -384,7 +402,7 @@ theora ask "what are the scaling challenges?" --tag transformers
 
 **Tier 2 — Prior answers (always included)**
 
-Every answer filed to `output/` is injected into context unconditionally — they bypass the ranker entirely. This is intentional: the ranker only sees titles and paths, not content. A prior answer titled *"what are the main themes?"* would never be ranked as relevant to a different question, even if its content is directly useful. By always including prior answers, every query you've asked compounds into the next one.
+Every answer filed to `output/` is injected into context unconditionally — they bypass the ranker entirely. This is intentional: the ranker only sees titles and paths, not content. A prior answer titled _"what are the main themes?"_ would never be ranked as relevant to a different question, even if its content is directly useful. By always including prior answers, every query you've asked compounds into the next one.
 
 **Scaling note:** The two tiers have different scaling characteristics. Wiki articles scale reasonably well — the ranker caps selection at 15 regardless of how many articles exist. Prior answers don't scale the same way: every single filed answer is always injected in full, unconditionally. At a handful of answers this is fine. At dozens it's manageable. At hundreds, the context window fills up before the LLM even sees your question. If you're doing heavy research with frequent `ask` calls, use `--no-file` for exploratory questions and only file answers that genuinely add durable knowledge. Splitting a large research area across multiple focused knowledge bases also helps — fewer prior answers per KB means more headroom per query.
 
@@ -431,11 +449,11 @@ theora search anything --tags                 # list all tags
 
 Search reads every article in `wiki/` and scores them using term frequency with bonuses:
 
-| Signal | Score |
-|--------|-------|
-| Each occurrence of the term in title or body | +1 |
-| Term appears in the article title | +5 bonus |
-| A tag matches a query term | +3 bonus |
+| Signal                                       | Score    |
+| -------------------------------------------- | -------- |
+| Each occurrence of the term in title or body | +1       |
+| Term appears in the article title            | +5 bonus |
+| A tag matches a query term                   | +3 bonus |
 
 Results are ranked by score and show the article title, tags, file path, score, and a snippet of the first matching line.
 
@@ -450,6 +468,51 @@ Use `--tags` to list every tag in the wiki (no query needed):
 ```bash
 theora search anything --tags
 ```
+
+### Map
+
+`theora map` builds a **focal graph** of your compiled wiki (sources, concepts, tags, entities, and links between them) and writes **[Markmap](https://markmap.js.org/repl)**-compatible markdown under `output/`. No headless browser is involved: you get a `.md` file you can open in Markmap tooling, IDEs, or static viewers.
+
+**Interactive (default in a TTY)** — Run `theora map` with no focus flags. You choose a focal mode (concept, ontology + concept, source, or tag), then depth and max node count.
+
+**Non-interactive** — Supply **exactly one** primary focus so nothing is prompted:
+
+| Flag | Role |
+| ---- | ---- |
+| `--around <slug>` | Center on a wiki article slug (concept, source, or filed `output/` markdown). Slug: lowercase letters, digits, hyphens only (`^[a-z0-9][a-z0-9-]*$`). |
+| `--tag <tag>` | **Without** `--around`: center on that tag. **With** `--around`: keep the article center but only expand through articles that have this tag. |
+| `--entity <key>` | Center on an entity key as stored in front matter: `category:name` (e.g. `person:jane-doe`). |
+| `--overview` | Center on a KB-wide hub graph; root label comes from `name` in `.theora/config.json`. |
+
+Using more than one of `--overview`, `--entity`, `--around`, or tag-as-center (`--tag` without `--around`) is an error.
+
+**Other options**
+
+| Option | Meaning |
+| ------ | ------- |
+| `--ontology <type>` | Restrict which concept articles participate (`person`, `organization`, `place`, `product`, `event`, `creative-work`, `technology`, `concept`). |
+| `--depth <n>` | Article hops from the focal point, 1–8 (default `2`). |
+| `--max-nodes <n>` | Hard cap on graph size, 4–200 (default `48`). |
+| `--expand-level <n>` | Optional Markmap hint `initialExpandLevel` in YAML front matter, 1–8. |
+| `--output <basename>` | Write under `output/` using this basename only (safe join; extension added if omitted). |
+| `--graph-json` | Also write a `.graph.json` next to the diagram. |
+| `--no-interactive` | Never prompt; required in non-TTY environments unless you pass a focus flag above. |
+
+Examples:
+
+```bash
+theora map                                              # TTY: guided focal + depth + max nodes
+theora map --around attention-mechanisms                # article slug
+theora map --around my-concept --tag ml                 # same center, tag-filtered expansion
+theora map --tag architecture                           # center on tag
+theora map --entity person:ada-lovelace
+theora map --overview --depth 4 --max-nodes 64
+theora map --around my-slug --expand-level 3 --graph-json
+```
+
+Saved files use YAML front matter like other filed output: **`title`** (`{focus} Mind Map`), **`type: mind-map`**, **`date`**, and optional **`markmap`** settings. They appear in the wiki listing and search like other `output/` articles. After adding or regenerating maps, run **`theora compile --reindex`** so `wiki/index.md` picks them up under **Mind maps** (separate from **Previous Queries**).
+
+The web wiki exposes the same graph as an interactive view at **`/wiki/map`**.
 
 ### Lint
 
@@ -517,11 +580,11 @@ The `tail` command shows a formatted table of LLM calls with timestamp, action, 
 
 Theora supports multiple LLM providers. OpenAI is the default.
 
-| Provider | Default Model | API Key Variable |
-|----------|--------------|-----------------|
-| `openai` | `gpt-4o` | `OPENAI_API_KEY` |
-| `openai-compatible` | `llama3.1:8b` | `OPENAI_COMPATIBLE_API_KEY` |
-| `anthropic` | `claude-sonnet-4-20250514` | `ANTHROPIC_API_KEY` |
+| Provider            | Default Model              | API Key Variable            |
+| ------------------- | -------------------------- | --------------------------- |
+| `openai`            | `gpt-4o`                   | `OPENAI_API_KEY`            |
+| `openai-compatible` | `llama3.1:8b`              | `OPENAI_COMPATIBLE_API_KEY` |
+| `anthropic`         | `claude-sonnet-4-20250514` | `ANTHROPIC_API_KEY`         |
 
 Set the provider at init time:
 
@@ -570,27 +633,27 @@ Or edit the KB-local `.theora/config.json` directly:
 }
 ```
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `compileConcurrency` | `3` | Parallel LLM calls during compile |
-| `conceptSummaryChars` | `3000` | Characters of each source article passed to the concept identification pass — higher values give the LLM more context but increase token usage |
-| `conceptMin` | `5` | Minimum number of concepts to extract per compile run |
-| `conceptMax` | `10` | Maximum number of concepts to extract per compile run |
+| Key                   | Default | Description                                                                                                                                    |
+| --------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `compileConcurrency`  | `3`     | Parallel LLM calls during compile                                                                                                              |
+| `conceptSummaryChars` | `3000`  | Characters of each source article passed to the concept identification pass — higher values give the LLM more context but increase token usage |
+| `conceptMin`          | `5`     | Minimum number of concepts to extract per compile run                                                                                          |
+| `conceptMax`          | `10`    | Maximum number of concepts to extract per compile run                                                                                          |
 
 ### Per-Action Model Defaults
 
 Each action uses a model optimized for its task. Cheaper models (`gpt-4o-mini`) are used for simpler tasks; full `gpt-4o` is reserved for quality-critical outputs.
 
-| Action | Default Model | Task |
-|--------|---------------|------|
-| `compile` | `gpt-4o-mini` | Summarize text/PDF sources |
-| `vision` | `gpt-4o` | Analyze images (needs vision capabilities) |
-| `concepts` | `gpt-4o-mini` | Extract concept articles |
-| `ask` | `gpt-4o` | Answer questions (quality matters) |
-| `rank` | `gpt-4o-mini` | Rank article relevance (simple task) |
-| `chart` | `gpt-4o` | Generate chart Python code |
-| `slides` | `gpt-4o` | Generate slide decks |
-| `lint` | `gpt-4o-mini` | Suggest improvements |
+| Action     | Default Model | Task                                       |
+| ---------- | ------------- | ------------------------------------------ |
+| `compile`  | `gpt-4o-mini` | Summarize text/PDF sources                 |
+| `vision`   | `gpt-4o`      | Analyze images (needs vision capabilities) |
+| `concepts` | `gpt-4o-mini` | Extract concept articles                   |
+| `ask`      | `gpt-4o`      | Answer questions (quality matters)         |
+| `rank`     | `gpt-4o-mini` | Rank article relevance (simple task)       |
+| `chart`    | `gpt-4o`      | Generate chart Python code                 |
+| `slides`   | `gpt-4o`      | Generate slide decks                       |
+| `lint`     | `gpt-4o-mini` | Suggest improvements                       |
 
 Override any action in your KB-local `.theora/config.json`:
 
@@ -676,6 +739,7 @@ theora ask "give a 10-slide overview of this research area" --output slides
 ```
 
 This produces two files in `output/`:
+
 - `<slug>.pdf` — the final slide deck (if marp-cli is installed)
 - `<slug>.marp.md` — the Marp markdown source (always kept)
 
@@ -695,9 +759,9 @@ This produces two files in `output/`:
   --color-accent: #c0392b;
   --color-fg: #1a1a2e;
   --color-bg: #ffffff;
-  --font-heading: 'Inter', sans-serif;
-  --font-body: 'Inter', sans-serif;
-  --font-code: 'JetBrains Mono', monospace;
+  --font-heading: "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-code: "JetBrains Mono", monospace;
 }
 ```
 
@@ -738,6 +802,7 @@ theora ask "scatter plot of price vs volume" --output chart
 ```
 
 This produces two files in `output/`:
+
 - `<slug>.png` — the rendered chart
 - `<slug>.py` — the Python source (always kept)
 

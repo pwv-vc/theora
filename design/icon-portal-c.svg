@@ -1,0 +1,23 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <mask id="potc-rim">
+      <rect width="64" height="64" fill="white"/>
+      <path d="M 22 18 L 40 18 L 44 22 L 44 44 Q 44 48 40 48 L 22 48 Q 18 48 18 44 L 18 22 Z" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="64" height="64" fill="#050508"/>
+  <g mask="url(#potc-rim)">
+    <rect x="0" y="5" width="64" height="5" fill="#ff00aa"/>
+    <rect x="0" y="12" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="15" width="64" height="5" fill="#00ff00"/>
+    <rect x="0" y="22" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="25" width="64" height="5" fill="#00bbff"/>
+    <rect x="0" y="32" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="35" width="64" height="5" fill="#ff00aa"/>
+    <rect x="0" y="42" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="45" width="64" height="5" fill="#00ff00"/>
+    <rect x="0" y="52" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="55" width="64" height="5" fill="#00bbff"/>
+  </g>
+  <path d="M 22 18 L 40 18 L 44 22 L 44 44 Q 44 48 40 48 L 22 48 Q 18 48 18 44 L 18 22 Z" fill="#e8e8ff" stroke="#141428" stroke-width="1.25"/>
+</svg>

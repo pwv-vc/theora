@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, basename, dirname, extname, relative, sep } from 'node:path'
 import ora from 'ora'
@@ -6,12 +6,12 @@ import pLimit from 'p-limit'
 import pc from 'picocolors'
 import { normalizeLinks } from './wiki.js'
 import { PDFParse } from 'pdf-parse'
-import { kbPaths } from './paths.js'
+import { kbPaths, safeJoin } from './paths.js'
 import { llm, llmVision, transcribeAudioFile } from './llm.js'
 import type { ImageInput } from './llm.js'
-import { listRawFiles, listWikiArticles, writeArticle, sanitizeLlmOutput, readWikiIndex, getWikiStats, ONTOLOGY_TYPES, ONTOLOGY_SCHEMA_URLS } from './wiki.js'
+import { listWikiArticles, writeArticle, sanitizeLlmOutput, readWikiIndex, getWikiStats, ONTOLOGY_TYPES, ONTOLOGY_SCHEMA_URLS } from './wiki.js'
 import type { ArticleMeta, OntologyType } from './wiki.js'
-import { getTagForFile } from './manifest.js'
+import { getTagForFile, getUrlForFile } from './manifest.js'
 import { slugify, titleFromFilename, normalizeTag } from './utils.js'
 import { readConfig } from './config.js'
 import {
@@ -24,6 +24,7 @@ import {
   buildVideoFramePrompt,
 } from './prompts/compile.js'
 import { hasFfmpeg } from './deps.js'
+import { parseYouTubeTranscriptMarkdown, sanitizeExistingYouTubeTranscriptMarkdown } from './youtube.js'
 import {
   computeFrameSchedule,
   extractAudioForWhisper,
@@ -69,6 +70,10 @@ function mergeTags(ingestTag: string | null, llmTags: string[]): string[] {
   return [...set].sort()
 }
 
+function getSourceSlug(filePath: string): string {
+  return slugify(basename(filePath, extname(filePath)))
+}
+
 function getExistingSourceSlugs(root: string): Set<string> {
   const paths = kbPaths(root)
   return new Set(
@@ -78,32 +83,140 @@ function getExistingSourceSlugs(root: string): Set<string> {
   )
 }
 
+function listRawFilesUnder(rawDir: string): string[] {
+  const files: string[] = []
+
+  function walk(dir: string) {
+    if (!existsSync(dir)) return
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name)
+      if (entry.isDirectory()) walk(full)
+      else files.push(full)
+    }
+  }
+
+  walk(rawDir)
+  return files
+}
+
 // --- File compilers ---
+
+function buildYouTubeCompileMetadata(content: string): {
+  articleTitle: string
+  sourceUrl?: string
+  sourcePublishedDate?: string
+  sourceVideoId?: string
+  sourceChannelId?: string
+  sourceThumbnailUrl?: string
+  metadataPrompt: string
+  metadataSection: string
+  datePeriodSection: string
+} | null {
+  const parsed = parseYouTubeTranscriptMarkdown(content)
+  if (!parsed) return null
+
+  const promptLines = [
+    `Title: ${parsed.title}`,
+    `Video ID: ${parsed.videoId ?? 'Unknown'}`,
+    `Channel: ${parsed.channel ?? 'Unknown'}`,
+    `Channel ID: ${parsed.channelId ?? 'Unknown'}`,
+    `Original URL: ${parsed.url ?? 'Unknown'}`,
+    `Thumbnail URL: ${parsed.thumbnailUrl ?? 'Unknown'}`,
+    `Published: ${parsed.publishedDate ?? 'Unknown'}`,
+    `Duration: ${parsed.duration ?? 'Unknown'}`,
+    `Description: ${parsed.description ?? 'Unknown'}`,
+    'Source type: YouTube captions transcript',
+  ]
+
+  const metadataLines = [
+    '## Video Metadata',
+    '',
+    `- Title: ${parsed.title}`,
+    `- Video ID: ${parsed.videoId ?? 'Unknown'}`,
+    `- Channel: ${parsed.channel ?? 'Unknown'}`,
+    `- Channel ID: ${parsed.channelId ?? 'Unknown'}`,
+    `- Published: ${parsed.publishedDate ?? 'Unknown'}`,
+    `- Duration: ${parsed.duration ?? 'Unknown'}`,
+    `- URL: ${parsed.url ?? 'Unknown'}`,
+    `- Thumbnail URL: ${parsed.thumbnailUrl ?? 'Unknown'}`,
+  ]
+
+  if (parsed.description) {
+    metadataLines.push('', '### Original Description', '', parsed.description)
+  }
+
+  metadataLines.push('')
+
+  const datePeriodSection =
+    `Published: ${parsed.publishedDate ?? 'Unknown'} — source: exact YouTube metadata. Coverage period unknown unless stated in the transcript or description.`
+
+  return {
+    articleTitle: parsed.title,
+    sourceUrl: parsed.url ?? undefined,
+    sourcePublishedDate: parsed.publishedDate ?? undefined,
+    sourceVideoId: parsed.videoId ?? undefined,
+    sourceChannelId: parsed.channelId ?? undefined,
+    sourceThumbnailUrl: parsed.thumbnailUrl ?? undefined,
+    metadataPrompt: promptLines.join('\n'),
+    metadataSection: metadataLines.join('\n'),
+    datePeriodSection,
+  }
+}
+
+function replaceExactSection(body: string, heading: string, replacement: string): string {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`## ${escaped}\\n[\\s\\S]*?(?=\\n## |$)`)
+  const section = `## ${heading}\n${replacement.trim()}`
+  if (re.test(body)) {
+    return body.replace(re, section)
+  }
+  return `${body.trimEnd()}\n\n${section}\n`
+}
 
 async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
   const name = basename(file, extname(file))
   const slug = slugify(name)
+  let content = readFileSync(file, 'utf-8').slice(0, 50000)
+  if (content.includes('**Source:** YouTube captions')) {
+    content = sanitizeExistingYouTubeTranscriptMarkdown(content)
+  }
+  const youtubeMeta = buildYouTubeCompileMetadata(content)
+  const sourceUrl = getUrlForFile(basename(file)) ?? youtubeMeta?.sourceUrl
 
-  const content = readFileSync(file, 'utf-8').slice(0, 50000)
   const ext = extname(file).toLowerCase().slice(1)
-  const raw = await llm(buildSourcePrompt(basename(file), content, ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: ext })
+  const raw = await llm(
+    buildSourcePrompt(basename(file), content, ingestTag, youtubeMeta?.metadataPrompt),
+    { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: ext },
+  )
   const { body, tags, entities } = sanitizeLlmOutput(raw)
+  const bodyWithExactDatePeriod = youtubeMeta
+    ? replaceExactSection(body, 'Date & Period', youtubeMeta.datePeriodSection)
+    : body
+  const finalBody = youtubeMeta
+    ? `${bodyWithExactDatePeriod.trimEnd()}\n\n---\n\n${youtubeMeta.metadataSection}`
+    : bodyWithExactDatePeriod
 
   const meta: ArticleMeta = {
-    title: titleFromFilename(file),
+    title: youtubeMeta?.articleTitle ?? titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
+    sourceUrl: sourceUrl ?? undefined,
+    sourcePublishedDate: youtubeMeta?.sourcePublishedDate,
+    sourceVideoId: youtubeMeta?.sourceVideoId,
+    sourceChannelId: youtubeMeta?.sourceChannelId,
+    sourceThumbnailUrl: youtubeMeta?.sourceThumbnailUrl,
     sourceType: 'text',
     tags: mergeTags(ingestTag, tags),
     entities,
   }
 
-  writeArticle(join(paths.wikiSources, `${slug}.md`), meta, body)
+  writeArticle(join(paths.wikiSources, `${slug}.md`), meta, finalBody)
 }
 
 async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
   const name = basename(file, extname(file))
   const slug = slugify(name)
+  const sourceUrl = getUrlForFile(basename(file))
 
   const buffer = readFileSync(file)
   let text: string
@@ -123,6 +236,7 @@ async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, i
     title: titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
+    sourceUrl: sourceUrl ?? undefined,
     sourceType: 'pdf',
     tags: mergeTags(ingestTag, tags),
     entities,
@@ -133,8 +247,9 @@ async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, i
 
 async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
   const name = basename(file, extname(file))
-  const slug = slugify(name)
+  const slug = getSourceSlug(file)
   const ext = extname(file).toLowerCase()
+  const sourceUrl = getUrlForFile(basename(file))
 
   const mediaType = MEDIA_TYPES[ext]
   if (!mediaType) return
@@ -154,6 +269,7 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
     title: titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
+    sourceUrl: sourceUrl ?? undefined,
     sourceType: 'image',
     tags: mergeTags(ingestTag, tags),
     entities,
@@ -163,12 +279,12 @@ async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>,
 }
 
 /** Written next to video/audio during compile; verbatim wiki is emitted in the same pass — do not compile via LLM again. */
-function isCompanionTranscriptRaw(filePath: string): boolean {
+export function isCompanionTranscriptRaw(filePath: string): boolean {
   return basename(filePath).toLowerCase().endsWith('.transcript.md')
 }
 
 /** Preview JPEGs live under `raw/.../{stem}.frames/` — not standalone sources. */
-function isRawVideoExtractedFramePath(filePath: string): boolean {
+export function isRawVideoExtractedFramePath(filePath: string): boolean {
   const normalized = filePath.replace(/\\/g, '/')
   return normalized.split('/').some(seg => seg.endsWith('.frames'))
 }
@@ -242,9 +358,10 @@ async function compileAudioFile(
   onStep?: (step: string) => void,
 ): Promise<void> {
   const name = basename(file, extname(file))
-  const slug = slugify(name)
+  const slug = getSourceSlug(file)
   const ext = extname(file).toLowerCase().slice(1)
   const cfg = readConfig()
+  const sourceUrl = getUrlForFile(basename(file))
 
   let pathForWhisper = file
   let cleanup: (() => void) | null = null
@@ -313,6 +430,7 @@ async function compileAudioFile(
     title: titleFromFilename(file),
     type: 'source',
     sourceFile: relative(paths.raw, file),
+    sourceUrl: sourceUrl ?? undefined,
     sourceType: 'audio',
     tags: mergeTags(ingestTag, tags),
     entities,
@@ -334,8 +452,9 @@ async function compileVideoFile(
   }
 
   const name = basename(file, extname(file))
-  const slug = slugify(name)
+  const slug = getSourceSlug(file)
   const cfg = readConfig()
+  const sourceUrl = getUrlForFile(basename(file))
   const tmpDir = mkdtempSync(join(tmpdir(), 'theora-video-'))
 
   try {
@@ -475,6 +594,7 @@ async function compileVideoFile(
       title: titleFromFilename(file),
       type: 'source',
       sourceFile: relative(paths.raw, file),
+      sourceUrl: sourceUrl ?? undefined,
       sourceType: 'video',
       tags: mergeTags(ingestTag, tags),
       entities,
@@ -489,9 +609,154 @@ async function compileVideoFile(
 
 // --- Pipeline stages ---
 
+export function resolveRawSourceTarget(root: string, sourceArg: string): string {
+  const paths = kbPaths(root)
+  const trimmed = sourceArg.trim()
+  if (!trimmed) {
+    throw new Error('--source requires a raw file name or relative path under raw/')
+  }
+
+  const rawFiles = listRawFilesUnder(paths.raw)
+  const looksLikeRelativePath = /[\\/]/.test(trimmed)
+
+  let resolved: string | undefined
+  if (looksLikeRelativePath) {
+    resolved = safeJoin(paths.raw, trimmed)
+    if (!existsSync(resolved)) {
+      throw new Error(`Raw source not found: ${trimmed}`)
+    }
+  } else {
+    const matches = rawFiles.filter(file => basename(file) === trimmed)
+    if (matches.length > 1) {
+      throw new Error(`Raw source "${trimmed}" is ambiguous under raw/. Use a relative path instead.`)
+    }
+    resolved = matches[0] ?? safeJoin(paths.raw, trimmed)
+    if (!existsSync(resolved)) {
+      throw new Error(`Raw source not found: ${trimmed}`)
+    }
+  }
+
+  if (isCompanionTranscriptRaw(resolved)) {
+    throw new Error(`Raw source "${trimmed}" is a companion transcript and cannot be compiled directly`)
+  }
+  if (isRawVideoExtractedFramePath(resolved)) {
+    throw new Error(`Raw source "${trimmed}" is a generated video frame and cannot be compiled directly`)
+  }
+
+  const kind = classifyFile(resolved)
+  if (kind === 'unknown') {
+    throw new Error(`Unsupported source type for --source: ${basename(resolved)}`)
+  }
+
+  return resolved
+}
+
+function removeCompiledArtifactsForSource(file: string, paths: ReturnType<typeof kbPaths>): void {
+  const name = basename(file, extname(file))
+  const slug = getSourceSlug(file)
+  const transcriptSlug = slugify(`${name}.transcript`)
+  const transcriptRaw = join(dirname(file), `${name}.transcript.md`)
+  const framesDir = join(dirname(file), `${name}.frames`)
+
+  rmSync(join(paths.wikiSources, `${slug}.md`), { force: true })
+  rmSync(join(paths.wikiSources, `${transcriptSlug}.md`), { force: true })
+  rmSync(transcriptRaw, { force: true })
+  rmSync(framesDir, { recursive: true, force: true })
+}
+
+async function compileOneSourceFile(
+  file: string,
+  paths: ReturnType<typeof kbPaths>,
+  onStep?: (step: string) => void,
+): Promise<void> {
+  const ingestTag = getTagForFile(basename(file))
+
+  switch (classifyFile(file)) {
+    case 'text':
+      await compileTextFile(file, paths, ingestTag)
+      return
+    case 'pdf':
+      await compilePdfFile(file, paths, ingestTag)
+      return
+    case 'image':
+      await compileImageFile(file, paths, ingestTag)
+      return
+    case 'audio':
+      await compileAudioFile(file, paths, ingestTag, onStep)
+      return
+    case 'video':
+      await compileVideoFile(file, paths, ingestTag, onStep)
+      return
+    default:
+      throw new Error(`Unsupported source type: ${basename(file)}`)
+  }
+}
+
+export async function compileTargetedSource(
+  root: string,
+  sourceArg: string,
+  onProgress?: (msg: string) => void,
+): Promise<string> {
+  const paths = kbPaths(root)
+  const file = resolveRawSourceTarget(root, sourceArg)
+  const relSource = relative(paths.raw, file)
+  const displayName = basename(file)
+  const spinner = onProgress ? null : ora(`Compiling source → ${relSource}`).start()
+  let stepTick: ReturnType<typeof setInterval> | undefined
+  let currentStepBase = ''
+
+  const clearStepTick = () => {
+    if (stepTick !== undefined) {
+      clearInterval(stepTick)
+      stepTick = undefined
+    }
+    currentStepBase = ''
+  }
+
+  const emitStep = (step: string) => {
+    clearStepTick()
+    currentStepBase = step
+    onProgress?.(`  · ${displayName}: ${step}`)
+    if (spinner) {
+      spinner.text = `Compiling source → ${relSource}\n    ${pc.dim(`${displayName}: ${step}`)}`
+    }
+
+    const started = Date.now()
+    stepTick = setInterval(() => {
+      const sec = Math.max(1, Math.floor((Date.now() - started) / 1000))
+      const withElapsed = `${currentStepBase} · ${sec}s`
+      if (spinner) {
+        spinner.text = `Compiling source → ${relSource}\n    ${pc.dim(`${displayName}: ${withElapsed}`)}`
+      }
+      if (onProgress && sec >= 3 && sec % 5 === 0) {
+        onProgress(`  · ${displayName}: ${withElapsed}`)
+      }
+    }, 1000)
+  }
+
+  removeCompiledArtifactsForSource(file, paths)
+  onProgress?.(`Compiling source → ${relSource}`)
+
+  try {
+    await compileOneSourceFile(file, paths, emitStep)
+    clearStepTick()
+    if (spinner) spinner.succeed(`Compiled source: ${relSource}`)
+    else onProgress?.(`✓ Compiled source: ${relSource}`)
+    return file
+  } catch (err) {
+    clearStepTick()
+    if (spinner) {
+      const msg = err instanceof Error ? err.message : String(err)
+      spinner.fail(`Compile failed for ${relSource}: ${msg}`)
+    }
+    throw err
+  }
+
+}
+
 export async function compileSources(root: string, concurrency?: number, onProgress?: (msg: string) => void): Promise<void> {
   const paths = kbPaths(root)
-  const rawFiles = listRawFiles()
+  const rawFiles = listRawFilesUnder(paths.raw)
   const existingSlugs = getExistingSourceSlugs(root)
 
   const newFiles = rawFiles.filter(f => {
@@ -499,7 +764,7 @@ export async function compileSources(root: string, concurrency?: number, onProgr
     if (isRawVideoExtractedFramePath(f)) return false
     const kind = classifyFile(f)
     if (kind === 'unknown') return false
-    return !existingSlugs.has(slugify(basename(f, extname(f))))
+    return !existingSlugs.has(getSourceSlug(f))
   })
 
   if (newFiles.length === 0) {
@@ -595,19 +860,8 @@ export async function compileSources(root: string, concurrency?: number, onProgr
         inFlight.add(name)
         updateSpinner()
 
-        const ingestTag = getTagForFile(name)
         try {
-          switch (classifyFile(file)) {
-            case 'text': await compileTextFile(file, paths, ingestTag); break
-            case 'pdf': await compilePdfFile(file, paths, ingestTag); break
-            case 'image': await compileImageFile(file, paths, ingestTag); break
-            case 'audio':
-              await compileAudioFile(file, paths, ingestTag, step => emitSourceStep(name, step))
-              break
-            case 'video':
-              await compileVideoFile(file, paths, ingestTag, step => emitSourceStep(name, step))
-              break
-          }
+          await compileOneSourceFile(file, paths, step => emitSourceStep(name, step))
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
           console.error(pc.red(`Compile failed for ${name}: ${msg}`))
@@ -757,7 +1011,9 @@ export async function rebuildIndex(root: string, onProgress?: (msg: string) => v
   const articles = listWikiArticles()
   const sources = articles.filter(a => a.path.startsWith(paths.wikiSources))
   const concepts = articles.filter(a => a.path.startsWith(paths.wikiConcepts))
-  const queries = articles.filter(a => a.path.startsWith(paths.output))
+  const outputMd = articles.filter(a => a.path.startsWith(paths.output) && a.path.endsWith('.md'))
+  const mindMaps = outputMd.filter(a => String(a.frontmatter.type) === 'mind-map')
+  const queries = outputMd.filter(a => String(a.frontmatter.type) !== 'mind-map')
 
   const toObsidianTag = (tag: string) => `#${tag.toLowerCase().replace(/\s+/g, '-')}`
 
@@ -824,7 +1080,7 @@ ${sources.map(articleLink).join('\n') || '_No sources compiled yet._'}
 ## Concepts (${concepts.length})
 
 ${concepts.map(articleLink).join('\n') || '_No concepts extracted yet._'}
-${queries.length > 0 ? `\n## Previous Queries (${queries.length})\n\n${queries.map(articleLink).join('\n')}\n` : ''}${tagSection ? `\n## Tags (${tagMap.size})\n\n${tagSection}\n` : ''}
+${mindMaps.length > 0 ? `\n## Mind maps (${mindMaps.length})\n\n${mindMaps.map(articleLink).join('\n')}\n` : ''}${queries.length > 0 ? `\n## Previous Queries (${queries.length})\n\n${queries.map(articleLink).join('\n')}\n` : ''}${tagSection ? `\n## Tags (${tagMap.size})\n\n${tagSection}\n` : ''}
 ## Stats
 
 - **Articles**: ${stats.articles}
@@ -835,4 +1091,3 @@ ${queries.length > 0 ? `\n## Previous Queries (${queries.length})\n\n${queries.m
   if (spinner) spinner.succeed('Index rebuilt')
   else onProgress?.('✓ Index rebuilt')
 }
-

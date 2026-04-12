@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<!--
+  Theora — bitmap T on CRT rounded square. Generous padding (~19%).
+  Accent pixels from the four Theora themes: cyan, green, yellow, purple.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Theora — CRT bitmap T</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a14;
+      color: #e8e8ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      padding: 40px 28px 80px;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    h1 {
+      color: #ff00aa;
+      font-size: 1.3rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .lede {
+      color: #7878b8;
+      font-size: 0.78rem;
+      max-width: 64ch;
+      margin-bottom: 36px;
+    }
+
+    .lede em { color: #ff88dd; font-style: normal; }
+
+    h2 {
+      color: #a8a8d8;
+      font-size: 0.85rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin: 36px 0 6px;
+      border-bottom: 1px solid #1e1e3c;
+      padding-bottom: 6px;
+    }
+
+    h2:first-of-type { margin-top: 0; }
+
+    .variant-note {
+      color: #585890;
+      font-size: 0.68rem;
+      margin-bottom: 14px;
+    }
+
+    .bg-matrix {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .bg-row {
+      border-radius: 8px;
+      padding: 12px 16px;
+      border: 1px solid;
+    }
+
+    .bg-row--dark   { background: #050508; border-color: #1e1e3c; }
+    .bg-row--light  { background: #f8f8ff; border-color: #d0d0e8; }
+    .bg-row--mid    { background: #888; border-color: #999; }
+
+    .bg-row-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      opacity: 0.7;
+    }
+
+    .bg-row--dark  .bg-row-label { color: #585890; }
+    .bg-row--light .bg-row-label { color: #383860; }
+    .bg-row--mid   .bg-row-label { color: #333; }
+
+    .sizes {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 16px 20px;
+    }
+
+    .size-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .size-cell span {
+      font-size: 0.56rem;
+      letter-spacing: 0.08em;
+      color: #585890;
+    }
+
+    .bg-row--light .size-cell span { color: #7878b8; }
+    .bg-row--mid   .size-cell span { color: #333; }
+
+    .size-cell img {
+      display: block;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+    }
+
+    .lockup-section { margin-top: 48px; }
+    .lockup-section h2 { margin-top: 0; }
+
+    .lockup-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .lockup-row img { display: block; }
+
+    .lockup-text {
+      font-weight: 700;
+      letter-spacing: 0.14em;
+    }
+
+    .lockup-text--dark  { color: #f8f8ff; }
+    .lockup-text--light { color: #050508; }
+  </style>
+</head>
+<body>
+  <h1>CRT bitmap T</h1>
+  <p class="lede">Pixel T on a <em>CRT rounded square</em>. 6\u00d76 grid, 5px cells, 12px padding (~19%). Four accent pixels from the Theora themes: <em>cyan</em> (Neon), <em>green</em> (Phosphor), <em>yellow</em>, <em>purple</em> (Neon).</p>
+
+  <div id="main"></div>
+
+  <div class="lockup-section">
+    <h2>Lockup</h2>
+    <div class="bg-row bg-row--dark" style="margin-bottom:12px">
+      <div class="bg-row-label">Dark</div>
+      <div class="lockup-row">
+        <img src="./icon-caution-t-a.svg" width="32" height="32" alt=""/>
+        <span class="lockup-text lockup-text--dark" style="font-size:1.25rem">THEORA</span>
+      </div>
+      <div class="lockup-row">
+        <img src="./icon-caution-t-b.svg" width="32" height="32" alt=""/>
+        <span class="lockup-text lockup-text--dark" style="font-size:1.25rem">THEORA</span>
+      </div>
+      <div class="lockup-row">
+        <img src="./icon-caution-t-c.svg" width="32" height="32" alt=""/>
+        <span class="lockup-text lockup-text--dark" style="font-size:1.25rem">THEORA</span>
+      </div>
+      <div class="lockup-row">
+        <img src="./icon-caution-t-d.svg" width="32" height="32" alt=""/>
+        <span class="lockup-text lockup-text--dark" style="font-size:1.25rem">THEORA</span>
+      </div>
+      <div class="lockup-row">
+        <img src="./icon-caution-t-e.svg" width="32" height="32" alt=""/>
+        <span class="lockup-text lockup-text--dark" style="font-size:1.25rem">THEORA</span>
+      </div>
+      <div class="lockup-row">
+        <img src="./icon-caution-t-f.svg" width="32" height="32" alt=""/>
+        <span class="lockup-text lockup-text--dark" style="font-size:1.25rem">THEORA</span>
+      </div>
+    </div>
+    <div class="bg-row bg-row--light">
+      <div class="bg-row-label">Light</div>
+      <div class="lockup-row">
+        <img src="./icon-caution-t-a.svg" width="32" height="32" alt=""/>
+        <span class="lockup-text lockup-text--light" style="font-size:1.25rem">THEORA</span>
+      </div>
+      <div class="lockup-row">
+        <img src="./icon-caution-t-b.svg" width="32" height="32" alt=""/>
+        <span class="lockup-text lockup-text--light" style="font-size:1.25rem">THEORA</span>
+      </div>
+      <div class="lockup-row">
+        <img src="./icon-caution-t-c.svg" width="32" height="32" alt=""/>
+        <span class="lockup-text lockup-text--light" style="font-size:1.25rem">THEORA</span>
+      </div>
+      <div class="lockup-row">
+        <img src="./icon-caution-t-d.svg" width="32" height="32" alt=""/>
+        <span class="lockup-text lockup-text--light" style="font-size:1.25rem">THEORA</span>
+      </div>
+      <div class="lockup-row">
+        <img src="./icon-caution-t-e.svg" width="32" height="32" alt=""/>
+        <span class="lockup-text lockup-text--light" style="font-size:1.25rem">THEORA</span>
+      </div>
+      <div class="lockup-row">
+        <img src="./icon-caution-t-f.svg" width="32" height="32" alt=""/>
+        <span class="lockup-text lockup-text--light" style="font-size:1.25rem">THEORA</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var SIZES = [16, 24, 32, 48, 64, 96];
+    var BGS = [
+      { cls: 'bg-row--dark',  label: 'Dark #050508' },
+      { cls: 'bg-row--light', label: 'Light #f8f8ff' },
+      { cls: 'bg-row--mid',   label: 'Mid #888' }
+    ];
+
+    var VARIANTS = [
+      { key: 'a', label: 'A \u2014 Magenta (Max theme)', file: './icon-caution-t-a.svg',
+        note: 'Base #ff00aa. White T. Accents: cyan top-right, green bottom-left crossbar, yellow mid-stem, purple bottom-stem.' },
+      { key: 'b', label: 'B \u2014 Green phosphor', file: './icon-caution-t-b.svg',
+        note: 'Base #0f2a0f. Green T. Accents: magenta top-right, cyan bottom-left crossbar, yellow mid-stem, purple bottom-stem.' },
+      { key: 'c', label: 'C \u2014 Neon', file: './icon-caution-t-c.svg',
+        note: 'Base #0a0020. Cyan T. Accents: magenta top-right, green bottom-left crossbar, yellow mid-stem, purple bottom-stem.' },
+      { key: 'd', label: 'D \u2014 Magenta on pink', file: './icon-caution-t-d.svg',
+        note: 'Base #ff88dd (light magenta). Magenta #ff00aa T. Same accent positions: cyan, green, yellow, purple.' },
+      { key: 'e', label: 'E \u2014 Neon dark', file: './icon-caution-t-e.svg',
+        note: 'Same as C but paired with #00bbff blue wordmark in lockup. Deep purple #0a0020 base, cyan T.' },
+      { key: 'f', label: 'F \u2014 Neon lifted', file: './icon-caution-t-f.svg',
+        note: 'Like C/E but base lifted to #1a0044 for dark-mode contrast. Same cyan T and accents.' }
+    ];
+
+    function sizeRow(file) {
+      var wrap = document.createElement('div');
+      wrap.className = 'sizes';
+      SIZES.forEach(function (px) {
+        var cell = document.createElement('div');
+        cell.className = 'size-cell';
+        var img = document.createElement('img');
+        img.src = file;
+        img.width = px;
+        img.height = px;
+        img.alt = '';
+        var lab = document.createElement('span');
+        lab.textContent = px + 'px';
+        cell.appendChild(img);
+        cell.appendChild(lab);
+        wrap.appendChild(cell);
+      });
+      return wrap;
+    }
+
+    function bgMatrix(file) {
+      var matrix = document.createElement('div');
+      matrix.className = 'bg-matrix';
+      BGS.forEach(function (bg) {
+        var row = document.createElement('div');
+        row.className = 'bg-row ' + bg.cls;
+        var lab = document.createElement('div');
+        lab.className = 'bg-row-label';
+        lab.textContent = bg.label;
+        row.appendChild(lab);
+        row.appendChild(sizeRow(file));
+        matrix.appendChild(row);
+      });
+      return matrix;
+    }
+
+    var root = document.getElementById('main');
+    VARIANTS.forEach(function (v) {
+      var h2 = document.createElement('h2');
+      h2.textContent = v.label;
+      root.appendChild(h2);
+      var n = document.createElement('div');
+      n.className = 'variant-note';
+      n.textContent = v.note;
+      root.appendChild(n);
+      root.appendChild(bgMatrix(v.file));
+    });
+  </script>
+</body>
+</html>
