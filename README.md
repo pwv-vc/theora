@@ -357,7 +357,7 @@ The LLM reads every new source in `raw/`, writes a summary article for each, ext
 theora compile --sources-only    # skip concept extraction
 theora compile --source foo.md   # recompile one raw source, skip concepts; rebuild wiki index + search index
 theora compile --concepts-only   # delete and regenerate all concept articles from existing sources
-theora compile --reindex         # rebuild wiki/index.md and .theora/search-index.json only (no LLM)
+theora compile --reindex         # rebuild wiki/index.md + .theora/search-index.json (no source/concept passes)
 theora compile --force           # delete existing articles and recompile everything from scratch
 theora compile --concurrency 5   # run 5 parallel LLM calls (faster, uses more API quota)
 theora compile --concurrency 1   # sequential (useful for debugging or strict rate limits)
@@ -370,7 +370,7 @@ After **every** compile path that finishes successfully (full compile, `--source
 1. **`wiki/index.md`** — master Obsidian-style index: sources, concepts, optional mind maps / previous-queries sections, and the **Tags** grouping.
 2. **`.theora/search-index.json`** — persisted **BM25** inverted index used by CLI `theora search` and the web wiki **Search** page.
 
-Reindexing does **not** call the LLM; it only walks markdown on disk. Use **`theora compile --reindex`** when you edited wiki or `output/` files by hand, added mind maps or filed answers, or search/index feel out of date — without re-running source or concept passes.
+Building **`.theora/search-index.json`** is **local only** (token counts and BM25 statistics from markdown on disk — no LLM). Regenerating **`wiki/index.md`** can still call the LLM for the **Overview** section when the wiki has at least one article. Use **`theora compile --reindex`** when you edited wiki or `output/` files by hand, added mind maps or filed answers, or search/index feel out of date — without re-running source or concept passes.
 
 Use `--concepts-only` to regenerate all concept articles without re-summarizing sources — useful after adding new sources or when you want concepts to reflect the latest wiki content. It clears `wiki/concepts/` and re-extracts from your already-compiled source articles.
 

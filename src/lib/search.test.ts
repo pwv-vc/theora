@@ -82,7 +82,6 @@ PostgreSQL is a relational database.
 
   it('does not throw on query tokens with regex metacharacters', () => {
     const { results } = searchArticles('$5')
-    expect(() => searchArticles('$5')).not.toThrow()
     expect(results.length).toBeGreaterThanOrEqual(0)
   })
 })

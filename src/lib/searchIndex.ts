@@ -1,6 +1,5 @@
 import { writeFileSync, readFileSync, existsSync, statSync } from 'node:fs'
-import { join } from 'node:path'
-import { kbPaths } from './paths.js'
+import { kbPaths, safeJoin } from './paths.js'
 import { listWikiArticles, type WikiArticle } from './wiki.js'
 import { stemWord, tokenize } from './searchTokenize.js'
 
@@ -244,5 +243,5 @@ export function indexPostingLookup(index: SearchIndexFile): Map<string, Map<numb
 }
 
 export function resolveArticlePath(root: string, relativePath: string): string {
-  return join(root, relativePath)
+  return safeJoin(root, relativePath)
 }

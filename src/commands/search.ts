@@ -2,7 +2,26 @@ import { Command } from 'commander'
 import pc from 'picocolors'
 import { requireKbRoot } from '../lib/paths.js'
 import { getAllTags } from '../lib/wiki.js'
-import { searchArticles } from '../lib/search.js'
+import { searchArticles, type SearchResult } from '../lib/search.js'
+
+function formatRelevanceScore(score: number): string {
+  if (!Number.isFinite(score)) return '—'
+  if (score === 0) return '0'
+  if (score >= 10) return score.toFixed(1)
+  if (score >= 1) return score.toFixed(2)
+  return score.toFixed(3)
+}
+
+function classifySearchKind(result: SearchResult): string {
+  const rp = result.relativePath
+  if (rp.startsWith('wiki/sources/')) return 'source'
+  if (rp.startsWith('wiki/concepts/')) return 'concept'
+  if (rp.startsWith('output/')) {
+    if (result.docType === 'mind-map') return 'mind map'
+    return 'previous answer'
+  }
+  return 'article'
+}
 
 export const searchCommand = new Command('search')
   .description('Search the wiki')
@@ -19,10 +38,11 @@ export const searchCommand = new Command('search')
         console.log(pc.yellow('No tags found. Compile some sources first.'))
         return
       }
-      console.log(pc.gray('Tags in wiki:\n'))
+      console.log(pc.dim(`Tags (${tags.length})\n`))
       for (const tag of tags) {
-        console.log(`  ${pc.white(tag)}`)
+        console.log(`  ${tag}`)
       }
+      console.log()
       return
     }
 
@@ -43,7 +63,7 @@ export const searchCommand = new Command('search')
     if (limited.length === 0) {
       console.log(pc.yellow(`No results found${options.tag ? ` for tag "${options.tag}"` : ''}.`))
       if (suggestedQuery && suggestedQuery.trim().toLowerCase() !== query.trim().toLowerCase()) {
-        console.log(pc.cyan(`Did you mean: ${suggestedQuery}`))
+        console.log(pc.dim(`Did you mean: ${suggestedQuery}`))
       }
       return
     }
@@ -52,18 +72,39 @@ export const searchCommand = new Command('search')
       suggestedQuery &&
       suggestedQuery.trim().toLowerCase() !== query.trim().toLowerCase()
     ) {
-      console.log(pc.cyan(`Did you mean: ${suggestedQuery}`))
+      console.log(pc.dim(`Did you mean: ${suggestedQuery}`))
     }
 
-    const tagNote = options.tag ? ` (tag: ${options.tag})` : ''
-    console.log(pc.gray(`${limited.length} result${limited.length !== 1 ? 's' : ''} for "${query}"${tagNote}\n`))
+    const tagNote = options.tag ? pc.dim(` · tag #${options.tag}`) : ''
+    console.log()
+    console.log(
+      pc.dim(`${limited.length} result${limited.length !== 1 ? 's' : ''} for `) +
+        `"${query}"` +
+        tagNote,
+    )
+    if (limited.some(r => r.score > 0)) {
+      console.log(pc.dim('Scores are BM25 (higher = stronger match).'))
+    }
+    console.log()
 
-    for (const result of limited) {
-      const tagStr = result.tags.length > 0 ? ` ${pc.cyan(result.tags.join(', '))}` : ''
-      const scoreLabel = Number.isFinite(result.score) ? result.score.toFixed(3) : String(result.score)
-      console.log(`  ${pc.white(result.title)}${tagStr}`)
-      console.log(`  ${pc.gray(result.path)} ${pc.gray(`(score: ${scoreLabel})`)}`)
-      console.log(`  ${pc.dim(result.snippet)}`)
+    for (let i = 0; i < limited.length; i++) {
+      const result = limited[i]!
+      const n = i + 1
+      const kind = classifySearchKind(result)
+      const scoreStr = formatRelevanceScore(result.score)
+
+      console.log(
+        `${pc.dim(`[${n}/${limited.length}]`)} ${pc.bold(result.title)} ${pc.dim(`(${kind})`)}`,
+      )
+      // Absolute path unstyled so terminal path detection (e.g. Cmd+click) still matches.
+      console.log(`  ${result.path}`)
+      console.log(pc.dim(`  Relevance: ${scoreStr}`))
+      if (result.snippet.trim()) {
+        console.log(pc.dim(`  ${result.snippet}`))
+      }
+      if (result.tags.length > 0) {
+        console.log(pc.dim(`  ${result.tags.map(t => `#${t}`).join(' ')}`))
+      }
       console.log()
     }
   })

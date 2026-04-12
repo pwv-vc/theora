@@ -96,7 +96,6 @@ function extractSnippet(
   const cleanedFull = stripMarkdown(bestLine)
   if (!cleanedFull) return ''
 
-  const lowerClean = cleanedFull.toLowerCase()
   let anchor = Math.min(SNIPPET_HALF_WINDOW, Math.floor(cleanedFull.length / 2))
   for (const t of rawTokens) {
     if (t.length < 2) continue

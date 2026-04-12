@@ -33,7 +33,7 @@ export function SearchPage({
     <div>
       <PageHeader
         title="Search"
-        subtitle={`Find sources, concepts, and queries in the compiled ${config.name} wiki.`}
+        subtitle={`Your ${config.name} wiki includes sources, concepts, and queries. Search below to find a match.`}
       />
       <div class="mb-6">
         <div class="flex gap-3">

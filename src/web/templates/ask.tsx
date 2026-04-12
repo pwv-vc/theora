@@ -17,7 +17,7 @@ export function AskPage({ tagsWithCounts, config, placeholderPhrases }: AskPageP
       <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js" integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+" crossorigin="anonymous" />
       <script src="https://cdn.jsdelivr.net/npm/dompurify@3.3.3/dist/purify.min.js" integrity="sha384-pcBjnGbkyKeOXaoFkmJiuR9E08/6gkmus6/Strimnxtl3uk0Hx23v345pWyC/MMr" crossorigin="anonymous" />
 
-      <PageHeader title="Ask" subtitle={`Ask a question against the compiled ${config.name} wiki.`} />
+      <PageHeader title="Ask" subtitle={`Your ${config.name} wiki can answer many kinds of questions. Type one below.`} />
 
       <div
         id="ask-placeholder-data"
