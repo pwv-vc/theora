@@ -9,7 +9,11 @@ import { DEFAULT_THEME } from '../lib/theme.js'
 import type { KbConfig } from '../lib/config.js'
 import type { Provider } from '../lib/types.js'
 import { DEFAULT_MODELS } from '../lib/types.js'
-import { getDefaultActionModels, getDefaultLocalModelPricing } from '../lib/config.js'
+import {
+  DEFAULT_SEARCH_TUNING,
+  getDefaultActionModels,
+  getDefaultLocalModelPricing,
+} from '../lib/config.js'
 import { createGlobalEnv, globalEnvExists, getGlobalEnvPath } from '../lib/env.js'
 
 export const initCommand = new Command('init')
@@ -47,6 +51,7 @@ export const initCommand = new Command('init')
       conceptSummaryChars: 3000,
       conceptMin: 5,
       conceptMax: 10,
+      search: DEFAULT_SEARCH_TUNING,
     }
     writeFileSync(paths.configFile, JSON.stringify(config, null, 2) + '\n')
 

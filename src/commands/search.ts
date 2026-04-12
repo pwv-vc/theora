@@ -2,7 +2,26 @@ import { Command } from 'commander'
 import pc from 'picocolors'
 import { requireKbRoot } from '../lib/paths.js'
 import { getAllTags } from '../lib/wiki.js'
-import { searchArticles } from '../lib/search.js'
+import { searchArticles, type SearchResult } from '../lib/search.js'
+
+function formatRelevanceScore(score: number): string {
+  if (!Number.isFinite(score)) return '—'
+  if (score === 0) return '0'
+  if (score >= 10) return score.toFixed(1)
+  if (score >= 1) return score.toFixed(2)
+  return score.toFixed(3)
+}
+
+function classifySearchKind(result: SearchResult): string {
+  const rp = result.relativePath
+  if (rp.startsWith('wiki/sources/')) return 'source'
+  if (rp.startsWith('wiki/concepts/')) return 'concept'
+  if (rp.startsWith('output/')) {
+    if (result.docType === 'mind-map') return 'mind map'
+    return 'previous answer'
+  }
+  return 'article'
+}
 
 export const searchCommand = new Command('search')
   .description('Search the wiki')
@@ -19,31 +38,73 @@ export const searchCommand = new Command('search')
         console.log(pc.yellow('No tags found. Compile some sources first.'))
         return
       }
-      console.log(pc.gray('Tags in wiki:\n'))
+      console.log(pc.dim(`Tags (${tags.length})\n`))
       for (const tag of tags) {
-        console.log(`  ${pc.white(tag)}`)
+        console.log(`  ${tag}`)
       }
+      console.log()
       return
     }
 
     const query = queryParts.join(' ')
     const limit = parseInt(options.limit, 10)
 
-    const results = searchArticles(query, options.tag).slice(0, limit)
-
-    if (results.length === 0) {
-      console.log(pc.yellow(`No results found${options.tag ? ` for tag "${options.tag}"` : ''}.`))
+    let response: ReturnType<typeof searchArticles>
+    try {
+      response = searchArticles(query, options.tag)
+    } catch (e) {
+      console.log(pc.yellow(e instanceof Error ? e.message : String(e)))
       return
     }
 
-    const tagNote = options.tag ? ` (tag: ${options.tag})` : ''
-    console.log(pc.gray(`${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"${tagNote}\n`))
+    const { results, suggestedQuery } = response
+    const limited = results.slice(0, limit)
 
-    for (const result of results) {
-      const tagStr = result.tags.length > 0 ? ` ${pc.cyan(result.tags.join(', '))}` : ''
-      console.log(`  ${pc.white(result.title)}${tagStr}`)
-      console.log(`  ${pc.gray(result.path)} ${pc.gray(`(score: ${result.score})`)}`)
-      console.log(`  ${pc.dim(result.snippet)}`)
+    if (limited.length === 0) {
+      console.log(pc.yellow(`No results found${options.tag ? ` for tag "${options.tag}"` : ''}.`))
+      if (suggestedQuery && suggestedQuery.trim().toLowerCase() !== query.trim().toLowerCase()) {
+        console.log(pc.dim(`Did you mean: ${suggestedQuery}`))
+      }
+      return
+    }
+
+    if (
+      suggestedQuery &&
+      suggestedQuery.trim().toLowerCase() !== query.trim().toLowerCase()
+    ) {
+      console.log(pc.dim(`Did you mean: ${suggestedQuery}`))
+    }
+
+    const tagNote = options.tag ? pc.dim(` · tag #${options.tag}`) : ''
+    console.log()
+    console.log(
+      pc.dim(`${limited.length} result${limited.length !== 1 ? 's' : ''} for `) +
+        `"${query}"` +
+        tagNote,
+    )
+    if (limited.some(r => r.score > 0)) {
+      console.log(pc.dim('Scores are BM25 (higher = stronger match).'))
+    }
+    console.log()
+
+    for (let i = 0; i < limited.length; i++) {
+      const result = limited[i]!
+      const n = i + 1
+      const kind = classifySearchKind(result)
+      const scoreStr = formatRelevanceScore(result.score)
+
+      console.log(
+        `${pc.dim(`[${n}/${limited.length}]`)} ${pc.bold(result.title)} ${pc.dim(`(${kind})`)}`,
+      )
+      // Absolute path unstyled so terminal path detection (e.g. Cmd+click) still matches.
+      console.log(`  ${result.path}`)
+      console.log(pc.dim(`  Relevance: ${scoreStr}`))
+      if (result.snippet.trim()) {
+        console.log(pc.dim(`  ${result.snippet}`))
+      }
+      if (result.tags.length > 0) {
+        console.log(pc.dim(`  ${result.tags.map(t => `#${t}`).join(' ')}`))
+      }
       console.log()
     }
   })

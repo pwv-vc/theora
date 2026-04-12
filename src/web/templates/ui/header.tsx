@@ -13,8 +13,8 @@ const ingestNavKeys = new Set(['ingest', 'compile'])
 const adminKeys = new Set(['settings', 'stats-usage', 'stats-logs'])
 
 const navLinks = [
-  { href: '/search', label: 'search', key: 'search' },
   { href: '/ask', label: 'ask', key: 'ask' },
+  { href: '/search', label: 'search', key: 'search' },
 ]
 
 const wikiSubLinks = [
