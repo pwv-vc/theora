@@ -76,48 +76,45 @@ export function sanitizeLlmOutput(raw: string): { body: string; tags: string[]; 
     }
   }
 
-  // Extract tags and entities from last lines if present
+  // Scan backward through the last few lines for Tags: and Entities: markers.
+  // LLMs may insert blank lines between them or reverse their order.
   const lines = text.split('\n')
   let tags: string[] = []
   let entities: Record<string, string[]> = {}
+  let tagsIdx = -1
+  let entitiesIdx = -1
+  const scanFloor = Math.max(0, lines.length - 6)
 
-  // Check for entities line (should be last or second-to-last)
-  const lastLine = lines[lines.length - 1]?.trim() ?? ''
-  const secondLastLine = lines[lines.length - 2]?.trim() ?? ''
+  for (let i = lines.length - 1; i >= scanFloor; i--) {
+    const trimmed = lines[i].trim().toLowerCase()
+    if (trimmed.startsWith('tags:') && tagsIdx === -1) tagsIdx = i
+    if (trimmed.startsWith('entities:') && entitiesIdx === -1) entitiesIdx = i
+  }
 
-  // Parse entities from line starting with "Entities:"
-  const entitiesLine = lastLine.toLowerCase().startsWith('entities:')
-    ? lastLine
-    : secondLastLine.toLowerCase().startsWith('entities:')
-      ? secondLastLine
-      : null
-
-  if (entitiesLine) {
+  if (entitiesIdx !== -1) {
     try {
-      const jsonStr = entitiesLine.slice(entitiesLine.indexOf(':') + 1).trim()
+      const raw_line = lines[entitiesIdx].trim()
+      const jsonStr = raw_line.slice(raw_line.indexOf(':') + 1).trim()
       const parsed = JSON.parse(jsonStr)
       if (parsed && typeof parsed === 'object') {
         entities = parsed
       }
     } catch {
-      // Ignore parse errors - entities will be empty
-    }
-    // Remove entities line
-    if (lastLine.toLowerCase().startsWith('entities:')) {
-      lines.pop()
-    } else {
-      lines.splice(lines.length - 2, 1)
+      // Ignore parse errors — entities will be empty
     }
   }
 
-  // Parse tags from last line (after entities removal)
-  const finalLastLine = lines[lines.length - 1]?.trim() ?? ''
-  if (finalLastLine.toLowerCase().startsWith('tags:')) {
-    const tagStr = finalLastLine.slice(5).trim()
+  if (tagsIdx !== -1) {
+    const tagStr = lines[tagsIdx].trim().slice(5).trim()
     tags = tagStr.split(',').map(t => normalizeTag(t)).filter(Boolean)
-    lines.pop()
-    while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop()
   }
+
+  // Remove both marker lines (higher index first to preserve indices)
+  const removeIndices = [tagsIdx, entitiesIdx].filter(i => i !== -1).sort((a, b) => b - a)
+  for (const idx of removeIndices) lines.splice(idx, 1)
+
+  // Trim trailing blank lines left behind by removal
+  while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop()
 
   return { body: lines.join('\n').trim(), tags, entities }
 }
@@ -135,7 +132,7 @@ export function writeArticle(destPath: string, meta: ArticleMeta, body: string):
   }
 
   if (meta.ontology?.length) {
-    frontmatter.ontology = meta.ontology.map(o => `[[${o}]]`)
+    frontmatter.ontology = [...meta.ontology]
     frontmatter.schema_url = meta.ontology.map(o => ONTOLOGY_SCHEMA_URLS[o])
   }
   if (meta.sourceFile) frontmatter.source_file = meta.sourceFile

@@ -7,6 +7,7 @@ interface WikiHeaderProps {
   sources: WikiArticle[]
   concepts: WikiArticle[]
   queries: WikiArticle[]
+  /** When omitted, no wiki subsection pill is highlighted. */
   activeSection?: 'sources' | 'concepts' | 'queries'
 }
 

@@ -1,0 +1,15 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="flda-f"><rect x="8" y="8" width="48" height="48" rx="12" ry="12"/></clipPath>
+  </defs>
+  <rect width="64" height="64" fill="#050508"/>
+  <rect x="8" y="8" width="48" height="48" rx="12" ry="12" fill="#0a0a14" stroke="#050508" stroke-width="2"/>
+  <g clip-path="url(#flda-f)">
+    <rect x="12" y="14" width="40" height="6" fill="#ff00aa"/>
+    <rect x="14" y="22" width="28" height="5" fill="#00ff00"/>
+    <rect x="10" y="29" width="36" height="5" fill="#00bbff"/>
+    <rect x="16" y="36" width="22" height="5" fill="#ff00aa"/>
+    <rect x="12" y="43" width="34" height="5" fill="#00ff00"/>
+    <rect x="18" y="50" width="20" height="5" fill="#00bbff"/>
+  </g>
+</svg>

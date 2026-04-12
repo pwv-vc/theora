@@ -2,13 +2,16 @@ import { readFileSync, writeFileSync, existsSync, rmSync, mkdirSync, statSync } 
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
+import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { serve } from '@hono/node-server'
 import { streamSSE } from 'hono/streaming'
 import { secureHeaders } from 'hono/secure-headers'
 import { marked, Renderer } from 'marked'
 import sanitizeHtml from 'sanitize-html'
 import { requireKbRoot, kbPaths, safeJoin } from '../lib/paths.js'
-import { listWikiArticles, readWikiIndex, getAllTagsWithCounts } from '../lib/wiki.js'
+import { listWikiArticles, readWikiIndex, getAllTagsWithCounts, ONTOLOGY_TYPES } from '../lib/wiki.js'
+import type { OntologyType } from '../lib/wiki.js'
 import { findRelevantArticles, buildContext } from '../lib/query.js'
 import { llmStream } from '../lib/llm.js'
 import { searchArticles } from '../lib/search.js'
@@ -19,19 +22,27 @@ import { streamAsk } from '../lib/ask.js'
 import { readManifest, writeManifest } from '../lib/manifest.js'
 import { ingestWebFile, ingestWebUrl } from '../lib/ingest.js'
 import { escapeHtml } from '../lib/utils.js'
+import {
+  collectEntityPills,
+  computeWikiMapWebGraph,
+  buildWikiMapGraph,
+} from '../lib/wikiMap/index.js'
+import type { WikiMapCenter } from '../lib/wikiMap/index.js'
 import { Layout } from './templates/layout.js'
+import { errorPageHtml } from './templates/error.js'
 import { HomePage } from './templates/home.js'
 import { ArticlePage } from './templates/article.js'
 import { SearchPage, SearchResults } from './templates/search.js'
+import { buildAskPlaceholderPhrases } from '../lib/askPlaceholders.js'
 import { AskPage } from './templates/ask.js'
 import { CompilePage } from './templates/compile.js'
 import { ConceptsPage } from './templates/concepts.js'
 import { QueriesPage } from './templates/queries.js'
 import { IngestPage } from './templates/ingest.js'
-import { StatsPage } from './templates/stats.js'
-import { AboutPage } from './templates/about.js'
+import { StatsLogsPage, StatsUsagePage } from './templates/stats.js'
 import { readLlmLogs, summarizeStats } from '../lib/llm-stats.js'
 import { settingsRoutes } from './routes/settings.js'
+import { MapPage } from './templates/map.js'
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: [
@@ -52,6 +63,18 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   disallowedTagsMode: 'discard',
 }
 
+function normalizeHttpErrorStatus(status: unknown): number {
+  const n = typeof status === 'number' && Number.isFinite(status) ? Math.trunc(status) : 500
+  if (n >= 100 && n <= 599) return n
+  return 500
+}
+
+/** Hono `c.html` rejects contentless status codes; map those to 500 for error bodies. */
+function toContentfulErrorStatus(status: number): ContentfulStatusCode {
+  if (status === 101 || status === 204 || status === 205 || status === 304) return 500
+  return status as ContentfulStatusCode
+}
+
 function parseMarkdown(content: string): string {
   const renderer = new Renderer()
   const originalCode = renderer.code.bind(renderer)
@@ -67,6 +90,38 @@ function parseMarkdown(content: string): string {
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+function parseOntologyQueryParam(s: string | undefined): OntologyType | undefined {
+  if (!s?.trim()) return undefined
+  const t = s.trim().toLowerCase() as OntologyType
+  return ONTOLOGY_TYPES.includes(t) ? t : undefined
+}
+
+function parseWikiMapQuery(q: (name: string) => string | undefined): {
+  aroundRaw: string
+  tagRaw: string
+  entityRaw: string
+  ontologyRaw: string
+  depth: number
+  maxNodes: number
+  bridgeCap: number
+  error: string
+} {
+  const aroundRaw = q('around')?.trim() ?? ''
+  const tagRaw = q('tag')?.trim() ?? ''
+  const entityRaw = q('entity')?.trim() ?? ''
+  const ontologyRaw = q('ontology')?.trim() ?? ''
+  const depth = Math.min(8, Math.max(1, parseInt(q('depth') ?? '3', 10) || 3))
+  const maxNodes = Math.min(500, Math.max(8, parseInt(q('maxNodes') ?? '200', 10) || 200))
+  const bridgeCap = Math.min(50, Math.max(1, parseInt(q('bridgeCap') ?? '10', 10) || 10))
+
+  let error = ''
+  if (ontologyRaw && !parseOntologyQueryParam(ontologyRaw)) {
+    error = `Invalid ontology. Use one of: ${ONTOLOGY_TYPES.join(', ')}.`
+  }
+
+  return { aroundRaw, tagRaw, entityRaw, ontologyRaw, depth, maxNodes, bridgeCap, error }
+}
 
 export function startServer(port: number): void {
   const app = new Hono()
@@ -84,8 +139,9 @@ export function startServer(port: number): void {
         "'unsafe-inline'",
       ],
       styleSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'", 'https://cdn.jsdelivr.net', 'data:'],
       imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", 'https://cdn.jsdelivr.net'],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
     },
@@ -108,6 +164,16 @@ export function startServer(port: number): void {
     if (!existsSync(svgPath)) return c.notFound()
     const svg = readFileSync(svgPath, 'utf-8')
     return c.text(svg, 200, { 'Content-Type': 'image/svg+xml; charset=utf-8' })
+  })
+
+  /** Short URL for the wiki mind map (preserves query string). */
+  app.get('/map', (c) => {
+    try {
+      const u = new URL(c.req.url)
+      return c.redirect(`/wiki/map${u.search}`, 302)
+    } catch {
+      return c.redirect('/wiki/map', 302)
+    }
   })
 
   // Serve raw files (images, PDFs, etc.) from the raw/ directory
@@ -266,6 +332,117 @@ export function startServer(port: number): void {
     )
   })
 
+  app.get('/wiki/map/graph.json', (c) => {
+    const root = requireKbRoot()
+    const paths = kbPaths(root)
+    const articles = listWikiArticles()
+    const parsed = parseWikiMapQuery((name) => c.req.query(name))
+    if (parsed.error) return c.json({ error: parsed.error }, 400)
+
+    const ontologyFilter = parseOntologyQueryParam(parsed.ontologyRaw || undefined)
+    const result = computeWikiMapWebGraph({
+      paths,
+      articles,
+      aroundRaw: parsed.aroundRaw,
+      tagRaw: parsed.tagRaw,
+      entityRaw: parsed.entityRaw,
+      ontologyFilter,
+      depth: parsed.depth,
+      maxNodes: parsed.maxNodes,
+      bridgeCap: parsed.bridgeCap,
+    })
+
+    if (result.error) return c.json({ error: result.error }, 400)
+    if (!result.graph) {
+      const configPath = join(root, '.theora', 'config.json')
+      const config = existsSync(configPath)
+        ? JSON.parse(readFileSync(configPath, 'utf-8'))
+        : { name: 'Knowledge Base' }
+      const kbName = String(config.name ?? 'Knowledge Base')
+      const overview = buildWikiMapGraph({
+        paths,
+        articles,
+        center: { type: 'overview' as const, kbName },
+        depth: 4,
+        maxNodes: parsed.maxNodes,
+        bridgeCap: parsed.bridgeCap,
+      })
+      return c.json({ graph: overview, focal: null })
+    }
+
+    return c.json({
+      graph: result.graph,
+      focal: parsed.aroundRaw || parsed.tagRaw || null,
+    })
+  })
+
+  app.get('/wiki/map', (c) => {
+    const root = requireKbRoot()
+    const paths = kbPaths(root)
+    const articles = listWikiArticles()
+    const parsed = parseWikiMapQuery((name) => c.req.query(name))
+
+    const configPath = join(root, '.theora', 'config.json')
+    const config = existsSync(configPath)
+      ? JSON.parse(readFileSync(configPath, 'utf-8'))
+      : { name: 'Knowledge Base' }
+
+    const kbName = String(config.name ?? 'Knowledge Base')
+    const sources = articles.filter((a) => a.path.startsWith(paths.wikiSources))
+    const concepts = articles.filter((a) => a.path.startsWith(paths.wikiConcepts))
+    const queries = articles.filter((a) => a.path.startsWith(paths.output))
+
+    const ontologyFilter = parseOntologyQueryParam(parsed.ontologyRaw || undefined)
+    let graph = null as import('../lib/wikiMap/index.js').WikiMapGraph | null
+    let error = parsed.error
+
+    if (!error && (parsed.aroundRaw || parsed.tagRaw || parsed.entityRaw)) {
+      const result = computeWikiMapWebGraph({
+        paths,
+        articles,
+        aroundRaw: parsed.aroundRaw,
+        tagRaw: parsed.tagRaw,
+        entityRaw: parsed.entityRaw,
+        ontologyFilter,
+        depth: parsed.depth,
+        maxNodes: parsed.maxNodes,
+        bridgeCap: parsed.bridgeCap,
+      })
+      error = result.error
+      graph = result.graph
+    }
+
+    if (!graph && !error) {
+      graph = buildWikiMapGraph({
+        paths,
+        articles,
+        center: { type: 'overview' as const, kbName },
+        depth: 4,
+        maxNodes: parsed.maxNodes,
+        bridgeCap: parsed.bridgeCap,
+      })
+    }
+
+    return c.html(
+      Layout({
+        title: `Map — ${kbName}`,
+        active: 'map',
+        children: MapPage({
+          config,
+          graph,
+          error: error || '',
+          around: parsed.aroundRaw,
+          tag: parsed.tagRaw,
+          entity: parsed.entityRaw,
+          ontology: parsed.ontologyRaw,
+          depth: parsed.depth,
+          maxNodes: parsed.maxNodes,
+          bridgeCap: parsed.bridgeCap,
+        }),
+      }).toString(),
+    )
+  })
+
   app.get('/wiki/:type/:slug', (c) => {
     const root = requireKbRoot()
     const paths = kbPaths(root)
@@ -356,6 +533,7 @@ export function startServer(port: number): void {
 
   app.get('/ask', (c) => {
     const tagsWithCounts = getAllTagsWithCounts()
+    const placeholderPhrases = buildAskPlaceholderPhrases()
 
     const configPath = join(requireKbRoot(), '.theora', 'config.json')
     const config = existsSync(configPath)
@@ -366,7 +544,7 @@ export function startServer(port: number): void {
       Layout({
         title: 'Ask',
         active: 'ask',
-        children: AskPage({ tagsWithCounts, config }),
+        children: AskPage({ tagsWithCounts, config, placeholderPhrases }),
       }).toString()
     )
   })
@@ -518,6 +696,11 @@ export function startServer(port: number): void {
   })
 
   app.get('/stats', (c) => {
+    const search = new URL(c.req.url).search
+    return c.redirect(`/stats/usage${search}`, 301)
+  })
+
+  app.get('/stats/usage', (c) => {
     const logs = readLlmLogs()
     const days = parseInt(c.req.query('days') ?? '30', 10)
 
@@ -532,14 +715,29 @@ export function startServer(port: number): void {
       ? JSON.parse(readFileSync(configPath, 'utf-8'))
       : { name: 'Knowledge Base' }
 
-    // Get last 10 logs for initial display
+    return c.html(
+      Layout({
+        title: `Usage — ${config.name ?? 'Knowledge Base'}`,
+        active: 'stats-usage',
+        children: StatsUsagePage({ summary, days, config }),
+      }).toString()
+    )
+  })
+
+  app.get('/stats/logs', (c) => {
+    const logs = readLlmLogs()
+    const configPath = join(requireKbRoot(), '.theora', 'config.json')
+    const config = existsSync(configPath)
+      ? JSON.parse(readFileSync(configPath, 'utf-8'))
+      : { name: 'Knowledge Base' }
+
     const recentLogs = logs.slice(-10)
 
     return c.html(
       Layout({
-        title: `Stats — ${config.name ?? 'Knowledge Base'}`,
-        active: 'stats',
-        children: StatsPage({ summary, days, recentLogs, config }),
+        title: `Logs — ${config.name ?? 'Knowledge Base'}`,
+        active: 'stats-logs',
+        children: StatsLogsPage({ recentLogs, config }),
       }).toString()
     )
   })
@@ -578,19 +776,18 @@ export function startServer(port: number): void {
     })
   })
 
-  app.get('/about', (c) => {
-    const configPath = join(requireKbRoot(), '.theora', 'config.json')
-    const config = existsSync(configPath)
-      ? JSON.parse(readFileSync(configPath, 'utf-8'))
-      : { name: 'Knowledge Base' }
+  app.notFound((c) => {
+    return c.html(errorPageHtml(404, c.req.path), 404)
+  })
 
-    return c.html(
-      Layout({
-        title: `About — ${config.name ?? 'Knowledge Base'}`,
-        active: 'home',
-        children: AboutPage({ config }),
-      }).toString()
-    )
+  app.onError((err, c) => {
+    console.error('[web]', err)
+    if (err instanceof HTTPException) {
+      const status = normalizeHttpErrorStatus(err.status)
+      const path = status === 404 ? c.req.path : undefined
+      return c.html(errorPageHtml(status, path), toContentfulErrorStatus(status))
+    }
+    return c.html(errorPageHtml(500), 500)
   })
 
   serve({ fetch: app.fetch, port }, (info) => {

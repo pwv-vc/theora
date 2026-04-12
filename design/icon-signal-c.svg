@@ -1,0 +1,19 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="sigc-d">
+      <polygon points="32,3 61,32 32,61 3,32"/>
+    </clipPath>
+  </defs>
+  <polygon points="32,3 61,32 32,61 3,32" fill="#050508"/>
+  <g clip-path="url(#sigc-d)">
+    <rect x="0" y="6" width="64" height="9" fill="#ff00aa"/>
+    <rect x="0" y="15" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="18" width="22" height="9" fill="#00ff00"/>
+    <rect x="42" y="18" width="22" height="9" fill="#00ff00"/>
+    <rect x="0" y="27" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="30" width="64" height="9" fill="#00bbff"/>
+    <rect x="0" y="39" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="42" width="64" height="9" fill="#ff00aa"/>
+  </g>
+  <polygon points="32,3 61,32 32,61 3,32" fill="none" stroke="#050508" stroke-width="1.5"/>
+</svg>

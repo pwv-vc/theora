@@ -16,7 +16,16 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
   const ontology = Array.isArray(fm.ontology) ? fm.ontology.map(String) : []
   const entities = fm.entities && typeof fm.entities === 'object' ? fm.entities as Record<string, string[]> : {}
 
-  const typeLabel = type === 'source' ? 'source' : type === 'concept' ? 'concept' : type === 'query' ? 'query' : ''
+  const typeLabel =
+    type === 'source'
+      ? 'source'
+      : type === 'concept'
+        ? 'concept'
+        : type === 'query'
+          ? 'query'
+          : type === 'mind-map'
+            ? 'mind map'
+            : ''
 
   return (
     <div>

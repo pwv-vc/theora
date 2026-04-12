@@ -1,38 +1,71 @@
 /** @jsxImportSource hono/jsx */
 /** @jsxImportSource hono/jsx */
-import type { KbConfig } from '../../lib/config.js'
-import { CheckboxField, LogPanel, PageHeader, Panel, PrimaryButton, SectionLabel, StatusDot } from './ui/index.js'
+import type { KbConfig } from "../../lib/config.js";
+import {
+  CheckboxField,
+  LogPanel,
+  PageHeader,
+  Panel,
+  PrimaryButton,
+  SectionLabel,
+  StatusDot,
+} from "./ui/index.js";
 
 interface CompilePageProps {
-  ingestedCount?: number
-  ingestedFiles?: string
-  config: KbConfig
+  ingestedCount?: number;
+  ingestedFiles?: string;
+  config: KbConfig;
 }
 
-export function CompilePage({ ingestedCount = 0, ingestedFiles = '', config }: CompilePageProps) {
-  const fileNames = ingestedFiles ? ingestedFiles.split(',').filter(Boolean) : []
+export function CompilePage({
+  ingestedCount = 0,
+  ingestedFiles = "",
+  config,
+}: CompilePageProps) {
+  const fileNames = ingestedFiles
+    ? ingestedFiles.split(",").filter(Boolean)
+    : [];
 
   return (
     <div>
-      <PageHeader title="Compile" subtitle={`Compile new found sources into the ${config.name} wiki and discover concepts.`} />
+      <PageHeader
+        title="Compile"
+        subtitle={`Compile new found sources into the ${config.name} wiki to discover concepts.`}
+      />
 
       {ingestedCount > 0 && (
-        <div class="mb-6 bg-green-950 border border-green-800 rounded-lg p-4 no-scanline" style="position: relative; z-index: 10001;">
+        <div
+          class="mb-6 bg-green-950 border border-green-800 rounded-lg p-4 no-scanline"
+          style="position: relative; z-index: 10001;"
+        >
           <div class="flex items-start gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400 shrink-0 mt-0.5">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="text-green-400 shrink-0 mt-0.5"
+            >
               <polyline points="20 6 9 17 4 12" />
             </svg>
             <div class="min-w-0">
               <div class="text-green-300 text-sm font-bold">
-                Added {ingestedCount} file{ingestedCount !== 1 ? 's' : ''} to the knowledge base
+                Added {ingestedCount} file{ingestedCount !== 1 ? "s" : ""} to
+                the knowledge base
               </div>
               {fileNames.length > 0 && (
                 <div class="text-green-600 text-xs mt-1 font-mono truncate">
-                  {fileNames.join(' · ')}
+                  {fileNames.join(" · ")}
                 </div>
               )}
               <div class="text-green-700 text-xs mt-2">
-                Run compile below to process {ingestedCount === 1 ? 'it' : 'them'} into the wiki.
+                Run compile below to process{" "}
+                {ingestedCount === 1 ? "it" : "them"} into the wiki.
               </div>
             </div>
           </div>
@@ -57,13 +90,18 @@ export function CompilePage({ ingestedCount = 0, ingestedFiles = '', config }: C
             description="Regenerate all concept articles from existing compiled sources"
           />
         </div>
-        <PrimaryButton id="compile-btn" onclick="runCompile()">Run Compile</PrimaryButton>
+        <PrimaryButton id="compile-btn" onclick="runCompile()">
+          Run Compile
+        </PrimaryButton>
       </Panel>
 
       <div id="progress-wrapper" class="hidden">
         <div class="flex items-center justify-between mb-3">
           <SectionLabel>Progress</SectionLabel>
-          <div id="compile-status" class="flex items-center gap-2 text-zinc-500 text-xs">
+          <div
+            id="compile-status"
+            class="flex items-center gap-2 text-zinc-500 text-xs"
+          >
             <StatusDot id="status-dot" />
             <span>Running...</span>
           </div>
@@ -71,7 +109,9 @@ export function CompilePage({ ingestedCount = 0, ingestedFiles = '', config }: C
         <LogPanel id="progress-log" />
       </div>
 
-      <script dangerouslySetInnerHTML={{ __html: `
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
         let compileSource = null;
 
         function runCompile() {
@@ -138,7 +178,9 @@ export function CompilePage({ ingestedCount = 0, ingestedFiles = '', config }: C
             compileStatus.innerHTML = '<span class="text-red-400">✗ Failed</span>';
           });
         }
-      ` }} />
+      `,
+        }}
+      />
     </div>
-  )
+  );
 }

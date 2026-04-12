@@ -1,0 +1,23 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <mask id="pota-rim">
+      <rect width="64" height="64" fill="white"/>
+      <rect x="22" y="19" width="20" height="26" rx="5" ry="5" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="64" height="64" fill="#050508"/>
+  <g mask="url(#pota-rim)">
+    <rect x="0" y="4" width="64" height="5" fill="#ff00aa"/>
+    <rect x="0" y="11" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="14" width="64" height="5" fill="#00ff00"/>
+    <rect x="0" y="21" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="24" width="64" height="5" fill="#00bbff"/>
+    <rect x="0" y="31" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="34" width="64" height="5" fill="#ff00aa"/>
+    <rect x="0" y="41" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="44" width="64" height="5" fill="#00ff00"/>
+    <rect x="0" y="51" width="64" height="3" fill="#050508"/>
+    <rect x="0" y="54" width="64" height="6" fill="#00bbff"/>
+  </g>
+  <rect x="22" y="19" width="20" height="26" rx="5" ry="5" fill="#e8e8ff" stroke="#141428" stroke-width="1.25"/>
+</svg>

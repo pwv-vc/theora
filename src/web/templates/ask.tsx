@@ -6,9 +6,12 @@ import { GhostButton, Input, PageHeader, PrimaryButton, SectionLabel, StatusDot,
 interface AskPageProps {
   tagsWithCounts: TagWithCount[]
   config: KbConfig
+  placeholderPhrases: string[]
 }
 
-export function AskPage({ tagsWithCounts, config }: AskPageProps) {
+export function AskPage({ tagsWithCounts, config, placeholderPhrases }: AskPageProps) {
+  const initialPlaceholder =
+    placeholderPhrases[0] ?? 'Tell me about this knowledge base'
   return (
     <div>
       <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js" integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+" crossorigin="anonymous" />
@@ -16,14 +19,20 @@ export function AskPage({ tagsWithCounts, config }: AskPageProps) {
 
       <PageHeader title="Ask" subtitle={`Ask a question against the compiled ${config.name} wiki.`} />
 
+      <div
+        id="ask-placeholder-data"
+        class="hidden"
+        data-phrases={encodeURIComponent(JSON.stringify(placeholderPhrases))}
+      />
+
       <div class="mb-6">
         <div class="flex gap-3 mb-4">
           <Input
             inputSize="md"
-            class="flex-1"
+            class="flex-1 transition-opacity duration-300"
             id="question-input"
             type="text"
-            placeholder="Tell me about this knowledge base"
+            placeholder={initialPlaceholder}
             onkeydown="if(event.key==='Enter')askQuestion()"
           />
           <PrimaryButton onclick="askQuestion()" id="ask-btn">Ask</PrimaryButton>
@@ -63,6 +72,58 @@ export function AskPage({ tagsWithCounts, config }: AskPageProps) {
       </div>
 
       <script dangerouslySetInnerHTML={{ __html: `
+        (function () {
+          const dataEl = document.getElementById('ask-placeholder-data');
+          const raw = dataEl && dataEl.dataset.phrases;
+          if (!raw) return;
+          let phrases;
+          try {
+            phrases = JSON.parse(decodeURIComponent(raw));
+          } catch (e) {
+            return;
+          }
+          if (!Array.isArray(phrases) || phrases.length < 2) return;
+
+          const input = document.getElementById('question-input');
+          if (!input) return;
+
+          let idx = 0;
+          let timer = null;
+
+          function startRotation() {
+            if (timer) clearInterval(timer);
+            timer = setInterval(tick, 5000);
+          }
+
+          function stopRotation() {
+            if (timer) {
+              clearInterval(timer);
+              timer = null;
+            }
+          }
+
+          function tick() {
+            if (document.activeElement === input || input.value.trim() !== '') return;
+            input.classList.add('opacity-40');
+            setTimeout(function () {
+              idx = (idx + 1) % phrases.length;
+              input.placeholder = phrases[idx];
+              input.classList.remove('opacity-40');
+            }, 200);
+          }
+
+          input.addEventListener('focus', stopRotation);
+          input.addEventListener('blur', function () {
+            if (input.value.trim() === '') startRotation();
+          });
+          input.addEventListener('input', function () {
+            if (input.value.trim() !== '') stopRotation();
+            else startRotation();
+          });
+
+          startRotation();
+        })();
+
         let currentSource = null;
 
         function askQuestion() {
