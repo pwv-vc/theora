@@ -138,6 +138,14 @@ pip3 install matplotlib
 
 Needed for `--output chart`. Requires Python 3 (`brew install python` if not installed).
 
+**Optional — YouTube captions-first ingest**
+
+```bash
+brew install yt-dlp
+```
+
+Needed for `theora ingest <youtube-url>`. Theora fetches captions and metadata only, then saves a transcript-backed markdown source into `raw/` without downloading the video file.
+
 ### Install
 
 ```bash
@@ -236,6 +244,13 @@ theora ingest https://arxiv.org/abs/2310.01234 --tag transformers
 theora ingest https://example.com/diagram.png --tag architecture
 ```
 
+YouTube URLs take a captions-first path: Theora uses `yt-dlp` to fetch metadata plus captions, then stores the transcript as a normal markdown source in `raw/` so compile can treat it like any other text document:
+
+```bash
+theora ingest https://www.youtube.com/watch?v=VIDEO_ID --tag research
+theora compile
+```
+
 You can mix files, directories, and URLs in a single command:
 
 ```bash
@@ -246,16 +261,17 @@ Only valid file types are ingested — everything else is skipped. Duplicates ar
 
 Supported file types:
 
-| Type              | Extensions                                                | How it's compiled                                                                                                                                                                                    |
-| ----------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Text              | `.md` `.mdx` `.txt` `.html` `.json` `.csv` `.xml` `.yaml` | Read as text, summarized by LLM                                                                                                                                                                      |
-| PDF               | `.pdf`                                                    | Text extracted, then summarized by LLM                                                                                                                                                               |
-| Image             | `.png` `.jpg` `.jpeg` `.gif` `.webp`                      | Analyzed via LLM vision, described and indexed                                                                                                                                                       |
-| Audio             | `.mp3` `.wav` `.ogg` `.flac` `.m4a`                       | Transcribed with OpenAI Whisper (`whisper-1`), then summarized like text                                                                                                                             |
-| Video             | `.mp4` `.mov` `.avi` `.mkv` `.webm`                       | Requires **ffmpeg** (on macOS, install with [Homebrew](https://brew.sh): `brew install ffmpeg`). Audio transcribed with Whisper; evenly sampled frames analyzed with vision; one merged wiki article |
-| URL (page)        | `http://` `https://`                                      | Fetched as HTML, compiled as text                                                                                                                                                                    |
-| URL (image)       | `http://` `https://`                                      | Downloaded, analyzed via LLM vision                                                                                                                                                                  |
-| URL (audio/video) | `http://` `https://`                                      | Streamed to disk; video uses `videoMaxFileBytes`, other media `mediaMaxFileBytes` (same rules as local ingest)                                                                                       |
+| Type | Extensions | How it's compiled |
+|------|-----------|-------------------|
+| Text | `.md` `.mdx` `.txt` `.html` `.json` `.csv` `.xml` `.yaml` | Read as text, summarized by LLM |
+| PDF | `.pdf` | Text extracted, then summarized by LLM |
+| Image | `.png` `.jpg` `.jpeg` `.gif` `.webp` | Analyzed via LLM vision, described and indexed |
+| Audio | `.mp3` `.wav` `.ogg` `.flac` `.m4a` | Transcribed with OpenAI Whisper (`whisper-1`), then summarized like text |
+| Video | `.mp4` `.mov` `.avi` `.mkv` `.webm` | Requires **ffmpeg** (on macOS, install with [Homebrew](https://brew.sh): `brew install ffmpeg`). Audio transcribed with Whisper; evenly sampled frames analyzed with vision; one merged wiki article |
+| URL (page) | `http://` `https://` | Fetched as HTML, compiled as text |
+| URL (image) | `http://` `https://` | Downloaded, analyzed via LLM vision |
+| URL (audio/video) | `http://` `https://` | Streamed to disk; video uses `videoMaxFileBytes`, other media `mediaMaxFileBytes` (same rules as local ingest) |
+| URL (YouTube) | `https://www.youtube.com/watch?...` `https://youtu.be/...` | Requires **yt-dlp**. Fetches metadata + captions only, then saves `raw/youtube-<video-id>.md` without downloading video |
 
 **Whisper and API keys:** Transcription always uses the **OpenAI** audio API (`models.transcribe`, default `whisper-1`). Set `OPENAI_API_KEY`, or use `OPENAI_TRANSCRIBE_API_KEY` if you want a separate key. Chat/vision still follow `provider` in `.theora/config.json` (e.g. Anthropic for compile/vision).
 
@@ -263,7 +279,7 @@ Supported file types:
 
 #### Audio and video: ingest and compile flows
 
-**Ingest** copies or streams files into `raw/` (same extensions as in the table above). Size limits depend on type: audio uses `mediaMaxFileBytes`; video files and `video/*` URL responses use `videoMaxFileBytes`. URL ingest runs an SSRF guard before fetch. Companion files produced at compile time (`*.transcript.md`, `{stem}.frames/`) are not separate ingest targets—they are created when you compile.
+**Ingest** copies or streams files into `raw/` (same extensions as in the table above). Size limits depend on type: audio uses `mediaMaxFileBytes`; video files and `video/*` URL responses use `videoMaxFileBytes`. URL ingest runs an SSRF guard before fetch. Supported YouTube URLs are a captions-first exception: Theora shells out to `yt-dlp`, fetches metadata plus captions, and writes a markdown transcript source instead of downloading media. Companion files produced at compile time (`*.transcript.md`, `{stem}.frames/`) are not separate ingest targets—they are created when you compile.
 
 ```mermaid
 flowchart TD

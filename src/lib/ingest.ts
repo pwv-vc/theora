@@ -1,6 +1,7 @@
-import { writeFileSync } from 'node:fs'
-import { join, extname, basename } from 'node:path'
+import { copyFileSync, statSync, writeFileSync } from 'node:fs'
+import { extname, basename } from 'node:path'
 import { lookup } from 'node:dns/promises'
+import { fetchYouTubeTranscript, isYouTubeUrl } from './youtube.js'
 import { slugify } from './utils.js'
 import { safeJoin } from './paths.js'
 import { readConfig } from './config.js'
@@ -122,7 +123,12 @@ async function isPrivateUrl(urlStr: string): Promise<boolean> {
   }
 }
 
-export async function fetchUrl(url: string, destDir: string): Promise<{ name: string }> {
+interface PersistedUrlResult {
+  name: string
+  skippedDupe?: boolean
+}
+
+async function fetchUrlResponse(url: string): Promise<Response> {
   if (await isPrivateUrl(url)) {
     throw new Error(`Blocked: "${url}" resolves to a private or internal address`)
   }
@@ -131,7 +137,15 @@ export async function fetchUrl(url: string, destDir: string): Promise<{ name: st
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} fetching ${url}`)
   }
+  return response
+}
 
+async function writeFetchedResponse(
+  response: Response,
+  url: string,
+  destDir: string,
+  existingNames?: Set<string>,
+): Promise<PersistedUrlResult> {
   const contentType = response.headers.get('content-type') ?? 'text/html'
   const mimeBase = contentType.split(';')[0].trim()
   const maxBytes = maxBytesForMime(mimeBase)
@@ -142,47 +156,88 @@ export async function fetchUrl(url: string, destDir: string): Promise<{ name: st
   }
 
   const name = filenameFromUrl(url, contentType)
-  const destPath = safeJoin(destDir, name)
-
-  const binaryStream = isBinaryStreamMime(mimeBase)
-
-  if (binaryStream) {
-    const chunks: Buffer[] = []
-    let totalBytes = 0
-    const reader = response.body!.getReader()
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      totalBytes += value.length
-      if (totalBytes > maxBytes) {
-        throw new Error(`Response exceeded ${maxBytes} byte limit`)
-      }
-      chunks.push(Buffer.from(value))
-    }
-    writeFileSync(destPath, Buffer.concat(chunks))
-  } else {
-    const chunks: Buffer[] = []
-    let totalBytes = 0
-    const reader = response.body!.getReader()
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      totalBytes += value.length
-      if (totalBytes > maxBytes) {
-        throw new Error(`Response exceeded ${maxBytes} byte limit`)
-      }
-      chunks.push(Buffer.from(value))
-    }
-    writeFileSync(destPath, Buffer.concat(chunks).toString('utf-8'))
+  if (existingNames?.has(name)) {
+    return { name, skippedDupe: true }
   }
 
+  const destPath = safeJoin(destDir, name)
+  const binaryStream = isBinaryStreamMime(mimeBase)
+  const chunks: Buffer[] = []
+  let totalBytes = 0
+  const reader = response.body!.getReader()
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    totalBytes += value.length
+    if (totalBytes > maxBytes) {
+      throw new Error(`Response exceeded ${maxBytes} byte limit`)
+    }
+    chunks.push(Buffer.from(value))
+  }
+
+  const content = Buffer.concat(chunks)
+  if (binaryStream) {
+    writeFileSync(destPath, content)
+  } else {
+    writeFileSync(destPath, content.toString('utf-8'))
+  }
+
+  existingNames?.add(name)
   return { name }
+}
+
+export async function fetchUrl(url: string, destDir: string): Promise<{ name: string }> {
+  const response = await fetchUrlResponse(url)
+  const { name } = await writeFetchedResponse(response, url, destDir)
+  return { name }
+}
+
+function writeNamedSource(
+  name: string,
+  contents: string | Buffer,
+  destDir: string,
+  existingNames: Set<string>,
+): IngestResult {
+  if (existingNames.has(name)) {
+    return { name, status: 'skipped_dupe' }
+  }
+
+  const destPath = safeJoin(destDir, name)
+  writeFileSync(destPath, contents)
+  existingNames.add(name)
+  return { name, status: 'ingested' }
 }
 
 export interface IngestResult {
   name: string
   status: 'ingested' | 'skipped_dupe' | 'skipped_type' | 'skipped_size' | 'error'
   error?: string
+  url?: string
+}
+
+export function ingestLocalFile(
+  filePath: string,
+  destDir: string,
+  existingNames: Set<string>,
+): IngestResult {
+  if (!isValidFile(filePath)) {
+    return { name: filePath, status: 'skipped_type', error: `${filePath}: unsupported file type` }
+  }
+
+  const name = basename(filePath)
+  const maxBytes = maxIngestBytesForFilename(name)
+
+  if (statSync(filePath).size > maxBytes) {
+    return { name, status: 'skipped_size', error: `${name}: exceeds ${maxBytes} byte limit` }
+  }
+
+  if (existingNames.has(name)) {
+    return { name, status: 'skipped_dupe' }
+  }
+
+  copyFileSync(filePath, safeJoin(destDir, name))
+  existingNames.add(name)
+  return { name, status: 'ingested' }
 }
 
 export async function ingestWebFile(
@@ -205,34 +260,53 @@ export async function ingestWebFile(
     return { name, status: 'skipped_dupe' }
   }
 
-  const destPath = safeJoin(destDir, name)
   const buffer = Buffer.from(await file.arrayBuffer())
-  writeFileSync(destPath, buffer)
-  existingNames.add(name)
-
-  return { name, status: 'ingested' }
+  return writeNamedSource(name, buffer, destDir, existingNames)
 }
 
-export async function ingestWebUrl(
+export async function ingestUrlSource(
   url: string,
   destDir: string,
   existingNames: Set<string>,
+  existingUrls?: Set<string>,
 ): Promise<IngestResult> {
   if (!isUrl(url)) {
     return { name: url, status: 'error', error: `${url}: not a valid URL` }
   }
 
   try {
-    const { name } = await fetchUrl(url, destDir)
-
-    if (existingNames.has(name)) {
-      return { name, status: 'skipped_dupe' }
+    if (existingUrls?.has(url)) {
+      return { name: url, status: 'skipped_dupe', url }
     }
 
-    existingNames.add(name)
-    return { name, status: 'ingested' }
+    if (isYouTubeUrl(url)) {
+      const transcript = await fetchYouTubeTranscript(url)
+      if (existingUrls?.has(transcript.url)) {
+        return { name: transcript.suggestedFilename, status: 'skipped_dupe', url: transcript.url }
+      }
+      const result = writeNamedSource(transcript.suggestedFilename, transcript.markdown, destDir, existingNames)
+      if (result.status === 'ingested') existingUrls?.add(transcript.url)
+      return { ...result, url: transcript.url }
+    }
+
+    const response = await fetchUrlResponse(url)
+    const result = await writeFetchedResponse(response, url, destDir, existingNames)
+    if (result.skippedDupe) {
+      return { name: result.name, status: 'skipped_dupe', url }
+    }
+    existingUrls?.add(url)
+    return { name: result.name, status: 'ingested', url }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     return { name: url, status: 'error', error: msg }
   }
+}
+
+export async function ingestWebUrl(
+  url: string,
+  destDir: string,
+  existingNames: Set<string>,
+  existingUrls?: Set<string>,
+): Promise<IngestResult> {
+  return ingestUrlSource(url, destDir, existingNames, existingUrls)
 }

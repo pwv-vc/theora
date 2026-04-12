@@ -605,6 +605,7 @@ export function startServer(port: number): void {
 
     const entries = readManifest()
     const existingNames = new Set(entries.map(e => e.name))
+    const existingUrls = new Set(entries.flatMap(e => e.url ? [e.url] : []))
 
     const ingestedEntries: { name: string; tag: string | null; url?: string }[] = []
     const errors: string[] = []
@@ -627,9 +628,9 @@ export function startServer(port: number): void {
     const urlsRaw = typeof body['urls'] === 'string' ? body['urls'] : ''
     const urls = urlsRaw.split('\n').map(u => u.trim()).filter(u => u.startsWith('http'))
     for (const url of urls) {
-      const result = await ingestWebUrl(url, destDir, existingNames)
+      const result = await ingestWebUrl(url, destDir, existingNames, existingUrls)
       if (result.status === 'ingested') {
-        ingestedEntries.push({ name: result.name, tag, url })
+        ingestedEntries.push({ name: result.name, tag, url: result.url ?? url })
         ingestedNames.push(result.name)
       } else if (result.status === 'error') {
         if (result.error) errors.push(result.error)
@@ -793,4 +794,3 @@ export function startServer(port: number): void {
     console.log(`  http://localhost:${info.port}`)
   })
 }
-
