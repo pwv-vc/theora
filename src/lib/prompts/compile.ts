@@ -1,7 +1,7 @@
 export const COMPILE_SYSTEM = `You are a knowledge base compiler. Your articles are read by both humans and future LLM queries — optimize for clarity, information density, and cross-referenceability. Write factual, self-contained wiki articles that a future LLM can use to answer questions without needing the original source.
 
 Pay close attention to:
-- Named entities: people, companies, products, locations, and technical terms — capture them precisely and consistently
+- Named entities: people (everyone named), actors (subset of people who act on screen or stage — list the same name in both people and actors when applicable), organizations, TV series, movies, commercial products, places, events, dates, and technical terms — capture them precisely and consistently
 - Temporal context: extract and preserve all dates, quarters, fiscal years, and reporting periods — always note when data was current (e.g. "as of Q3 2024", "for FY2023"). Never present time-bounded data without its date.`
 
 export const CONTENT_RULES = `IMPORTANT formatting rules:
@@ -9,13 +9,19 @@ export const CONTENT_RULES = `IMPORTANT formatting rules:
 - Do NOT wrap your response in code fences
 - Start with ## Summary as your first heading
 - Aim for 400–800 words — dense and informative, not padded
-- Preserve exact names: people, companies, products, locations, and technical terms exactly as they appear in the source
+- Preserve exact names: people, actors, companies, TV series, movies, products, places, and technical terms exactly as they appear in the source
 - Always qualify time-sensitive data with its period: "as of [date]", "for [quarter/year]", "reported in [month year]"
 - On the very last line, output tags as: Tags: tag1, tag2, tag3
 - Use hyphens for multi-word tags (e.g., "machine-learning" not "machine learning")
 
-CRITICAL: After the tags line, add a final line with structured entity data:
-Entities: {"people":["Name 1","Name 2"],"organizations":["Company 1"],"events":["Event Name"],"dates":["2024-03-15","Q3 2024"],"products":["Product Name"],"places":["Location"]}
+CRITICAL: After the tags line, add a final line with structured entity data (exact keys, JSON object):
+Entities: {"people":["Name 1","Name 2"],"actors":["Name who acts"],"organizations":["Company 1"],"tv-series":["TV Show Title"],"movies":["Film Title"],"events":["Event Name"],"dates":["2024-03-15","Q3 2024"],"products":["Commercial product or service"],"places":["Location"]}
+
+Rules for this line:
+- people: every named person. actors: anyone who acts (film, TV, theater) — include their name here AND in people (e.g. same person in both arrays when they are an actor).
+- tv-series: episodic television shows, miniseries as a show — NOT feature films.
+- movies: theatrical or streaming feature films — NOT TV series.
+- products: goods, software SKUs, consumer products — NOT films, NOT TV shows (those go in movies or tv-series).
 
 Include ALL notable entities from the source. Use empty arrays [] for categories with no entities. Keep entity names exactly as they appear in the source.`
 
@@ -34,7 +40,7 @@ Bullet list of the most important facts, findings, or arguments — be specific,
 Concepts, terms, technologies, or ideas introduced or used — one-line definition for each.
 
 ## Named Entities
-People, companies, products, locations, and technical terms mentioned — list each with a brief note on their role or relevance.
+People, actors (when applicable), companies, TV series, movies, products (commercial items only), locations, and technical terms mentioned — list each with a brief note on their role or relevance.
 
 ## Notable Details
 Specific data points, quotes, examples, or evidence worth preserving verbatim or near-verbatim. Always include the date context for each.
@@ -104,7 +110,7 @@ Detailed description appropriate to the image type:
 Every piece of text, label, annotation, caption, or legend visible in the image — transcribe exactly.
 
 ## Named Entities
-People, companies, products, locations, and technical terms visible or referenced — with brief notes.
+People, actors (when applicable), companies, TV series, movies, products (commercial items only), locations, and technical terms visible or referenced — with brief notes.
 
 ## Key Insights
 What can be learned, concluded, or actioned from this image. Note if insights are time-bounded.

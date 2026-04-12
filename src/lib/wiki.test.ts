@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { repairWikiArticleMarkdownHrefsForWeb, sanitizeLlmOutput } from './wiki.js'
+import {
+  ONTOLOGY_TYPES,
+  ONTOLOGY_SCHEMA_URLS,
+  buildConceptOntologyExtractionGuidance,
+  normalizeEntitiesRecord,
+  repairWikiArticleMarkdownHrefsForWeb,
+  sanitizeLlmOutput,
+} from './wiki.js'
 
 describe('sanitizeLlmOutput', () => {
   it('parses tags and entities on consecutive lines', () => {
@@ -134,6 +141,40 @@ Entities: {"people":["Dave"]}`
     expect(result.tags).toEqual(['a', 'b', 'c'])
     expect(result.entities).toEqual({ people: ['Dave'] })
     expect(result.body).toBe('## Summary\nContent.')
+  })
+})
+
+describe('normalizeEntitiesRecord', () => {
+  it('keeps empty arrays and drops non-string array entries', () => {
+    expect(
+      normalizeEntitiesRecord({
+        people: ['Ada', 1, '', 'Grace'],
+        actors: [],
+        'tv-series': ['Max Headroom'],
+      }),
+    ).toEqual({
+      people: ['Ada', 'Grace'],
+      actors: [],
+      'tv-series': ['Max Headroom'],
+    })
+  })
+})
+
+describe('ontology vocabulary', () => {
+  it('maps every ONTOLOGY_TYPES entry to a schema.org URL', () => {
+    const keys = Object.keys(ONTOLOGY_SCHEMA_URLS)
+    expect(keys.length).toBe(ONTOLOGY_TYPES.length)
+    for (const t of ONTOLOGY_TYPES) {
+      const url = ONTOLOGY_SCHEMA_URLS[t]
+      expect(url).toMatch(/^https:\/\/schema\.org\//)
+    }
+  })
+
+  it('buildConceptOntologyExtractionGuidance lists all allowed tokens', () => {
+    const g = buildConceptOntologyExtractionGuidance()
+    for (const t of ONTOLOGY_TYPES) {
+      expect(g).toContain(`"${t}"`)
+    }
   })
 })
 

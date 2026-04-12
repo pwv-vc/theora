@@ -24,9 +24,30 @@ export const ONTOLOGY_TYPES = [
   'place',         // schema.org/Place        — Wikidata Q2221906
   'product',       // schema.org/Product      — Wikidata Q2424752
   'event',         // schema.org/Event        — Wikidata Q1656682
-  'creative-work', // schema.org/CreativeWork — Wikidata Q17537576 (papers, books, articles)
+  'creative-work', // schema.org/CreativeWork — Wikidata Q17537576 (umbrella for works)
   'technology',    // schema.org/SoftwareApplication / TechArticle
-  'concept',       // abstract idea — no direct schema.org equivalent; fallback
+  'concept',       // abstract idea — schema.org/Thing; fallback
+  // Person roles (schema.org/Person; distinct tokens for map/filter)
+  'actor',
+  'musician',
+  'visual-artist',
+  // Creative work subtypes
+  'movie',
+  'tv-series',
+  'music-album',
+  'song',
+  'book',
+  'visual-artwork',
+  // Cross-domain KB
+  'educational-organization',
+  'government-organization',
+  'website',
+  'dataset',
+  'sports-team',
+  'scholarly-article',
+  'medical-condition',
+  'drug',
+  'recipe',
 ] as const
 export type OntologyType = typeof ONTOLOGY_TYPES[number]
 
@@ -39,6 +60,60 @@ export const ONTOLOGY_SCHEMA_URLS: Record<OntologyType, string> = {
   'creative-work': 'https://schema.org/CreativeWork',
   'technology':    'https://schema.org/SoftwareApplication',
   'concept':       'https://schema.org/Thing',
+  'actor':         'https://schema.org/Person',
+  'musician':      'https://schema.org/Person',
+  'visual-artist': 'https://schema.org/Person',
+  'movie':         'https://schema.org/Movie',
+  'tv-series':     'https://schema.org/TVSeries',
+  'music-album':   'https://schema.org/MusicAlbum',
+  'song':          'https://schema.org/MusicRecording',
+  'book':          'https://schema.org/Book',
+  'visual-artwork': 'https://schema.org/VisualArtwork',
+  'educational-organization': 'https://schema.org/EducationalOrganization',
+  'government-organization':  'https://schema.org/GovernmentOrganization',
+  'website':       'https://schema.org/WebSite',
+  'dataset':       'https://schema.org/Dataset',
+  'sports-team':   'https://schema.org/SportsTeam',
+  'scholarly-article': 'https://schema.org/ScholarlyArticle',
+  'medical-condition': 'https://schema.org/MedicalCondition',
+  'drug':          'https://schema.org/Drug',
+  'recipe':        'https://schema.org/Recipe',
+}
+
+/** LLM instructions for concept extraction JSON (kept in wiki.ts with ONTOLOGY_TYPES). */
+export function buildConceptOntologyExtractionGuidance(): string {
+  const lines = ONTOLOGY_TYPES.map(
+    (t) => `  "${t}" (${ONTOLOGY_SCHEMA_URLS[t]})`,
+  ).join('\n')
+
+  return `Return a JSON array of objects with:
+- "slug": kebab-case filename
+- "title": human-readable title
+- "description": one-sentence description
+- "related_sources": array of source slugs that mention this concept
+- "ontology": array of types from the allowed list below — use ONLY those exact strings, at least one per concept
+
+Rules for "ontology":
+- Prefer the MOST SPECIFIC types that fit. When several apply, include ALL of them (multi-label is expected when rules below say so).
+- People: If the concept is clearly an actor, musician, or visual artist (painter, sculptor, etc.), output "person" PLUS every applicable role token: actor, musician, visual-artist. Do NOT output only "person" when a role token is clearly supported by the summaries.
+- Organizations: Prefer "educational-organization" or "government-organization" over generic "organization" when the summaries clearly describe a school, university, or government body.
+- Creative works: Use one primary work type when clear — movie, tv-series, book, music-album, song, visual-artwork. Add "creative-work" only when the work type is mixed or genuinely unclear.
+- Disambiguation:
+  - movie = film; tv-series = episodic television (not a one-off special).
+  - song = single track/recording; music-album = album release.
+  - visual-artwork = the work (painting, sculpture); visual-artist = the person.
+  - scholarly-article = paper or preprint; book = monograph or long-form book.
+  - dataset = data release, benchmark, corpus; technology = software, library, platform, API.
+  - drug = medication or vaccine; medical-condition = disease or syndrome; product = commercial product when it is not primarily a drug.
+  - website = the site or web property as the concept; organization = the company, agency, or institution (use the more specific org subtype when it fits).
+
+Example objects (shape only; slugs and related_sources must match this KB):
+{"slug":"ada-lovelace","title":"Ada Lovelace","description":"Mathematician and writer known for early computing work.","related_sources":["analytical-engine-notes"],"ontology":["person"]}
+{"slug":"jane-composer","title":"Jane Composer","description":"Composer and performer.","related_sources":["symphony-review-2024"],"ontology":["person","musician"]}
+{"slug":"deep-focus","title":"Deep Focus","description":"A neo-noir crime film.","related_sources":["film-retrospective"],"ontology":["movie"]}
+
+Allowed ontology tokens (ONLY these strings):
+${lines}`
 }
 
 export interface ArticleMeta {
@@ -58,6 +133,20 @@ export interface ArticleMeta {
 }
 
 // --- LLM Output Sanitization ---
+
+/** Normalize Entities: JSON line values to string arrays (drops invalid entries). */
+export function normalizeEntitiesRecord(raw: Record<string, unknown>): Record<string, string[]> {
+  const out: Record<string, string[]> = {}
+  for (const [k, v] of Object.entries(raw)) {
+    if (Array.isArray(v)) {
+      const names = v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+      out[k] = names
+    } else if (typeof v === 'string' && v.trim()) {
+      out[k] = [v.trim()]
+    }
+  }
+  return out
+}
 
 export function sanitizeLlmOutput(raw: string): { body: string; tags: string[]; entities?: Record<string, string[]> } {
   let text = raw.trim()
@@ -96,8 +185,8 @@ export function sanitizeLlmOutput(raw: string): { body: string; tags: string[]; 
       const raw_line = lines[entitiesIdx].trim()
       const jsonStr = raw_line.slice(raw_line.indexOf(':') + 1).trim()
       const parsed = JSON.parse(jsonStr)
-      if (parsed && typeof parsed === 'object') {
-        entities = parsed
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        entities = normalizeEntitiesRecord(parsed as Record<string, unknown>)
       }
     } catch {
       // Ignore parse errors — entities will be empty

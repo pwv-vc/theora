@@ -57,6 +57,8 @@ flowchart TD
 
 Each source gets its own article with consistent sections — Summary, Key Points, Named Entities, Notable Details. Concepts are extracted across all sources and linked back. The index ties everything together with tags and a brief overview.
 
+Compiled sources also emit structured **entities** in front matter (slug-style keys such as `people/…`, `actors/…` for performers listed under both, `tv-series/…`, `movies/…`, `products/…` for commercial items only, plus organizations, places, events, dates). Recompile affected sources after prompt updates so existing articles pick up the new buckets.
+
 ### The Ask Loop
 
 `theora ask` is where the compounding happens:
@@ -505,7 +507,7 @@ Using more than one of `--overview`, `--entity`, `--around`, or tag-as-center (`
 
 | Option | Meaning |
 | ------ | ------- |
-| `--ontology <type>` | Restrict which concept articles participate (`person`, `organization`, `place`, `product`, `event`, `creative-work`, `technology`, `concept`). |
+| `--ontology <type>` | Restrict which concept articles participate. Values are the allowlist in [`src/lib/wiki.ts`](src/lib/wiki.ts) (`ONTOLOGY_TYPES`): core types (`person`, `organization`, `place`, …), creative subtypes (`movie`, `book`, `tv-series`, …), roles (`actor`, `musician`, `visual-artist`), and general KB types (`dataset`, `website`, `educational-organization`, …). |
 | `--depth <n>` | Article hops from the focal point, 1–8 (default `2`). |
 | `--max-nodes <n>` | Hard cap on graph size, 4–200 (default `48`). |
 | `--expand-level <n>` | Optional Markmap hint `initialExpandLevel` in YAML front matter, 1–8. |

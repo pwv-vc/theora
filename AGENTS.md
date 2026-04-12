@@ -89,9 +89,9 @@ Apply across server, client, CLI, and prompts.
 - References: `[Title](path)` not bold-only duplicates.
 - **`output/`:** In `listWikiArticles()`; **always** inject into ask context **beside** ranked articles (ranker doesn’t read file bodies). **Caveat:** old answers can over-influence unrelated questions.
 - **`wiki/index.md`:** `theora compile --reindex`; covers sources + concepts, **not** `output/` — so ask must inject output explicitly.
-- **Concepts:** `ontology` = YAML array of bare strings; multiple values OK; prefer standard vocabularies. `related_sources`: quoted `[[slug]]` in frontmatter **and** wiki links in body.
+- **Concepts:** `ontology` = YAML array of bare strings from `ONTOLOGY_TYPES` in `wiki.ts` (schema.org-aligned: media subtypes, org subtypes, roles, datasets, etc.); multiple values OK when several apply. `related_sources`: quoted `[[slug]]` in frontmatter **and** wiki links in body.
 - **Generated links:** Display = frontmatter **`title`** only (not body/H1); href = kebab slug. Normalize `[[wiki-links]]` on index like ask output. Index tags Obsidian-navigable.
-- **Entities:** Slug-style labels at compile (`people/foo`); web shows typed pills not raw JSON.
+- **Entities:** Slug-style labels at compile (`people/foo`, `actors/foo`, `tv-series/foo`, `movies/foo`, …); compile prompt defines buckets. Web shows typed pills not raw JSON. Re-run compile on sources to refresh entities after prompt changes.
 - **Wiki UI sections:** ALL-CAPS headers with counts (e.g. `SOURCE (12)`).
 - **Concept extraction:** Configurable truncation (default ~3000 chars/source) and min/max concepts per run (taste defaults min 5, max 10).
 
