@@ -1,8 +1,9 @@
 import { join } from 'node:path'
 import { existsSync, readFileSync, accessSync, constants } from 'node:fs'
-import { findKbRoot } from './paths.js'
-import { readConfig, KbConfig } from './config.js'
+import { readConfigAtRoot, KbConfig } from './config.js'
 import { getGlobalEnvPath, globalEnvExists } from './env.js'
+import { getGlobalConfigPath, globalConfigExists, readGlobalConfig } from './global-config.js'
+import { resolveKbRoot, type KbResolutionSource } from './paths.js'
 
 export interface EnvLocation {
   source: 'kb' | 'cwd' | 'global' | 'none'
@@ -13,8 +14,13 @@ export interface EnvLocation {
 export interface SettingsInfo {
   kbConfig: KbConfig | null
   kbRoot: string | null
+  kbResolutionSource: KbResolutionSource
   envLocation: EnvLocation
   envKeys: string[]
+  globalConfigExists: boolean
+  globalConfigPath: string
+  activeKb: string | null
+  knownKbsCount: number
   globalEnvExists: boolean
   globalEnvPath: string
 }
@@ -39,7 +45,7 @@ function isReadableFile(path: string): boolean {
 }
 
 export function findActiveEnvFile(): EnvLocation {
-  const kbRoot = findKbRoot()
+  const kbRoot = resolveKbRoot().root
   const cwd = process.cwd()
 
   // Check KB root first (highest priority)
@@ -91,7 +97,7 @@ export function getEnvKeysFromFile(envPath: string): string[] {
 
 export function getAllEnvKeys(): string[] {
   const keys = new Set<string>()
-  const kbRoot = findKbRoot()
+  const kbRoot = resolveKbRoot().root
 
   // Check all potential sources in priority order
   const sources: string[] = []
@@ -113,16 +119,23 @@ export function getAllEnvKeys(): string[] {
 }
 
 export function getSettingsInfo(): SettingsInfo {
-  const kbRoot = findKbRoot()
-  const kbConfig = kbRoot ? readConfig() : null
+  const resolution = resolveKbRoot()
+  const kbRoot = resolution.root
+  const kbConfig = kbRoot ? readConfigAtRoot(kbRoot) : null
   const envLocation = findActiveEnvFile()
+  const globalConfig = readGlobalConfig()
 
   return {
     kbConfig,
     kbRoot,
+    kbResolutionSource: resolution.source,
     envLocation,
     envKeys: getAllEnvKeys(),
+    globalConfigExists: globalConfigExists(),
+    globalConfigPath: getGlobalConfigPath(),
+    activeKb: globalConfig.activeKb ?? null,
+    knownKbsCount: globalConfig.knownKbs?.length ?? 0,
     globalEnvExists: globalEnvExists(),
-    globalEnvPath: getGlobalEnvPath()
+    globalEnvPath: getGlobalEnvPath(),
   }
 }

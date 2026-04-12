@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import pc from 'picocolors'
-import { findKbRoot } from './paths.js'
+import { findActiveKbRoot } from './paths.js'
 import { formatDuration } from './utils.js'
 
 export interface LlmCallStats {
@@ -87,7 +87,7 @@ export function getSession(): SessionStats {
 // --- Cumulative stats (persisted to .kb/stats.json) ---
 
 function statsPath(): string | null {
-  const root = findKbRoot()
+  const root = findActiveKbRoot()
   if (!root) return null
   return join(root, '.theora', 'stats.json')
 }

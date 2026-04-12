@@ -13,6 +13,7 @@ import { statsCommand } from './commands/stats.js'
 import { tailCommand } from './commands/tail.js'
 import { serveCommand } from './commands/serve.js'
 import { settingsCommand } from './commands/settings.js'
+import { kbCommand } from './commands/kb.js'
 import { mapCommand } from './commands/map.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -51,6 +52,7 @@ program.addCommand(statsCommand)
 program.addCommand(tailCommand)
 program.addCommand(serveCommand)
 program.addCommand(settingsCommand)
+program.addCommand(kbCommand)
 program.addCommand(mapCommand)
 
 function handleError(err: unknown): never {

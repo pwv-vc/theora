@@ -1,7 +1,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import pc from 'picocolors'
-import { kbPaths, findKbRoot } from './paths.js'
+import { kbPaths, findActiveKbRoot } from './paths.js'
 import type { LocalModelPricingConfig } from './config.js'
 import { formatDuration } from './utils.js'
 
@@ -133,7 +133,7 @@ export interface StatsSummary {
 }
 
 function getLogPath(): string | null {
-  const root = findKbRoot()
+  const root = findActiveKbRoot()
   if (!root) return null
   return kbPaths(root).llmLog
 }

@@ -1,5 +1,6 @@
 import { join, resolve } from 'node:path'
 import { existsSync } from 'node:fs'
+import { readGlobalConfig } from './global-config.js'
 
 /**
  * Join `base` and `untrusted` and verify the result stays inside `base`.
@@ -14,11 +15,26 @@ export function safeJoin(base: string, untrusted: string): string {
   return resolved
 }
 
+export type KbResolutionSource = 'cwd' | 'global' | 'none'
+
+export interface KbResolution {
+  root: string | null
+  source: KbResolutionSource
+  invalidGlobalKb: string | null
+}
+
+export function isKbRoot(path: string): boolean {
+  const root = resolve(path)
+  return existsSync(join(root, '.theora', 'config.json'))
+    && existsSync(join(root, 'raw'))
+    && existsSync(join(root, 'wiki'))
+    && existsSync(join(root, 'output'))
+}
+
 export function findKbRoot(from: string = process.cwd()): string | null {
   let dir = resolve(from)
   while (true) {
-    // Check for .theora/config.json to distinguish KB roots from global ~/.theora
-    if (existsSync(join(dir, '.theora', 'config.json'))) {
+    if (isKbRoot(dir)) {
       return dir
     }
     const parent = resolve(dir, '..')
@@ -27,12 +43,42 @@ export function findKbRoot(from: string = process.cwd()): string | null {
   }
 }
 
-export function requireKbRoot(): string {
-  const root = findKbRoot()
-  if (!root) {
-    throw new Error('Not inside a knowledge base. Run `theora init` first.')
+export function resolveKbRoot(from: string = process.cwd()): KbResolution {
+  const localRoot = findKbRoot(from)
+  if (localRoot) {
+    return { root: localRoot, source: 'cwd', invalidGlobalKb: null }
   }
-  return root
+
+  const { activeKb } = readGlobalConfig()
+  if (!activeKb) {
+    return { root: null, source: 'none', invalidGlobalKb: null }
+  }
+
+  const resolvedActiveKb = resolve(activeKb)
+  if (!isKbRoot(resolvedActiveKb)) {
+    return { root: null, source: 'none', invalidGlobalKb: resolvedActiveKb }
+  }
+
+  return { root: resolvedActiveKb, source: 'global', invalidGlobalKb: null }
+}
+
+export function findActiveKbRoot(from: string = process.cwd()): string | null {
+  return resolveKbRoot(from).root
+}
+
+export function requireKbRoot(): string {
+  const resolution = resolveKbRoot()
+  if (resolution.root) {
+    return resolution.root
+  }
+
+  if (resolution.invalidGlobalKb) {
+    throw new Error(
+      `Configured active KB is invalid: "${resolution.invalidGlobalKb}". Run \`theora kb use <path>\` to set a valid knowledge base.`,
+    )
+  }
+
+  throw new Error('Not inside a knowledge base and no active KB is configured. Run `theora kb use <path>` first.')
 }
 
 export type KbPaths = ReturnType<typeof kbPaths>
