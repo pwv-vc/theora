@@ -321,6 +321,7 @@ The LLM reads every new source in `raw/`, writes a summary article for each, ext
 
 ```bash
 theora compile --sources-only    # skip concept extraction
+theora compile --source foo.md   # recompile one raw source, skip concepts, rebuild the index
 theora compile --concepts-only   # delete and regenerate all concept articles from existing sources
 theora compile --reindex         # just rebuild the index
 theora compile --force           # delete existing articles and recompile everything from scratch
@@ -329,6 +330,8 @@ theora compile --concurrency 1   # sequential (useful for debugging or strict ra
 ```
 
 Use `--concepts-only` to regenerate all concept articles without re-summarizing sources — useful after adding new sources or when you want concepts to reflect the latest wiki content. It clears `wiki/concepts/` and re-extracts from your already-compiled source articles.
+
+Use `--source <raw-file>` when you want to refresh exactly one raw source article without running a full source pass. It accepts either a bare filename (for example `foo.md`) or a path relative to `raw/` (for example `tag/foo.md`), overwrites the matching `wiki/sources/<slug>.md`, refreshes source-specific companion artifacts, skips concept extraction, and still rebuilds `wiki/index.md`. It is intentionally incompatible with `--force`, `--concepts-only`, and `--reindex`.
 
 Use `--force` when you want to reprocess all sources with updated prompts or settings. It clears `wiki/sources/` and `wiki/concepts/` then runs a full compile. Your `raw/` files are never touched.
 
