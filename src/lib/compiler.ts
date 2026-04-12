@@ -757,7 +757,9 @@ export async function rebuildIndex(root: string, onProgress?: (msg: string) => v
   const articles = listWikiArticles()
   const sources = articles.filter(a => a.path.startsWith(paths.wikiSources))
   const concepts = articles.filter(a => a.path.startsWith(paths.wikiConcepts))
-  const queries = articles.filter(a => a.path.startsWith(paths.output))
+  const outputMd = articles.filter(a => a.path.startsWith(paths.output) && a.path.endsWith('.md'))
+  const mindMaps = outputMd.filter(a => String(a.frontmatter.type) === 'mind-map')
+  const queries = outputMd.filter(a => String(a.frontmatter.type) !== 'mind-map')
 
   const toObsidianTag = (tag: string) => `#${tag.toLowerCase().replace(/\s+/g, '-')}`
 
@@ -824,7 +826,7 @@ ${sources.map(articleLink).join('\n') || '_No sources compiled yet._'}
 ## Concepts (${concepts.length})
 
 ${concepts.map(articleLink).join('\n') || '_No concepts extracted yet._'}
-${queries.length > 0 ? `\n## Previous Queries (${queries.length})\n\n${queries.map(articleLink).join('\n')}\n` : ''}${tagSection ? `\n## Tags (${tagMap.size})\n\n${tagSection}\n` : ''}
+${mindMaps.length > 0 ? `\n## Mind maps (${mindMaps.length})\n\n${mindMaps.map(articleLink).join('\n')}\n` : ''}${queries.length > 0 ? `\n## Previous Queries (${queries.length})\n\n${queries.map(articleLink).join('\n')}\n` : ''}${tagSection ? `\n## Tags (${tagMap.size})\n\n${tagSection}\n` : ''}
 ## Stats
 
 - **Articles**: ${stats.articles}

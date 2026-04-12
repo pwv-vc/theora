@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
+import matter from 'gray-matter'
 import { safeJoin } from '../paths.js'
 import type { WikiMapGraph } from './graph.js'
 import { wikiMapGraphToJson } from './graph.js'
@@ -10,7 +11,11 @@ export interface EmitWikiMapArtifactsOptions {
   outputDir: string
   baseName: string
   graph: WikiMapGraph
-  /** Initial expand level hint embedded as a markmap frontmatter comment. */
+  /** Focal label for the title: becomes `"{focusLabel} Mind Map"`. */
+  focusLabel: string
+  /** ISO timestamp; defaults to now. */
+  date?: string
+  /** Initial expand level hint for markmap (merged into front matter). */
   expandLevel?: number
   /** If set, basename only; must stay under outputDir via safeJoin */
   outputBasename?: string
@@ -24,15 +29,28 @@ export interface EmitWikiMapArtifactsResult {
   primaryOutputPath: string
 }
 
+function buildMindMapFrontmatter(options: EmitWikiMapArtifactsOptions): Record<string, unknown> {
+  const title = `${options.focusLabel} Mind Map`
+  const date = options.date ?? new Date().toISOString()
+  const fm: Record<string, unknown> = {
+    title,
+    type: 'mind-map',
+    date,
+  }
+  if (options.expandLevel && options.expandLevel >= 1 && options.expandLevel <= 8) {
+    fm.markmap = { initialExpandLevel: options.expandLevel }
+  }
+  return fm
+}
+
 export function emitWikiMapArtifacts(options: EmitWikiMapArtifactsOptions): EmitWikiMapArtifactsResult {
   const visualizer = getMindMapVisualizer('markmap')
   const diagramPayload = visualizer.toDiagram(options.graph)
   mkdirSync(options.outputDir, { recursive: true })
 
-  let source = diagramPayload.source
-  if (options.expandLevel && options.expandLevel >= 1 && options.expandLevel <= 8) {
-    source = `---\nmarkmap:\n  initialExpandLevel: ${options.expandLevel}\n---\n\n${source}`
-  }
+  const frontmatter = buildMindMapFrontmatter(options)
+  const body = `\n${diagramPayload.source}\n`
+  const source = matter.stringify(body, frontmatter)
 
   const base = options.baseName
   const ext = diagramPayload.sourceExtension

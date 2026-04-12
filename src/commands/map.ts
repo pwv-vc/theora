@@ -1,4 +1,6 @@
 import { Command } from 'commander'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { stdin as stdinStream, stdout as stdoutStream } from 'node:process'
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
@@ -28,11 +30,38 @@ function parseOntology(s: string | undefined): OntologyType | undefined {
   return ONTOLOGY_TYPES.includes(t) ? t : undefined
 }
 
+function readKbName(root: string): string {
+  const configPath = join(root, '.theora', 'config.json')
+  if (!existsSync(configPath)) return 'Knowledge Base'
+  try {
+    const config = JSON.parse(readFileSync(configPath, 'utf-8')) as { name?: string }
+    return String(config.name ?? 'Knowledge Base')
+  } catch {
+    return 'Knowledge Base'
+  }
+}
+
+/** Slug for --around (concept / source / filed output). */
+function isArticleSlug(s: string): boolean {
+  return /^[a-z0-9][a-z0-9-]*$/.test(s)
+}
+
 function mapFileSlug(center: WikiMapCenter): string {
   if (center.type === 'tag') return `map-tag-${normalizeTag(center.tag).replace(/[^a-z0-9-]+/g, '-')}`
   if (center.type === 'entity') return `map-entity-${center.entityKey.replace(/[^a-z0-9-]+/g, '-')}`
   if (center.type === 'overview') return 'map-overview'
   return `map-${center.slug.toLowerCase().replace(/[^a-z0-9-]+/g, '-')}`
+}
+
+function mindMapFocusLabel(center: WikiMapCenter, articles: ReturnType<typeof listWikiArticles>): string {
+  if (center.type === 'article') {
+    const slug = center.slug.trim().toLowerCase()
+    const found = articles.find((a) => articleSlug(a) === slug)
+    return found?.title ?? center.slug
+  }
+  if (center.type === 'tag') return normalizeTag(center.tag)
+  if (center.type === 'entity') return center.entityKey
+  return center.kbName
 }
 
 async function promptMapOptions(
@@ -172,17 +201,27 @@ export const mapCommand = new Command('map')
     '--tag <tag>',
     'with --around: only expand articles with this tag; without --around: center on this tag',
   )
+  .option(
+    '--entity <key>',
+    'center on an entity key category:name (e.g. person:jane-doe); exclusive with other focus flags',
+  )
+  .option('--overview', 'center on KB hub overview (uses .theora/config.json name)')
   .option('--ontology <type>', `filter concepts by ontology (${ONTOLOGY_TYPES.join(', ')})`)
   .option('--depth <n>', 'article hops from center (1–8)', '2')
   .option('--max-nodes <n>', 'maximum nodes in the graph', '48')
   .option('--expand-level <n>', 'initial expand level hint for markmap renderers (1–8)')
   .option('--output <path>', 'write to this path under output/ (basename only, safe join)')
   .option('--graph-json', 'also write graph JSON next to the diagram')
-  .option('--no-interactive', 'fail if focal options are missing (for CI)')
+  .option(
+    '--no-interactive',
+    'do not prompt; require --around, --tag (without --around), --entity, or --overview when focus is needed',
+  )
   .action(
     async (opts: {
       around?: string
       tag?: string
+      entity?: string
+      overview?: boolean
       ontology?: string
       depth: string
       maxNodes: string
@@ -203,6 +242,8 @@ export const mapCommand = new Command('map')
 
       const around = opts.around?.trim()
       const tagOpt = opts.tag?.trim()
+      const entityRaw = opts.entity?.trim()
+      const wantsOverview = opts.overview === true
 
       if (ontologyFilter === undefined && opts.ontology?.trim()) {
         console.error(
@@ -215,13 +256,31 @@ export const mapCommand = new Command('map')
       }
 
       const hasArticleCenter = Boolean(around)
-      const hasTagOnly = Boolean(tagOpt) && !around
+      const hasTagOnlyCenter = Boolean(tagOpt) && !around
+      const hasEntityCenter = Boolean(entityRaw)
+      const hasOverviewCenter = wantsOverview
 
-      if (!hasArticleCenter && !hasTagOnly) {
+      const focusModes =
+        (hasOverviewCenter ? 1 : 0) +
+        (hasEntityCenter ? 1 : 0) +
+        (hasArticleCenter ? 1 : 0) +
+        (hasTagOnlyCenter ? 1 : 0)
+
+      if (focusModes > 1) {
+        console.error(
+          pc.red(
+            'Use only one map focus: --overview, --entity <key>, --around <slug>, or --tag <tag> (without --around).',
+          ),
+        )
+        process.exitCode = 1
+        return
+      }
+
+      if (focusModes === 0) {
         if (!isTTYInteractive(allowPrompt)) {
           console.error(
             pc.red(
-              'Specify --around <slug> or --tag <tag>, or run in a terminal for interactive setup.',
+              'Specify a focus: --around <slug>, --tag <tag>, --entity <key>, or --overview — or run in a terminal for interactive setup.',
             ),
           )
           process.exitCode = 1
@@ -237,9 +296,22 @@ export const mapCommand = new Command('map')
         depth = picked.depth
         maxNodes = picked.maxNodes
         p.outro(pc.green('Building graph…'))
-      } else if (hasTagOnly) {
+      } else if (hasOverviewCenter) {
+        center = { type: 'overview', kbName: readKbName(root) }
+      } else if (hasEntityCenter) {
+        center = { type: 'entity', entityKey: entityRaw! }
+      } else if (hasTagOnlyCenter) {
         center = { type: 'tag', tag: tagOpt! }
       } else {
+        if (!isArticleSlug(around!)) {
+          console.error(
+            pc.red(
+              `Invalid --around slug "${around}". Use lowercase letters, digits, and hyphens only (e.g. my-concept).`,
+            ),
+          )
+          process.exitCode = 1
+          return
+        }
         center = { type: 'article', slug: around! }
       }
 
@@ -257,13 +329,15 @@ export const mapCommand = new Command('map')
       })
 
       if (graph.nodes.length === 0) {
-        console.error(
-          pc.red(
-            center.type === 'article'
-              ? `No graph: unknown slug "${center.slug}" or filters excluded all nodes.`
-              : 'No graph: no articles match this tag and filters.',
-          ),
-        )
+        const msg =
+          center.type === 'article'
+            ? `No graph: unknown slug "${center.slug}" or filters excluded all nodes.`
+            : center.type === 'tag'
+              ? 'No graph: no articles match this tag and filters.'
+              : center.type === 'entity'
+                ? `No graph: no articles for entity "${center.entityKey}" or filters excluded all nodes.`
+                : 'No graph: overview could not be built (empty wiki or filters).'
+        console.error(pc.red(msg))
         process.exitCode = 1
         return
       }
@@ -273,6 +347,7 @@ export const mapCommand = new Command('map')
         outputDir: paths.output,
         baseName,
         graph,
+        focusLabel: mindMapFocusLabel(center, articles),
         expandLevel: opts.expandLevel ? parseInt(opts.expandLevel, 10) || undefined : undefined,
         outputBasename: opts.output?.trim(),
         graphJson: Boolean(opts.graphJson),
