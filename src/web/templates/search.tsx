@@ -126,8 +126,11 @@ export function SearchResults({ results, q, tag }: SearchResultsProps) {
               ? `/wiki/concepts/${slug}`
               : "#";
 
+        const outputDocType = isOutput ? result.docType ?? "query" : "";
         const typeLabel = isOutput
-          ? "query"
+          ? outputDocType === "mind-map"
+            ? "mind map"
+            : outputDocType
           : isSource
             ? "source"
             : isConcept

@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@clack/prompts": "^1.2.0",
     "@hono/node-server": "^1.19.13",
     "commander": "^13.0.0",
     "dotenv": "^17.4.1",

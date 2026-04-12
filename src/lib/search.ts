@@ -7,6 +7,8 @@ export interface SearchResult {
   tags: string[]
   score: number
   snippet: string
+  /** From front matter when present (e.g. query, mind-map). */
+  docType?: string
 }
 
 function stripMarkdown(text: string): string {
@@ -61,6 +63,7 @@ export function searchArticles(query: string, filterTag?: string): SearchResult[
         tags: article.tags,
         score: 0,
         snippet: extractSnippet(article.content, []),
+        docType: typeof article.frontmatter.type === 'string' ? article.frontmatter.type : undefined,
       }))
   }
 
@@ -94,6 +97,7 @@ export function searchArticles(query: string, filterTag?: string): SearchResult[
         tags: article.tags,
         score,
         snippet,
+        docType: typeof article.frontmatter.type === 'string' ? article.frontmatter.type : undefined,
       })
     }
   }

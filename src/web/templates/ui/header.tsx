@@ -3,12 +3,12 @@ import { getPkgVersion } from '../../../lib/pkg-version.js'
 import { LogoIcon } from './logo-icon.js'
 
 interface HeaderProps {
-  active: 'home' | 'concepts' | 'queries' | 'search' | 'ask' | 'compile' | 'ingest' | 'stats-usage' | 'stats-logs' | 'settings' | 'error'
+  active: 'home' | 'concepts' | 'queries' | 'map' | 'search' | 'ask' | 'compile' | 'ingest' | 'stats-usage' | 'stats-logs' | 'settings' | 'error'
 }
 
 const assetVersion = getPkgVersion()
 
-const wikiKeys = new Set(['home', 'concepts', 'queries'])
+const wikiKeys = new Set(['home', 'concepts', 'queries', 'map'])
 const ingestNavKeys = new Set(['ingest', 'compile'])
 const adminKeys = new Set(['settings', 'stats-usage', 'stats-logs'])
 
@@ -21,6 +21,7 @@ const wikiSubLinks = [
   { href: '/', label: 'sources', key: 'home' },
   { href: '/wiki/concepts', label: 'concepts', key: 'concepts' },
   { href: '/wiki/queries', label: 'queries', key: 'queries' },
+  { href: '/wiki/map', label: 'map', key: 'map' },
 ]
 
 const ingestSubLinks = [
