@@ -321,6 +321,44 @@ function pathUnderRawFromRelativeMarkdown(relPath: string): string {
   return relPath.replace(/^(?:\.\.\/)+raw\//, '')
 }
 
+const WEB_WIKI_ARTICLE_PATH =
+  /^(?:\/)?(?:output\/)?wiki\/(sources|concepts)\/([^/?#]+)$/i
+
+/**
+ * LLMs often emit markdown links like `/output/wiki/sources/foo.md` or `wiki/concepts/bar.md`
+ * instead of [[wiki-links]]. Web routes are `/wiki/sources|concepts/<slug>` with no `.md`.
+ */
+export function repairWikiArticleMarkdownHrefsForWeb(text: string): string {
+  return text.replace(/(?<!!)\[([^\]]*)\]\(([^)]+)\)/g, (match, label: string, href: string) => {
+    const trimmed = href.trim()
+    if (/^(?:https?:)?\/\//i.test(trimmed)) return match
+
+    let suffix = ''
+    const qIdx = trimmed.search(/[?#]/)
+    let pathPart = trimmed
+    if (qIdx !== -1) {
+      pathPart = trimmed.slice(0, qIdx)
+      suffix = trimmed.slice(qIdx)
+    }
+
+    let p = pathPart.replace(/\/+$/, '')
+    if (p.startsWith('./')) p = p.slice(2)
+    while (p.startsWith('../')) p = p.slice(3)
+
+    const m = p.match(WEB_WIKI_ARTICLE_PATH)
+    if (!m) return match
+
+    const type = m[1].toLowerCase()
+    let slug = m[2]
+    if (slug.toLowerCase().endsWith('.md')) slug = slug.slice(0, -3)
+    slug = slug.toLowerCase().replace(/\s+/g, '-')
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) return match
+
+    const fixed = `/wiki/${type}/${slug}${suffix}`
+    return fixed === trimmed ? match : `[${label}](${fixed})`
+  })
+}
+
 export function normalizeLinksForWeb(text: string, articles: WikiArticle[]): string {
   const bySlug = new Map(articles.map(a => [basename(a.path, '.md'), a]))
 
@@ -359,6 +397,8 @@ export function normalizeLinksForWeb(text: string, articles: WikiArticle[]): str
     if (!/\s/.test(rawPath)) return match
     return `![${altText}](/raw/${encodeRawUrlPath(rawPath)})`
   })
+
+  result = repairWikiArticleMarkdownHrefsForWeb(result)
 
   return result
 }

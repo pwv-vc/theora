@@ -475,6 +475,16 @@ export function startServer(port: number): void {
     )
   })
 
+  /** LLM/user mistake: wiki articles live under /wiki/, not under /output/wiki/. */
+  app.get('/output/wiki/:type/:slug', (c) => {
+    const { type, slug: slugRaw } = c.req.param()
+    if (type !== 'sources' && type !== 'concepts') return c.notFound()
+    let slug = slugRaw
+    if (slug.toLowerCase().endsWith('.md')) slug = slug.slice(0, -3)
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) return c.notFound()
+    return c.redirect(`/wiki/${type}/${slug}`, 302)
+  })
+
   app.get('/output/:slug', (c) => {
     const root = requireKbRoot()
     const paths = kbPaths(root)

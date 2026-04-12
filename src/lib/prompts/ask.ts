@@ -4,7 +4,8 @@ Wiki-link format (CRITICAL — follow exactly):
 - Use double square brackets: [[filename-without-extension]]
 - Examples: [[concert-1995-08-05]], [[red-hot-chili-peppers]], [[great-woods-venue]]
 - The link text is just the article filename (kebab-case, no .md extension, no path like wiki/ or sources/)
-- WRONG: [[sources/concerts.md]], [[wiki/sources/concerts.md]], [[concert 1995]], [[Concert-1995]]
+- Do not cite articles with markdown links like [text](path) — no /wiki/, /output/wiki/, or .md paths; only [[slug]] syntax.
+- WRONG: [[sources/concerts.md]], [[wiki/sources/concerts.md]], [x](/output/wiki/sources/foo.md), [x](wiki/concepts/bar.md)
 - CORRECT: [[concert-1995-08-05]]
 
 Grounding rules:
@@ -28,7 +29,8 @@ WIKI-LINK FORMAT (follow exactly):
 - Use [[article-filename]] with double square brackets
 - The filename is kebab-case (lowercase with hyphens), no .md extension
 - Example: If citing an article at "wiki/sources/concert-1995-08-05.md", write [[concert-1995-08-05]]
-- WRONG: [[sources/concert-1995-08-05.md]], [[wiki/sources/concert-1995-08-05.md]], [[Concert 1995]]
+- Never use markdown URL links to wiki files (no paths like output/wiki/, wiki/sources/..., or *.md in parentheses).
+- WRONG: [[sources/concert-1995-08-05.md]], [[wiki/sources/concert-1995-08-05.md]], [[Concert 1995]], [t](/wiki/sources/x.md)
 - CORRECT: [[concert-1995-08-05]]
 
 Use exact names for people, companies, products, and technical terms as they appear in the sources. For time-sensitive information, present data points in chronological order and always note the date or period each data point refers to.

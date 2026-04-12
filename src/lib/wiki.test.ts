@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sanitizeLlmOutput } from './wiki.js'
+import { repairWikiArticleMarkdownHrefsForWeb, sanitizeLlmOutput } from './wiki.js'
 
 describe('sanitizeLlmOutput', () => {
   it('parses tags and entities on consecutive lines', () => {
@@ -134,5 +134,32 @@ Entities: {"people":["Dave"]}`
     expect(result.tags).toEqual(['a', 'b', 'c'])
     expect(result.entities).toEqual({ people: ['Dave'] })
     expect(result.body).toBe('## Summary\nContent.')
+  })
+})
+
+describe('repairWikiArticleMarkdownHrefsForWeb', () => {
+  it('rewrites /output/wiki/... and strips .md', () => {
+    const md =
+      'See [Defer]( /output/wiki/sources/defer-stream.md ) and [G]( /output/wiki/concepts/graphql-directives.md ).'
+    expect(repairWikiArticleMarkdownHrefsForWeb(md)).toBe(
+      'See [Defer](/wiki/sources/defer-stream) and [G](/wiki/concepts/graphql-directives).',
+    )
+  })
+
+  it('rewrites relative wiki/ paths and /wiki/...md', () => {
+    const md = '[a](wiki/sources/foo-bar.md) [b](/wiki/concepts/baz.md)'
+    expect(repairWikiArticleMarkdownHrefsForWeb(md)).toBe(
+      '[a](/wiki/sources/foo-bar) [b](/wiki/concepts/baz)',
+    )
+  })
+
+  it('preserves images and external URLs', () => {
+    const md = '![x](https://ex/wiki/sources/nope) [y](https://a/b)'
+    expect(repairWikiArticleMarkdownHrefsForWeb(md)).toBe(md)
+  })
+
+  it('leaves already-correct /wiki/ links unchanged', () => {
+    const md = '[ok](/wiki/sources/defer-stream)'
+    expect(repairWikiArticleMarkdownHrefsForWeb(md)).toBe(md)
   })
 })
