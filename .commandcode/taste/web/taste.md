@@ -58,3 +58,6 @@
 - Keep footers minimal and clean — show only essential info like version number and social links (e.g., GitHub), avoid corporate branding, copyright notices, and multi-section layouts. Confidence: 0.85
 - Store design exploration files (logo variants, preview HTML pages, SVG experiments) in a dedicated `design/` directory at the project root, not in `src/web/static/` — keeps production assets separate from design iterations. Confidence: 0.80
 - Use double quotes and semicolons consistently in TypeScript/JSX files — prefer `"string"` over `'string'` and always terminate statements with `;`. Confidence: 0.75
+- Distinguish between "video" and "youtube" as separate source types in frontmatter — treat YouTube videos as a distinct subtype from generic video sources. Confidence: 0.75
+- Display source type icons using Lucide icons in web UI — show source type in both source detail header and grid result list views. Confidence: 0.75
+- Group source file extensions into basic categories rather than 1-1 mapping — e.g., html and markdown both map to "text" type; json, csv, xml, yaml also map to "text". Keep categories simple: text, pdf, image, audio, video, youtube. Confidence: 0.75

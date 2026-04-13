@@ -14,6 +14,7 @@ vi.mock('../llm.js', () => ({
 }))
 
 import { compileTargetedSource, resolveRawSourceTarget } from './wiki-compiler.js'
+import { logCompilationError, formatCompilationErrorForDisplay } from './compile-logger.js'
 
 const ORIGINAL_CWD = process.cwd()
 const tempRoots: string[] = []
@@ -148,6 +149,42 @@ describe('compileTargetedSource', () => {
     expect(updated).toContain('Fresh body.')
     expect(updated).not.toContain('Old body.')
     expect(updated).toContain('source_file: foo.md')
+    expect(llmMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('compiles YouTube transcript markdown as text without frame extraction', async () => {
+    const root = createKbRoot()
+    const rawFile = join(root, 'raw', 'youtube-3Co8Z8BQgWc.md')
+    const articleFile = join(root, 'wiki', 'sources', 'youtube-3Co8Z8BQgWc.md')
+
+    const youtubeContent = `# Apollo 11 Overview
+
+**URL:** https://www.youtube.com/watch?v=3Co8Z8BQgWc
+**Video ID:** 3Co8Z8BQgWc
+**Channel:** NASA
+**Published:** 2023-01-15
+**Thumbnail URL:** https://img.youtube.com/vi/3Co8Z8BQgWc/0.jpg
+
+**Source:** YouTube captions
+
+## Description
+Official NASA footage of the Apollo 11 mission.
+
+## Transcript
+[00:00] This is the beginning of the transcript.
+[01:30] The rocket launches into space.
+`
+
+    writeFileSync(rawFile, youtubeContent)
+    process.chdir(root)
+
+    await compileTargetedSource(root, 'youtube-3Co8Z8BQgWc.md')
+
+    const article = readFileSync(articleFile, 'utf-8')
+    // Should compile as text (not video), so no frame extraction attempted
+    expect(article).toContain('Fresh body.')
+    expect(article).toContain('source_type: youtube')
+    expect(article).toContain('source_video_id: 3Co8Z8BQgWc')
     expect(llmMock).toHaveBeenCalledTimes(1)
   })
 })

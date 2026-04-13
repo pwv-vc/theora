@@ -1,7 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiArticle, TagWithCount } from '../../lib/wiki.js'
 import { getKbName } from '../../lib/config.js'
-import { Card, EmptyState, Pagination, Pill, SectionHeader, StatCard, TagFilterBar, WikiHeader } from './ui/index.js'
+import { Card, EmptyState, Pagination, Pill, SectionHeader, StatCard, TagFilterBar, WikiHeader, SourceTypeIcon } from './ui/index.js'
 
 interface HomePageProps {
   sources: WikiArticle[]
@@ -27,11 +27,15 @@ interface HomePageProps {
 function ArticleCard({ article }: { article: WikiArticle }) {
   const slug = article.path.split('/').pop()?.replace('.md', '')
   const href = `/wiki/sources/${slug}`
+  const sourceType = article.frontmatter.source_type ? String(article.frontmatter.source_type) as 'text' | 'data' | 'pdf' | 'image' | 'audio' | 'video' | 'youtube' : null
 
   return (
     <Card href={href}>
-      <div class="text-zinc-100 text-sm font-bold group-hover:text-red-500 mb-1 truncate">
-        {article.title}
+      <div class="flex items-start gap-2 mb-2">
+        {sourceType && <SourceTypeIcon type={sourceType} />}
+        <div class="text-zinc-100 text-sm font-bold group-hover:text-red-500 truncate flex-1">
+          {article.title}
+        </div>
       </div>
       {article.tags.length > 0 && (
         <div class="flex flex-wrap gap-1 mt-2">

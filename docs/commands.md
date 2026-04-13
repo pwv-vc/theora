@@ -49,6 +49,7 @@ Supported file types:
 | Image | `.png` `.jpg` `.jpeg` `.gif` `.webp` | Analyzed via LLM vision, described and indexed |
 | Audio | `.mp3` `.wav` `.ogg` `.flac` `.m4a` | Transcribed with OpenAI Whisper (`whisper-1`), then summarized like text |
 | Video | `.mp4` `.mov` `.avi` `.mkv` `.webm` | Requires **ffmpeg** (on macOS, install with [Homebrew](https://brew.sh): `brew install ffmpeg`). Audio transcribed with Whisper; evenly sampled frames analyzed with vision; one merged wiki article |
+| YouTube Video | `youtube-<id>.md` | YouTube transcripts ingested via `theora ingest <youtube-url>`. Compiled as **text** (no frame extraction, no ffmpeg). Displays with YouTube icon in wiki. Frontmatter: `source_type: youtube` |
 | URL (page) | `http://` `https://` | Fetched as HTML, compiled as text |
 | URL (image) | `http://` `https://` | Downloaded, analyzed via LLM vision |
 | URL (audio/video) | `http://` `https://` | Streamed to disk; video uses `videoMaxFileBytes`, other media `mediaMaxFileBytes` (same rules as local ingest) |
@@ -142,6 +143,39 @@ Use `--source <raw-file>` when you want to refresh exactly one raw source articl
 Use `--force` when you want to reprocess all sources with updated prompts or settings. It clears `wiki/sources/` and `wiki/concepts/` then runs a full compile. Your `raw/` files are never touched.
 
 By default, `theora compile` runs **3 parallel LLM calls** at a time — safe for both OpenAI and Anthropic rate limits. Use `--concurrency` to tune this per-run, or set a permanent default with `theora init --concurrency <n>` (stored in `.theora/config.json`).
+
+### Compile error handling
+
+When compilation fails, Theora provides human-friendly error messages and persists detailed error logs for debugging:
+
+```
+✗ Compilation failed for youtube-3Co8Z8BQgWc.md
+
+The file does not appear to be a valid video file.
+
+Suggestions:
+  • The file may not be a valid video file.
+  • Check that the file extension matches the actual content (e.g., .mp4, .mov, .avi).
+  • If this is a YouTube transcript markdown file, it should be processed as text, not video.
+
+Error details saved to: /Users/you/.theora/logs/compile-youtube-3Co8Z8BQgWc-2026-04-13T08-05-12-000Z.log
+You can review the full error log for more technical details.
+```
+
+**Error logs** are stored in `~/.theora/logs/` with one log file per failed compilation (not appended). Each log contains:
+- Timestamp and source file
+- Error type classification (ffmpeg, ffprobe, invalid_format, etc.)
+- Full error message and command that failed
+- Actionable suggestions for fixing the issue
+
+At the end of a batch compile, if any sources failed, you'll see a summary:
+
+```
+⚠ Compiled 7/8 sources (1 failed)
+
+1 compilation failure:
+  • youtube-3Co8Z8BQgWc.md → /Users/you/.theora/logs/compile-youtube-3Co8Z8BQgWc-2026-04-13T08-05-12-000Z.log
+```
 
 ## Ask
 

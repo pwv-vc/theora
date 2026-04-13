@@ -29,11 +29,7 @@ See [cli/taste.md](cli/taste.md)
 # security
 See [security/taste.md](security/taste.md)
 # error-handling
-- Validate required configuration (API keys, env vars) early with clear, actionable error messages instead of letting downstream services return cryptic errors. Confidence: 0.70
-- Before executing optional runtime dependencies (e.g., Python modules like matplotlib), check if they are installed with a pre-flight check (e.g., `python3 -c "import matplotlib"`) and emit a clear install instruction (`pip3 install matplotlib`) rather than letting execution fail with a ModuleNotFoundError. Confidence: 0.85
-- When multiple Python versions may be installed, probe each candidate (python3, python3.13, python3.12, python3.11, ...) for the required module (`import matplotlib`) and use the first that succeeds — don't assume the default `python3` binary has the needed packages. Confidence: 0.85
-- Catch unhandled errors at the CLI entry point and display them as clean, formatted messages (e.g., using picocolors red) — never let raw Node.js stack traces with file:// paths reach the user. Confidence: 0.80
-
+See [error-handling/taste.md](error-handling/taste.md)
 # llm-integration
 See [llm-integration/taste.md](llm-integration/taste.md)
 # cli-design

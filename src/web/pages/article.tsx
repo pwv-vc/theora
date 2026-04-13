@@ -1,6 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiArticle } from '../../lib/wiki.js'
-import { Pill, Prose, TagLink } from './ui/index.js'
+import { Pill, Prose, TagLink, SourceTypeIcon } from './ui/index.js'
 
 interface ArticlePageProps {
   article: WikiArticle
@@ -13,6 +13,7 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
   const dateCompiled = String(fm.date_compiled ?? fm.date ?? '')
   const sourceFile = fm.source_file ? String(fm.source_file) : null
   const sourceThumbnailUrl = fm.source_thumbnail_url ? String(fm.source_thumbnail_url) : null
+  const sourceType = fm.source_type ? String(fm.source_type) as 'text' | 'data' | 'pdf' | 'image' | 'audio' | 'video' | 'youtube' : null
   const ontology = Array.isArray(fm.ontology) ? fm.ontology.map(String) : []
   const entities = fm.entities && typeof fm.entities === 'object' ? fm.entities as Record<string, string[]> : {}
 
@@ -36,8 +37,18 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
       </div>
 
       <div class="mb-6 pb-6 border-b border-zinc-800">
+        <h1 class="text-2xl font-bold text-zinc-100 mb-4">{article.title}</h1>
+
         <div class="flex items-center gap-2 mb-3 flex-wrap">
           {typeLabel && <Pill variant="type">{typeLabel}</Pill>}
+          {sourceType && (
+            <Pill variant="type">
+              <span class="flex items-center gap-1">
+                <SourceTypeIcon type={sourceType} size={12} />
+                <span class="capitalize">{sourceType}</span>
+              </span>
+            </Pill>
+          )}
           {ontology.map(o => (
             <Pill key={o} variant="ontology">{o}</Pill>
           ))}
@@ -47,8 +58,6 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
             ))
           )}
         </div>
-
-        <h1 class="text-2xl font-bold text-zinc-100 mb-3">{article.title}</h1>
 
         <div class="flex flex-wrap items-center gap-3">
           {article.tags.length > 0 && (

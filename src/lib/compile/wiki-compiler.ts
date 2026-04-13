@@ -33,6 +33,7 @@ import {
   buildVideoFramePrompt,
 } from '../prompts/compile.js'
 import { hasFfmpeg } from '../deps.js'
+import { logCompilationError, formatCompilationErrorForDisplay } from './compile-logger.js'
 import { parseYouTubeTranscriptMarkdown, sanitizeExistingYouTubeTranscriptMarkdown } from '../youtube.js'
 import {
   computeFrameSchedule,
@@ -47,17 +48,25 @@ import { CONCEPT_SYSTEM, buildConceptPrompt } from '../prompts/concept.js'
 
 // --- File classification ---
 
-const TEXT_EXTS = new Set(['.md', '.mdx', '.txt', '.html', '.json', '.csv', '.xml', '.yaml', '.yml'])
+const TEXT_EXTS = new Set(['.md', '.mdx', '.txt', '.html'])
+const DATA_EXTS = new Set(['.json', '.csv', '.xml', '.yaml', '.yml'])
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp'])
 const PDF_EXTS = new Set(['.pdf'])
 const AUDIO_EXTS = new Set(['.mp3', '.wav', '.ogg', '.flac', '.m4a'])
 const VIDEO_EXTS = new Set(['.mp4', '.mov', '.avi', '.mkv', '.webm'])
 
-type FileKind = 'text' | 'image' | 'pdf' | 'audio' | 'video' | 'unknown'
+type FileKind = 'text' | 'data' | 'image' | 'pdf' | 'audio' | 'video' | 'youtube-video' | 'unknown'
 
 function classifyFile(path: string): FileKind {
   const ext = extname(path).toLowerCase()
+  const base = basename(path)
+
+  // YouTube transcripts are markdown files representing video content
+  // but should be compiled as text without frame extraction
+  if (ext === '.md' && base.startsWith('youtube-')) return 'youtube-video'
+
   if (TEXT_EXTS.has(ext)) return 'text'
+  if (DATA_EXTS.has(ext)) return 'data'
   if (IMAGE_EXTS.has(ext)) return 'image'
   if (PDF_EXTS.has(ext)) return 'pdf'
   if (AUDIO_EXTS.has(ext)) return 'audio'
@@ -214,12 +223,39 @@ async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, 
     sourceVideoId: youtubeMeta?.sourceVideoId,
     sourceChannelId: youtubeMeta?.sourceChannelId,
     sourceThumbnailUrl: youtubeMeta?.sourceThumbnailUrl,
-    sourceType: 'text',
+    sourceType: youtubeMeta ? 'youtube' : 'text',
     tags: mergeTags(ingestTag, tags),
     entities,
   }
 
   writeArticle(join(paths.wikiSources, `${slug}.md`), meta, finalBody)
+}
+
+async function compileDataFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
+  const name = basename(file, extname(file))
+  const slug = slugify(name)
+  const sourceUrl = getUrlForFile(basename(file))
+
+  const content = readFileSync(file, 'utf-8').slice(0, 50000)
+  const ext = extname(file).toLowerCase().slice(1)
+
+  const raw = await llm(
+    buildSourcePrompt(basename(file), content, ingestTag),
+    { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: ext },
+  )
+  const { body, tags, entities } = sanitizeLlmOutput(raw)
+
+  const meta: ArticleMeta = {
+    title: titleFromFilename(file),
+    type: 'source',
+    sourceFile: relative(paths.raw, file),
+    sourceUrl: sourceUrl ?? undefined,
+    sourceType: 'data',
+    tags: mergeTags(ingestTag, tags),
+    entities,
+  }
+
+  writeArticle(join(paths.wikiSources, `${slug}.md`), meta, body)
 }
 
 async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
@@ -561,8 +597,8 @@ async function compileVideoFile(
 
     onStep?.(
       hasTranscriptArtifact
-        ? 'Merging transcript + frames into wiki article (LLM)'
-        : 'Merging frame analysis into wiki article (LLM)',
+        ? 'Merging transcript + frames into wiki article (LLM) — this may take a while'
+        : 'Merging frame analysis into wiki article (LLM) — this may take a while',
     )
     const raw = await llm(buildVideoPrompt(basename(file), transcript, frameAnalyses, ingestTag), {
       system: COMPILE_SYSTEM,
@@ -684,6 +720,13 @@ async function compileOneSourceFile(
     case 'text':
       await compileTextFile(file, paths, ingestTag)
       return
+    case 'youtube-video':
+      // YouTube transcripts compile as text without frame extraction
+      await compileTextFile(file, paths, ingestTag)
+      return
+    case 'data':
+      await compileDataFile(file, paths, ingestTag)
+      return
     case 'pdf':
       await compilePdfFile(file, paths, ingestTag)
       return
@@ -754,10 +797,16 @@ export async function compileTargetedSource(
     return file
   } catch (err) {
     clearStepTick()
+    const error = err instanceof Error ? err : new Error(String(err))
+    const logPath = logCompilationError(error, file)
+
     if (spinner) {
-      const msg = err instanceof Error ? err.message : String(err)
-      spinner.fail(`Compile failed for ${relSource}: ${msg}`)
+      spinner.fail(`Compile failed for ${relSource}`)
     }
+
+    const displayMessage = formatCompilationErrorForDisplay(error, file, logPath)
+    console.error(displayMessage)
+
     throw err
   }
 
@@ -781,24 +830,27 @@ export async function compileSources(root: string, concurrency?: number, onProgr
     return
   }
 
-  const byKind = { text: 0, image: 0, pdf: 0, audio: 0, video: 0 }
+  const byKind: Record<FileKind, number> = { text: 0, 'youtube-video': 0, data: 0, image: 0, pdf: 0, audio: 0, video: 0, unknown: 0 }
   for (const f of newFiles) {
     const kind = classifyFile(f)
-    if (kind !== 'unknown') byKind[kind]++
+    byKind[kind]++
   }
 
   const parts = []
-  if (byKind.text > 0) parts.push(`${byKind.text} text`)
-  if (byKind.pdf > 0) parts.push(`${byKind.pdf} PDF`)
-  if (byKind.image > 0) parts.push(`${byKind.image} image`)
-  if (byKind.audio > 0) parts.push(`${byKind.audio} audio`)
-  if (byKind.video > 0) parts.push(`${byKind.video} video`)
+  if (byKind.text > 0) parts.push(`${byKind.text} text${byKind.text !== 1 ? 's' : ''}`)
+  if (byKind['youtube-video'] > 0) parts.push(`${byKind['youtube-video']} YouTube video${byKind['youtube-video'] !== 1 ? 's' : ''}`)
+  if (byKind.pdf > 0) parts.push(`${byKind.pdf} PDF${byKind.pdf !== 1 ? 's' : ''}`)
+  if (byKind.image > 0) parts.push(`${byKind.image} image${byKind.image !== 1 ? 's' : ''}`)
+  if (byKind.audio > 0) parts.push(`${byKind.audio} audio file${byKind.audio !== 1 ? 's' : ''}`)
+  if (byKind.video > 0) parts.push(`${byKind.video} video${byKind.video !== 1 ? 's' : ''}`)
   console.log(`Found ${newFiles.length} new source${newFiles.length !== 1 ? 's' : ''} to compile (${parts.join(', ')})`)
 
   const { compileConcurrency } = readConfig()
   const limit = pLimit(concurrency ?? compileConcurrency)
 
   let done = 0
+  let failed = 0
+  const failedLogs: Array<{ file: string; logPath: string }> = []
   const inFlight = new Set<string>()
   const sourceStepByName = new Map<string, string>()
   const stepBaseByName = new Map<string, string>()
@@ -872,8 +924,12 @@ export async function compileSources(root: string, concurrency?: number, onProgr
         try {
           await compileOneSourceFile(file, paths, step => emitSourceStep(name, step))
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          console.error(pc.red(`Compile failed for ${name}: ${msg}`))
+          const error = err instanceof Error ? err : new Error(String(err))
+          const logPath = logCompilationError(error, file)
+          const displayMessage = formatCompilationErrorForDisplay(error, file, logPath)
+          console.error(displayMessage)
+          failed++
+          failedLogs.push({ file: name, logPath })
         } finally {
           clearStepTick(name)
           sourceStepByName.delete(name)
@@ -885,10 +941,30 @@ export async function compileSources(root: string, concurrency?: number, onProgr
     )
   )
 
+  const successCount = newFiles.length - failed
+
   if (spinner) {
-    spinner.succeed(`Compiled ${newFiles.length} source${newFiles.length !== 1 ? 's' : ''}`)
+    if (failed > 0) {
+      spinner.warn(`Compiled ${successCount}/${newFiles.length} source${newFiles.length !== 1 ? 's' : ''} (${failed} failed)`)
+    } else {
+      spinner.succeed(`Compiled ${newFiles.length} source${newFiles.length !== 1 ? 's' : ''}`)
+    }
   } else {
-    onProgress?.(`✓ Compiled ${newFiles.length} source${newFiles.length !== 1 ? 's' : ''}`)
+    if (failed > 0) {
+      onProgress?.(`⚠ Compiled ${successCount}/${newFiles.length} source${newFiles.length !== 1 ? 's' : ''} (${failed} failed)`)
+    } else {
+      onProgress?.(`✓ Compiled ${newFiles.length} source${newFiles.length !== 1 ? 's' : ''}`)
+    }
+  }
+
+  // Show summary of failures
+  if (failed > 0 && failedLogs.length > 0) {
+    console.error('')
+    console.error(pc.red(`${failed} compilation ${failed === 1 ? 'failure' : 'failures'}:`))
+    for (const { file, logPath } of failedLogs) {
+      console.error(`  • ${pc.cyan(file)} → ${pc.gray(logPath)}`)
+    }
+    console.error('')
   }
 }
 
