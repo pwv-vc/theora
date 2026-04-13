@@ -7,6 +7,7 @@ import { kbPaths, requireKbRoot, safeJoin } from '../lib/paths.js'
 import { readManifest, writeManifest } from '../lib/manifest.js'
 import { VALID_EXTS, ingestLocalFile, ingestUrlSource, isUrl, isValidFile } from '../lib/ingest.js'
 import { normalizeYouTubeInput } from '../lib/youtube.js'
+import { bulkIngest } from '../lib/bulk-ingest.js'
 function collectFiles(dir: string): string[] {
   const results: string[] = []
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -20,14 +21,29 @@ function collectFiles(dir: string): string[] {
 
 export const ingestCommand = new Command('ingest')
   .description('Add source documents to the knowledge base')
-  .argument('<sources...>', 'files, directories, or URLs to ingest')
+  .argument('[sources...]', 'files, directories, or URLs to ingest')
   .option('--tag <tag>', 'tag to categorize the source')
-  .action(async (sources: string[], options: { tag?: string }) => {
+  .option('--from <file>', 'ingest URLs from a KB JSON file (use - for stdin)')
+  .action(async (sources: string[], options: { tag?: string; from?: string }) => {
     const root = requireKbRoot()
     const paths = kbPaths(root)
 
     if (options.tag && !/^[a-z0-9][a-z0-9-]*$/.test(options.tag)) {
       console.error(pc.red(`Invalid tag "${options.tag}" — use lowercase letters, numbers, and hyphens only`))
+      process.exit(1)
+    }
+
+    // Validation: must have either sources or --from, not both
+    const hasSources = sources && sources.length > 0
+    const hasFrom = Boolean(options.from)
+
+    if (hasSources && hasFrom) {
+      console.error(pc.red('Cannot use --from with positional sources. Use one or the other.'))
+      process.exit(1)
+    }
+
+    if (!hasSources && !hasFrom) {
+      console.error(pc.red('No sources specified. Provide sources as arguments or use --from <file>.'))
       process.exit(1)
     }
 
@@ -37,6 +53,40 @@ export const ingestCommand = new Command('ingest')
     const entries = readManifest()
     const existingNames = new Set(entries.map(e => e.name))
     const existingUrls = new Set(entries.flatMap(e => e.url ? [e.url] : []))
+
+    // Handle bulk ingest from file
+    if (hasFrom) {
+      const result = await bulkIngest({
+        filePath: options.from!,
+        destDir,
+        existingNames,
+        existingUrls,
+        tag: options.tag,
+      })
+
+      // Update manifest with results
+      for (const r of result.results) {
+        if (r.status === 'ingested' && r.url) {
+          entries.push({
+            name: r.name,
+            ingested: new Date().toISOString(),
+            tag: options.tag ?? null,
+            url: r.url,
+          })
+        }
+      }
+
+      writeManifest(entries)
+
+      // Display stats
+      const parts = [`Ingested ${result.stats.ingested} file${result.stats.ingested !== 1 ? 's' : ''}`]
+      if (result.stats.skippedDupe > 0) parts.push(`${result.stats.skippedDupe} skipped (already ingested)`)
+      if (result.stats.errors > 0) parts.push(`${result.stats.errors} failed`)
+      console.log(pc.green('✓') + ' ' + parts.join(', '))
+
+      console.log(`Next: ${pc.cyan('theora compile')} to build the wiki`)
+      return
+    }
 
     let ingested = 0, skippedType = 0, skippedDupe = 0, skippedSize = 0
 

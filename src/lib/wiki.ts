@@ -126,7 +126,7 @@ export interface ArticleMeta {
   sourceVideoId?: string
   sourceChannelId?: string
   sourceThumbnailUrl?: string
-  sourceType?: 'text' | 'pdf' | 'image' | 'audio' | 'video'
+  sourceType?: 'text' | 'data' | 'pdf' | 'image' | 'audio' | 'video' | 'youtube'
   tags: string[]
   relatedSources?: string[]
   entities?: Record<string, string[]>

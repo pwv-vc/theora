@@ -20,3 +20,4 @@
 - Use all-caps section headers with item counts (e.g., "SOURCE (12)") for wiki page sections — apply this style consistently across wiki home, concepts, and queries pages. Confidence: 0.85
 - In wiki article web view headers, display entities as visual pills showing type and name (e.g., "organization/supabase") rather than raw JSON blobs. Confidence: 0.75
 - When building entities during compile, use slug-style labels (e.g., `people/philip-glass`, `actors/matt-frewer`, `tv-series/max-headroom-20-minutes-into-the-future`, `organizations/tower-records`) instead of path-style labels (e.g., `people/Philip Glass`, `organizations/Tower Records`). TV series and films belong in `tv-series/` and `movies/`, not `products/`. Confidence: 0.90
+- In wiki source view page headers, display the source type as a pill/badge containing both the Lucide icon and the source type text label (e.g., "audio", "pdf", "image"). Confidence: 0.75

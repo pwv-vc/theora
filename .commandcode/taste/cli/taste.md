@@ -25,3 +25,4 @@
 - Use ANSI Shadow font for ASCII art at large terminal widths and ANSI Compact for small widths. Confidence: 0.85
 - Use minimal white, gray, and black colors for ASCII art banners. Confidence: 0.85
 - Check if package is publishable using `npx can-i-publish` before building or publishing. Confidence: 0.85
+- Pluralize item type names in CLI output when the count is greater than 1 (e.g., "9 texts, 5 PDFs, 3 images" not "9 text, 5 PDF, 3 image"). Confidence: 0.75

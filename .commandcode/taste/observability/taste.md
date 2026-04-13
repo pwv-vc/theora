@@ -1,5 +1,6 @@
 # observability
 - Track operational metrics (ingest time, AI cost, AI processing time) in stats for CLI tools that use LLM APIs. Confidence: 0.65
+- Do not implement session logging infrastructure to capture warnings/errors; let the user handle deprecation warnings and similar issues themselves. Confidence: 0.75
 - Structure LLM action logging with a concrete verb as `action` (e.g. `compile`, `ask`) — avoid vague placeholders like `unknown`. Put subtype or target details in a separate `meta` field (e.g. `meta: 'md'` or `'pdf'`) rather than compound action names like `compile-text`. Update logger, tail, and web log viewer to support `meta` (can be null/empty). Confidence: 0.80
 - Stats display logic (grouping, aggregation, formatting) must be shared between CLI and web via common lib utilities — both interfaces should show identical stats with the same logic. Confidence: 0.85
 - Format time durations in stats displays: when duration exceeds 5000ms, convert to seconds or minutes+seconds with 3 decimal places precision instead of raw milliseconds. Confidence: 0.80

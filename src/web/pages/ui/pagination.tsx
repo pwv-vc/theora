@@ -8,6 +8,8 @@ interface PaginationProps {
   itemsPerPage: number;
   baseUrl: string;
   activeTag?: string;
+  activeSourceType?: string;
+  activeSort?: string;
 }
 
 function PaginationButton({
@@ -46,10 +48,14 @@ function buildPageUrl(
   baseUrl: string,
   page: number,
   activeTag?: string,
+  activeSourceType?: string,
+  activeSort?: string,
 ): string {
   const params = new URLSearchParams();
   if (page > 1) params.set("page", String(page));
   if (activeTag) params.set("tag", activeTag);
+  if (activeSourceType) params.set("sourceType", activeSourceType);
+  if (activeSort) params.set("sort", activeSort);
   const queryString = params.toString();
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 }
@@ -86,6 +92,8 @@ export function Pagination({
   itemsPerPage,
   baseUrl,
   activeTag,
+  activeSourceType,
+  activeSort,
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
@@ -105,7 +113,7 @@ export function Pagination({
 
       <div class="flex items-center gap-1">
         <PaginationButton
-          href={buildPageUrl(baseUrl, currentPage - 1, activeTag)}
+          href={buildPageUrl(baseUrl, currentPage - 1, activeTag, activeSourceType, activeSort)}
           disabled={currentPage <= 1}
         >
           <svg
@@ -128,7 +136,7 @@ export function Pagination({
             <span class="px-2 text-zinc-600">...</span>
           ) : (
             <PaginationButton
-              href={buildPageUrl(baseUrl, page as number, activeTag)}
+              href={buildPageUrl(baseUrl, page as number, activeTag, activeSourceType, activeSort)}
               isActive={page === currentPage}
             >
               {page}
@@ -137,7 +145,7 @@ export function Pagination({
         )}
 
         <PaginationButton
-          href={buildPageUrl(baseUrl, currentPage + 1, activeTag)}
+          href={buildPageUrl(baseUrl, currentPage + 1, activeTag, activeSourceType, activeSort)}
           disabled={currentPage >= totalPages}
         >
           <svg

@@ -15,6 +15,7 @@ import { serveCommand } from './commands/serve.js'
 import { settingsCommand } from './commands/settings.js'
 import { kbCommand } from './commands/kb.js'
 import { mapCommand } from './commands/map.js'
+import { exportCommand } from './commands/export.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -54,6 +55,7 @@ program.addCommand(serveCommand)
 program.addCommand(settingsCommand)
 program.addCommand(kbCommand)
 program.addCommand(mapCommand)
+program.addCommand(exportCommand)
 
 function handleError(err: unknown): never {
   const msg = err instanceof Error ? err.message : String(err)

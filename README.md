@@ -22,7 +22,13 @@ Theora was inspired by the idea of using LLMs to **compile and maintain** a pers
 
 - **Node.js 20+** — see [docs/getting-started.md](docs/getting-started.md) for fnm/Homebrew setup.
 - **An LLM API key** — [OpenAI](https://platform.openai.com/api-keys) (default) or [Anthropic](https://console.anthropic.com/).
-- **Optional:** `@marp-team/marp-cli` (PDF slides), `matplotlib` (charts), `yt-dlp` (YouTube caption ingest) — details in [Getting started](docs/getting-started.md).
+- **Optional:**
+  - `@marp-team/marp-cli` (PDF slides)
+  - `matplotlib` (charts)
+  - `yt-dlp` (YouTube caption ingest)
+  - `ffmpeg` (Video screenshot frame extraction)
+
+> For details, see [Getting started](docs/getting-started.md).
 
 **Install Theora** (from a clone of this repo):
 
