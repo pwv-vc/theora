@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { requireKbRoot } from '../../lib/paths.js'
 import { readConfig } from '../../lib/config.js'
-import { runCompile } from '../../lib/compile.js'
+import { runCompile } from '../../lib/compile/index.js'
 import { Layout } from '../pages/layout.js'
 import { CompilePage } from '../pages/compile.js'
 
@@ -35,7 +35,7 @@ compileRoutes.post('/run', async (c) => {
       await runCompile(
         root,
         { force, sourcesOnly, conceptsOnly },
-        async (msg) => { await stream.writeSSE({ data: msg }) },
+        async (msg: string) => { await stream.writeSSE({ data: msg }) },
       )
 
       await stream.writeSSE({ event: 'done', data: 'Compilation complete' })

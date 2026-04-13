@@ -11,6 +11,10 @@ export interface AskOptions {
   tag?: string
   file?: boolean
   onChunk: (text: string) => void
+  /** After index + ranked context are ready, before the model streams. */
+  onContextBuilt?: () => void
+  /** First token from the model (useful to stop a “generating” spinner). */
+  onFirstAnswerChunk?: () => void
 }
 
 export interface AskResult {
@@ -51,11 +55,21 @@ export async function streamAsk(question: string, options: AskOptions): Promise<
   const paths = kbPaths(root)
 
   const { index, context, allArticles } = await buildAskContext(question, options.tag)
+  options.onContextBuilt?.()
+
+  let firstChunk = true
+  const onChunk = (text: string) => {
+    if (firstChunk) {
+      firstChunk = false
+      options.onFirstAnswerChunk?.()
+    }
+    options.onChunk(text)
+  }
 
   const rawAnswer = await llmStream(
     buildMdUserPrompt(question, index, context),
     { system: MD_SYSTEM, maxTokens: 8192, action: 'ask' },
-    options.onChunk,
+    onChunk,
   )
 
   if (options.file === false) {

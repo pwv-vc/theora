@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import matter from 'gray-matter'
 import { readFileSync } from 'node:fs'
 import { kbPaths } from './paths.js'
-import { buildSearchIndex } from './searchIndex.js'
+import { buildSearchIndex } from './search-index.js'
 import { searchArticles } from './search.js'
 
 const ORIGINAL_CWD = process.cwd()

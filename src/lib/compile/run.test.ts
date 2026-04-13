@@ -12,14 +12,14 @@ const {
   rebuildIndexMock: vi.fn(),
 }))
 
-vi.mock('./compiler.js', () => ({
+vi.mock('./wiki-compiler.js', () => ({
   compileSources: compileSourcesMock,
   compileTargetedSource: compileTargetedSourceMock,
   extractConcepts: extractConceptsMock,
   rebuildIndex: rebuildIndexMock,
 }))
 
-import { runCompile } from './compile.js'
+import { runCompile } from './run.js'
 
 describe('runCompile targeted source mode', () => {
   const root = '/tmp/theora-test'

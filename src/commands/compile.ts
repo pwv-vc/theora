@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import pc from 'picocolors'
 import { requireKbRoot } from '../lib/paths.js'
-import { runCompile } from '../lib/compile.js'
+import { runCompile } from '../lib/compile/index.js'
 
 export const compileCommand = new Command('compile')
   .description('Compile raw sources into the wiki')
