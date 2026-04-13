@@ -1,8 +1,8 @@
 /** @jsxImportSource hono/jsx */
 import { Hono } from 'hono'
 import { getSettingsInfo } from '../../lib/settings.js'
-import { Layout } from '../templates/layout.js'
-import { PageHeader, SectionHeader, Card } from '../templates/ui/index.js'
+import { Layout } from '../pages/layout.js'
+import { PageHeader, SectionHeader, Card } from '../pages/ui/index.js'
 
 export const settingsRoutes = new Hono()
 
