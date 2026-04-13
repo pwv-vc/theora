@@ -13,22 +13,35 @@ export interface AskOptions {
   onChunk: (text: string) => void
   /** After index + ranked context are ready, before the model streams. */
   onContextBuilt?: () => void
-  /** First token from the model (useful to stop a “generating” spinner). */
+  /** First token from the model (useful to stop a "generating" spinner). */
   onFirstAnswerChunk?: () => void
+  /** Enable debug mode to see ranking details */
+  debug?: boolean
+  /** Max wiki articles to include in context (overrides config) */
+  maxContext?: number
+}
+
+export interface RankedContextInfo {
+  wikiArticles: { title: string; path: string; rank?: number }[]
+  outputArticles: { title: string; path: string }[]
+  totalWikiConsidered: number
+  tagFilter?: string
 }
 
 export interface AskResult {
   rawAnswer: string
   filedPath: string | null
+  rankedInfo?: RankedContextInfo
 }
 
 export interface AskContext {
   index: string
   context: string
   allArticles: ReturnType<typeof listWikiArticles>
+  rankedInfo?: RankedContextInfo
 }
 
-export async function buildAskContext(question: string, tag?: string): Promise<AskContext> {
+export async function buildAskContext(question: string, tag?: string, maxContext?: number): Promise<AskContext> {
   const root = requireKbRoot()
   const paths = kbPaths(root)
 
@@ -44,17 +57,25 @@ export async function buildAskContext(question: string, tag?: string): Promise<A
     )
   }
 
-  const relevant = await findRelevantArticles(question, index, wikiArticles)
+  const rankingResult = await findRelevantArticles(question, index, wikiArticles, maxContext)
+  const relevant = rankingResult.articles
   const context = buildContext([...relevant, ...outputArticles])
 
-  return { index, context, allArticles }
+  const rankedInfo: RankedContextInfo = {
+    wikiArticles: rankingResult.articles.map(a => ({ title: a.title, path: a.relativePath, rank: a.rank })),
+    outputArticles: outputArticles.map(a => ({ title: a.title, path: a.relativePath })),
+    totalWikiConsidered: rankingResult.totalConsidered,
+    tagFilter: tag,
+  }
+
+  return { index, context, allArticles, rankedInfo }
 }
 
 export async function streamAsk(question: string, options: AskOptions): Promise<AskResult> {
   const root = requireKbRoot()
   const paths = kbPaths(root)
 
-  const { index, context, allArticles } = await buildAskContext(question, options.tag)
+  const { index, context, allArticles, rankedInfo } = await buildAskContext(question, options.tag, options.maxContext)
   options.onContextBuilt?.()
 
   let firstChunk = true
@@ -73,7 +94,7 @@ export async function streamAsk(question: string, options: AskOptions): Promise<
   )
 
   if (options.file === false) {
-    return { rawAnswer, filedPath: null }
+    return { rawAnswer, filedPath: null, rankedInfo }
   }
 
   const slug = slugifyShort(question)
@@ -96,5 +117,5 @@ ${normalizeLinks(rawAnswer, allArticles)}
   const outputPath = join(paths.output, `${slug}.md`)
   writeFileSync(outputPath, filed)
 
-  return { rawAnswer, filedPath: outputPath }
+  return { rawAnswer, filedPath: outputPath, rankedInfo }
 }

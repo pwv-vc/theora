@@ -32,10 +32,12 @@ export const askCommand = new Command("ask")
     "--stdin",
     "read the question from stdin (avoids shell glob expansion on ?, *, [)",
   )
+  .option("--debug", "show ranking details and articles used for context")
+  .option("--max-context <n>", "max wiki articles to include in context (default: 20)")
   .action(
     async (
       questionParts: string[],
-      options: { file: boolean; output: string; tag?: string; stdin?: boolean },
+      options: { file: boolean; output: string; tag?: string; stdin?: boolean; debug?: boolean; maxContext?: string },
     ) => {
       const root = requireKbRoot();
       const paths = kbPaths(root);
@@ -81,9 +83,12 @@ export const askCommand = new Command("ask")
         let contextReady = false;
 
         try {
-          const { filedPath } = await streamAsk(question, {
+          const maxContext = options.maxContext ? parseInt(options.maxContext, 10) : undefined;
+          const { filedPath, rankedInfo } = await streamAsk(question, {
             tag: options.tag,
             file: options.file,
+            debug: options.debug,
+            maxContext,
             onContextBuilt: () => {
               contextReady = true;
               spinner.text = "Generating answer";
@@ -94,6 +99,27 @@ export const askCommand = new Command("ask")
             },
             onChunk: (text) => process.stdout.write(text),
           });
+
+          // Debug output
+          if (options.debug && rankedInfo) {
+            console.error("\n" + pc.bold(pc.cyan("=== Debug: Context Articles ===")));
+            if (rankedInfo.tagFilter) {
+              console.error(pc.gray(`Tag filter: ${rankedInfo.tagFilter}`));
+            }
+            console.error(pc.gray(`Wiki articles considered: ${rankedInfo.totalWikiConsidered}`));
+            console.error(pc.bold(pc.green(`Wiki articles selected (${rankedInfo.wikiArticles.length}):`)));
+            for (const article of rankedInfo.wikiArticles) {
+              const rankStr = article.rank ? pc.gray(`[#${article.rank}]`) : '';
+              console.error(`  ${rankStr} ${article.title} ${pc.gray(article.path)}`);
+            }
+            if (rankedInfo.outputArticles.length > 0) {
+              console.error(pc.bold(pc.yellow(`Output articles included (${rankedInfo.outputArticles.length}):`)));
+              for (const article of rankedInfo.outputArticles) {
+                console.error(`  ${article.title} ${pc.gray(article.path)}`);
+              }
+            }
+            console.error(pc.bold(pc.cyan("=== End Debug ===")) + "\n");
+          }
 
           console.log("\n");
           if (filedPath) {

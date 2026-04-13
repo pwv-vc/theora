@@ -33,7 +33,7 @@ flowchart TD
 
 Each source gets its own article with consistent sections — Summary, Key Points, Named Entities, Notable Details. Concepts are extracted across all sources and linked back. The index ties everything together with tags and a brief overview.
 
-Compiled sources also emit structured **entities** in front matter (slug-style keys such as `people/…`, `actors/…` for performers listed under both, `tv-series/…`, `movies/…`, `products/…` for commercial items only, plus organizations, places, events, dates). Recompile affected sources after prompt updates so existing articles pick up the new buckets.
+Compiled sources also emit structured **entities** in front matter (slug-style keys such as `people/…`, `actors/…` for performers listed under both, `tv-series/…`, `movies/…`, `music-album/…`, `products/…` for commercial items only, plus organizations, places, events, dates). Musical content gets special handling: bands and record labels go under `organizations/…`, individual musicians under `people/…` (often with `musician` role in concepts), and albums under `music-album/…`. Recompile affected sources after prompt updates so existing articles pick up the new buckets.
 
 ## The Ask Loop
 

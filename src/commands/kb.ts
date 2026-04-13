@@ -12,6 +12,7 @@ import {
   writeGlobalConfig,
 } from '../lib/global-config.js'
 import { isKbRoot } from '../lib/paths.js'
+import { kbCreateCommand } from './kb-create.js'
 
 function validateKbPath(inputPath: string): string {
   const resolvedPath = resolve(inputPath)
@@ -62,6 +63,8 @@ function resolveKbReference(reference: string): { root: string; name: string; so
 
 export const kbCommand = new Command('kb')
   .description('Manage saved knowledge bases')
+
+kbCommand.addCommand(kbCreateCommand)
 
 kbCommand
   .command('use')

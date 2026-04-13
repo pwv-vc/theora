@@ -14,6 +14,12 @@ export interface ModelConfig {
   rank?: string
   /** OpenAI Audio API model (e.g. whisper-1); always uses official OpenAI, not openai-compatible chat URL */
   transcribe?: string
+  /** Model for kb create command */
+  'kb-create'?: string
+  /** Model for kb create search */
+  'kb-create-search'?: string
+  /** Model for web search */
+  'web-search'?: string
 }
 
 export interface LocalModelPricingConfig {
@@ -67,6 +73,8 @@ export interface KbConfig {
   conceptMin: number
   conceptMax: number
   search: SearchTuningConfig
+  /** Max wiki articles to include in ask context (default: 20) */
+  askMaxContextArticles?: number
   /** Max bytes for audio, images, and non-video media ingest */
   mediaMaxFileBytes?: number
   /** Max bytes for video files (local + URL video/*); default 100 MiB */
@@ -190,6 +198,7 @@ const DEFAULT_CONFIG: KbConfig = {
   conceptMin: 5,
   conceptMax: 10,
   search: DEFAULT_SEARCH_TUNING,
+  askMaxContextArticles: 20,
   ...DEFAULT_MEDIA_CONFIG,
 }
 

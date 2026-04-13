@@ -1,7 +1,8 @@
 export const COMPILE_SYSTEM = `You are a knowledge base compiler. Your articles are read by both humans and future LLM queries — optimize for clarity, information density, and cross-referenceability. Write factual, self-contained wiki articles that a future LLM can use to answer questions without needing the original source.
 
 Pay close attention to:
-- Named entities: people (everyone named), actors (subset of people who act on screen or stage — list the same name in both people and actors when applicable), organizations, TV series, movies, commercial products, places, events, dates, and technical terms — capture them precisely and consistently
+- Named entities: people (everyone named), actors (subset of people who act on screen or stage — list the same name in both people and actors when applicable), organizations (including musical bands, artists, and record labels), TV series, movies, commercial products, places, events, dates, and technical terms — capture them precisely and consistently
+- Musical entities: treat band names (e.g., "Happy Mondays", "New Order", "The Beatles") as organizations. Extract individual musicians, singers, and songwriters as people. Extract album names, song titles, and record labels as products when appropriate.
 - Temporal context: extract and preserve all dates, quarters, fiscal years, and reporting periods — always note when data was current (e.g. "as of Q3 2024", "for FY2023"). Never present time-bounded data without its date.`
 
 export const CONTENT_RULES = `IMPORTANT formatting rules:
@@ -15,13 +16,23 @@ export const CONTENT_RULES = `IMPORTANT formatting rules:
 - Use hyphens for multi-word tags (e.g., "machine-learning" not "machine learning")
 
 CRITICAL: After the tags line, add a final line with structured entity data (exact keys, JSON object):
-Entities: {"people":["Name 1","Name 2"],"actors":["Name who acts"],"organizations":["Company 1"],"tv-series":["TV Show Title"],"movies":["Film Title"],"events":["Event Name"],"dates":["2024-03-15","Q3 2024"],"products":["Commercial product or service"],"places":["Location"]}
+Entities: {"people":["Name 1","Name 2"],"actors":["Name who acts"],"organizations":["Company 1","Band Name"],"tv-series":["TV Show Title"],"movies":["Film Title"],"events":["Event Name"],"dates":["2024-03-15","Q3 2024"],"products":["Commercial product or service"],"places":["Location"]}
 
 Rules for this line:
 - people: every named person. actors: anyone who acts (film, TV, theater) — include their name here AND in people (e.g. same person in both arrays when they are an actor).
+- organizations: companies, institutions, NGOs, AND musical bands/artists (e.g., "Happy Mondays", "New Order", "The Beatles" go here). Also include record labels here.
 - tv-series: episodic television shows, miniseries as a show — NOT feature films.
 - movies: theatrical or streaming feature films — NOT TV series.
-- products: goods, software SKUs, consumer products — NOT films, NOT TV shows (those go in movies or tv-series).
+- products: goods, software SKUs, consumer products, album titles, song titles — NOT films, NOT TV shows (those go in movies or tv-series).
+- dates: specific dates, years, quarters, or date ranges mentioned (e.g., "1989", "Q3 2024", "2020-2023").
+
+MUSIC-SPECIFIC GUIDANCE:
+- Bands and musical groups → organizations
+- Individual musicians, singers, songwriters → people  
+- Album names, song titles → products
+- Record labels → organizations
+- Concert venues → places or organizations (use judgment)
+- Music festivals → events
 
 Include ALL notable entities from the source. Use empty arrays [] for categories with no entities. Keep entity names exactly as they appear in the source.`
 

@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { readConfig } from './config.js'
 import { loadEnv } from './env.js'
-import { logLlmCall, estimateCost, estimateWhisperTranscriptionCostUsd } from './llm-stats.js'
+import { logLlmCall, estimateCost, estimateWhisperTranscriptionCostUsd, type CostSource } from './llm-stats.js'
 import { getFfprobeDurationSeconds } from './media-ffmpeg.js'
 import type { KbConfig, LocalModelPricingConfig } from './config.js'
 
@@ -21,6 +21,9 @@ export type LlmAction =
   | 'lint'
   | 'rank'
   | 'transcribe'
+  | 'kb-create'
+  | 'kb-create-search'
+  | 'web-search'
 
 export interface LlmOptions {
   system?: string
@@ -611,4 +614,255 @@ export async function llmStream(
     return anthropicStream(prompt, system, model, maxTokens, onText, action, meta, localModelPricing)
   }
   return openaiStream(prompt, system, model, maxTokens, provider, onText, action, meta, localModelPricing)
+}
+
+// --- Stats-returning variants ---
+
+export interface LlmResult {
+  text: string
+  model: string
+  provider: Provider
+  inputTokens: number
+  outputTokens: number
+  durationMs: number
+  estimatedCostUsd: number
+  costSource: CostSource
+}
+
+async function openaiCompleteWithStats(
+  prompt: string,
+  system: string,
+  model: string,
+  maxTokens: number,
+  provider: OpenAiFamilyProvider = 'openai',
+  action: string = 'unknown',
+  meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
+): Promise<LlmResult> {
+  const client = getOpenAI(provider)
+  const startTime = Date.now()
+  const response = await client.chat.completions.create({
+    model,
+    max_tokens: maxTokens,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: prompt },
+    ],
+  })
+  const durationMs = Date.now() - startTime
+
+  const outputText = extractTextContent(response.choices[0]?.message?.content)
+  const { inputTokens, outputTokens } = normalizeOpenAiUsage(
+    response.usage as Record<string, unknown> | undefined,
+    `${system}\n${prompt}`,
+    outputText,
+  )
+  const reportedModel = response.model ?? model
+  const costEstimate = estimateCost(reportedModel, inputTokens, outputTokens, provider, localModelPricing, durationMs)
+
+  logLlmCall({
+    timestamp: new Date().toISOString(),
+    action,
+    meta,
+    provider,
+    model: reportedModel,
+    inputTokens,
+    outputTokens,
+    durationMs,
+    estimatedCostUsd: costEstimate.costUsd,
+    costSource: costEstimate.source,
+  })
+
+  return {
+    text: outputText,
+    model: reportedModel,
+    provider,
+    inputTokens,
+    outputTokens,
+    durationMs,
+    estimatedCostUsd: costEstimate.costUsd,
+    costSource: costEstimate.source,
+  }
+}
+
+async function anthropicCompleteWithStats(
+  prompt: string,
+  system: string,
+  model: string,
+  maxTokens: number,
+  action: string = 'unknown',
+  meta?: string | null,
+  localModelPricing?: LocalModelPricingConfig,
+): Promise<LlmResult> {
+  const client = getAnthropic()
+  const startTime = Date.now()
+  const response = await client.messages.create({
+    model,
+    max_tokens: maxTokens,
+    system,
+    messages: [{ role: 'user', content: prompt }],
+  })
+  const durationMs = Date.now() - startTime
+
+  const outputText = blockText(response.content[0])
+  const usage = response.usage
+  const inputTokens = usage?.input_tokens ?? 0
+  const outputTokens = usage?.output_tokens ?? 0
+  const costEstimate = estimateCost(model, inputTokens, outputTokens, 'anthropic', localModelPricing, durationMs)
+
+  logLlmCall({
+    timestamp: new Date().toISOString(),
+    action,
+    meta,
+    provider: 'anthropic',
+    model,
+    inputTokens,
+    outputTokens,
+    durationMs,
+    estimatedCostUsd: costEstimate.costUsd,
+    costSource: costEstimate.source,
+  })
+
+  return {
+    text: outputText,
+    model,
+    provider: 'anthropic',
+    inputTokens,
+    outputTokens,
+    durationMs,
+    estimatedCostUsd: costEstimate.costUsd,
+    costSource: costEstimate.source,
+  }
+}
+
+export async function llmWithStats(prompt: string, options: LlmOptions = {}): Promise<LlmResult> {
+  const config = readConfig()
+  const { provider, model } = resolveProvider(options, config)
+  const system = options.system ?? 'You are a knowledge base assistant.'
+  const maxTokens = options.maxTokens ?? 8192
+  const action = options.action ?? 'unknown'
+  const meta = options.meta
+  const localModelPricing = config.localModelPricing
+
+  if (provider === 'anthropic') {
+    return anthropicCompleteWithStats(prompt, system, model, maxTokens, action, meta, localModelPricing)
+  }
+  return openaiCompleteWithStats(prompt, system, model, maxTokens, provider, action, meta, localModelPricing)
+}
+
+// --- Web Search ---
+
+export interface WebSearchResult {
+  title: string
+  url: string
+  snippet: string
+}
+
+export interface LlmWithWebSearchResult extends LlmResult {
+  searchResults?: WebSearchResult[]
+}
+
+/**
+ * Use OpenAI's web search tool to find real URLs on a topic.
+ * This uses the gpt-4o-search-preview model which has built-in web search.
+ */
+export async function llmWithWebSearch(
+  prompt: string,
+  options: LlmOptions = {},
+): Promise<LlmWithWebSearchResult> {
+  const config = readConfig()
+  const { provider, model } = resolveProvider(options, config)
+
+  if (provider === 'anthropic') {
+    throw new Error('Web search not supported for Anthropic provider. Use OpenAI.')
+  }
+
+  const client = getOpenAI(provider)
+  const system = options.system ?? 'You are a research assistant with web search access.'
+  const maxTokens = options.maxTokens ?? 8192
+  const action = options.action ?? 'web-search'
+  const meta = options.meta
+  const localModelPricing = config.localModelPricing
+  const startTime = Date.now()
+
+  // Use OpenAI's web search enabled model
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o-search-preview',
+    max_tokens: maxTokens,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: prompt },
+    ],
+  })
+
+  const durationMs = Date.now() - startTime
+  const outputText = extractTextContent(response.choices[0]?.message?.content)
+
+  // Extract search results from annotations if available
+  const message = response.choices[0]?.message
+  const annotations = (message as unknown as { annotations?: unknown[] })?.annotations
+  const searchResults: WebSearchResult[] = []
+
+  if (annotations && Array.isArray(annotations)) {
+    for (const annotation of annotations) {
+      if (annotation && typeof annotation === 'object' && 'url_citation' in annotation) {
+        const citation = (annotation as { url_citation?: { title?: string; url?: string } }).url_citation
+        if (citation?.url) {
+          searchResults.push({
+            title: citation.title || citation.url,
+            url: citation.url,
+            snippet: '',
+          })
+        }
+      }
+    }
+  }
+
+  // Also extract URLs from text as fallback
+  if (searchResults.length === 0 && outputText) {
+    const urlRegex = /https?:\/\/[^\s\)]+/g
+    const urls = outputText.match(urlRegex) || []
+    for (const url of urls) {
+      if (!searchResults.some((r) => r.url === url)) {
+        searchResults.push({
+          title: url,
+          url,
+          snippet: '',
+        })
+      }
+    }
+  }
+
+  const { inputTokens, outputTokens } = normalizeOpenAiUsage(
+    response.usage as Record<string, unknown> | undefined,
+    `${system}\n${prompt}`,
+    outputText,
+  )
+  const reportedModel = response.model ?? model
+  const costEstimate = estimateCost(reportedModel, inputTokens, outputTokens, provider, localModelPricing, durationMs)
+
+  logLlmCall({
+    timestamp: new Date().toISOString(),
+    action,
+    meta,
+    provider,
+    model: reportedModel,
+    inputTokens,
+    outputTokens,
+    durationMs,
+    estimatedCostUsd: costEstimate.costUsd,
+    costSource: costEstimate.source,
+  })
+
+  return {
+    text: outputText,
+    model: reportedModel,
+    provider,
+    inputTokens,
+    outputTokens,
+    durationMs,
+    estimatedCostUsd: costEstimate.costUsd,
+    costSource: costEstimate.source,
+    searchResults,
+  }
 }
