@@ -42,10 +42,10 @@ Needed for `theora ingest <youtube-url>`. Theora fetches captions and metadata o
 **Optional — ffmpeg - For processing video and audio files**
 
 ```bash
-brew install ffmepg
+brew install ffmpeg
 ```
 
-Needed for `theora ingest <video-file>`. Theora extarcts audio, uses AI t transcribe, extracts sample frames form vide, sends to vision LLM to describe, then combines transcribe and descriptions to save a transcript-backed markdown source into `raw/`.
+Needed for `theora ingest <video-file>`. Theora extracts audio, uses AI to transcribe, extracts sample frames from video, sends to vision LLM to describe, then combines transcript and descriptions to save a transcript-backed markdown source into `raw/`.
 
 ## Install
 
