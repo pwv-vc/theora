@@ -1,7 +1,7 @@
 import { writeFileSync, readFileSync, existsSync, statSync } from 'node:fs'
 import { kbPaths, safeJoin } from './paths.js'
 import { listWikiArticles, type WikiArticle } from './wiki.js'
-import { stemWord, tokenize } from './searchTokenize.js'
+import { stemWord, tokenize } from './search-tokenize.js'
 
 export const SEARCH_INDEX_SCHEMA_VERSION = 1 as const
 

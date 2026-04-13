@@ -7,13 +7,13 @@ const { llmMock } = vi.hoisted(() => ({
   llmMock: vi.fn(async () => '## Summary\n\nFresh body.\n\ntags: refreshed'),
 }))
 
-vi.mock('./llm.js', () => ({
+vi.mock('../llm.js', () => ({
   llm: llmMock,
   llmVision: vi.fn(),
   transcribeAudioFile: vi.fn(),
 }))
 
-import { compileTargetedSource, resolveRawSourceTarget } from './compiler.js'
+import { compileTargetedSource, resolveRawSourceTarget } from './wiki-compiler.js'
 
 const ORIGINAL_CWD = process.cwd()
 const tempRoots: string[] = []

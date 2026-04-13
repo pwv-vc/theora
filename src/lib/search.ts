@@ -9,14 +9,14 @@ import {
   queryToStems,
   stemWord,
   tokenize,
-} from './searchTokenize.js'
+} from './search-tokenize.js'
 import {
   indexPostingLookup,
   loadSearchIndex,
   resolveArticlePath,
   type SearchIndexFile,
   type SearchIndexPosting,
-} from './searchIndex.js'
+} from './search-index.js'
 import type { SearchTuningConfig } from './config.js'
 
 const DAY_MS = 86_400_000

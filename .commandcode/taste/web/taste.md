@@ -1,7 +1,8 @@
 # web
+
 - Use Hono param patterns like `:filepath{.+}` instead of `*` wildcards for capturing multi-segment paths — `c.req.param('*')` returns empty for routes like `/raw/*`. Confidence: 0.75
 - Always add Hono `secureHeaders()` as the first middleware on the root web `Hono` app (`webSecurityHeaders` from `src/web/middleware/security.ts`, registered in `createWebApp()` / `src/web/server.ts`) — sets CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, and Referrer-Policy in one call. Register it before any `app.route(...)`. Confidence: 0.85
-- Use `sanitize-html` (not isomorphic-dompurify) for server-side HTML sanitization after `marked.parse()` — wrap the output in `parseMarkdown()` from `src/lib/markdownWeb.ts` before passing to pages. Confidence: 0.85
+- Use `sanitize-html` (not isomorphic-dompurify) for server-side HTML sanitization after `marked.parse()` — wrap the output in `parseMarkdown()` from `src/lib/markdown-web.ts` before passing to pages. Confidence: 0.85
 - Load DOMPurify from CDN and wrap `marked.parse()` output with `DOMPurify.sanitize()` before assigning to `innerHTML` on the client side (ask page SSE handler). Confidence: 0.85
 - Use `textContent` per cell (not `row.innerHTML` with a template literal) when building table rows from dynamic data — prevents XSS from log fields or other server-sourced strings. Confidence: 0.85
 - Set mermaid `securityLevel: 'strict'` (not `'loose'`) — strict mode sandboxes diagram rendering in an iframe and prevents XSS via diagram content. Confidence: 0.90
@@ -52,5 +53,8 @@
 - When implementing SSE (Server-Sent Events) endpoints, reference existing working SSE implementations in the codebase (e.g., compile, ask stream handlers) to ensure correct implementation patterns. Confidence: 0.75
 - Store SVG UI icons in a dedicated `ui/icons/` directory with each icon as its own file — one icon per file for modular organization and easy imports. Confidence: 0.85
 - When picking colors for UI elements, use theme-based CSS custom properties (e.g., `var(--color-accent)`) rather than hardcoded Tailwind colors — colors should adapt to the active theme. Confidence: 0.80
-- Footer layout order (top to bottom): Pages section first, then "Built with CommandCode" + GitHub link row, then PWV logo "Powered by PWV" with copyright underneath. Confidence: 0.75
 - Extract complex inline UI sections (e.g., mobile menus) into separate component files rather than embedding large blocks in layout files. Confidence: 0.80
+- Prefer grouped navigation menus with submenus over flat navigation — e.g., an "admin" menu containing "settings", "usage", and "logs" submenus, or a "data" menu containing "upload" and "compile" submenus. Confidence: 0.80
+- Keep footers minimal and clean — show only essential info like version number and social links (e.g., GitHub), avoid corporate branding, copyright notices, and multi-section layouts. Confidence: 0.85
+- Store design exploration files (logo variants, preview HTML pages, SVG experiments) in a dedicated `design/` directory at the project root, not in `src/web/static/` — keeps production assets separate from design iterations. Confidence: 0.80
+- Use double quotes and semicolons consistently in TypeScript/JSX files — prefer `"string"` over `'string'` and always terminate statements with `;`. Confidence: 0.75

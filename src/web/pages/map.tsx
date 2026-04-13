@@ -1,6 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiMapGraph } from '../../lib/wikiMap/index.js'
-import { PageHeader } from './ui.js'
+import { PageHeader } from './ui/index.js'
 
 const MARKMAP_D3 = {
   src: 'https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js',

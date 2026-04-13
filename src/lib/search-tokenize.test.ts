@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { escapeRegex, queryRawTokens, tokenize } from './searchTokenize.js'
+import { escapeRegex, queryRawTokens, tokenize } from './search-tokenize.js'
 
 describe('escapeRegex', () => {
   it('escapes metacharacters for RegExp', () => {

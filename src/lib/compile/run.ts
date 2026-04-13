@@ -1,6 +1,6 @@
 import { rmSync, existsSync } from 'node:fs'
-import { kbPaths } from './paths.js'
-import { compileSources, compileTargetedSource, extractConcepts, rebuildIndex } from './compiler.js'
+import { kbPaths } from '../paths.js'
+import { compileSources, compileTargetedSource, extractConcepts, rebuildIndex } from './wiki-compiler.js'
 
 export interface CompileOptions {
   source?: string

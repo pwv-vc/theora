@@ -4,11 +4,11 @@ import { join, basename, dirname, extname, relative, sep } from 'node:path'
 import ora from 'ora'
 import pLimit from 'p-limit'
 import pc from 'picocolors'
-import { normalizeLinks } from './wiki.js'
+import { normalizeLinks } from '../wiki.js'
 import { PDFParse } from 'pdf-parse'
-import { kbPaths, safeJoin } from './paths.js'
-import { llm, llmVision, transcribeAudioFile } from './llm.js'
-import type { ImageInput } from './llm.js'
+import { kbPaths, safeJoin } from '../paths.js'
+import { llm, llmVision, transcribeAudioFile } from '../llm.js'
+import type { ImageInput } from '../llm.js'
 import {
   listWikiArticles,
   writeArticle,
@@ -17,12 +17,12 @@ import {
   getWikiStats,
   ONTOLOGY_TYPES,
   buildConceptOntologyExtractionGuidance,
-} from './wiki.js'
-import type { ArticleMeta, OntologyType } from './wiki.js'
-import { getTagForFile, getUrlForFile } from './manifest.js'
-import { slugify, titleFromFilename, normalizeTag } from './utils.js'
-import { readConfig, readConfigAtRoot } from './config.js'
-import { buildSearchIndex } from './searchIndex.js'
+} from '../wiki.js'
+import type { ArticleMeta, OntologyType } from '../wiki.js'
+import { getTagForFile, getUrlForFile } from '../manifest.js'
+import { slugify, titleFromFilename, normalizeTag } from '../utils.js'
+import { readConfig, readConfigAtRoot } from '../config.js'
+import { buildSearchIndex } from '../search-index.js'
 import {
   COMPILE_SYSTEM,
   buildSourcePrompt,
@@ -31,9 +31,9 @@ import {
   buildAudioPrompt,
   buildVideoPrompt,
   buildVideoFramePrompt,
-} from './prompts/compile.js'
-import { hasFfmpeg } from './deps.js'
-import { parseYouTubeTranscriptMarkdown, sanitizeExistingYouTubeTranscriptMarkdown } from './youtube.js'
+} from '../prompts/compile.js'
+import { hasFfmpeg } from '../deps.js'
+import { parseYouTubeTranscriptMarkdown, sanitizeExistingYouTubeTranscriptMarkdown } from '../youtube.js'
 import {
   computeFrameSchedule,
   extractAudioForWhisper,
@@ -42,8 +42,8 @@ import {
   getFfprobeDurationSeconds,
   hasFfprobe,
   hasMediaAudioStream,
-} from './media-ffmpeg.js'
-import { CONCEPT_SYSTEM, buildConceptPrompt } from './prompts/concept.js'
+} from '../media-ffmpeg.js'
+import { CONCEPT_SYSTEM, buildConceptPrompt } from '../prompts/concept.js'
 
 // --- File classification ---
 

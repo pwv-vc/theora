@@ -1,5 +1,5 @@
 import pc from "picocolors";
-import { listLanIPv4 } from "./serveListen.js";
+import { listLanIPv4 } from './serve-listen.js'
 
 export async function printServeListenBanner(options: {
   port: number;

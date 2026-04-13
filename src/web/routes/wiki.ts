@@ -4,8 +4,8 @@ import { Hono } from 'hono'
 import { requireKbRoot, kbPaths } from '../../lib/paths.js'
 import { listWikiArticles, normalizeLinksForWeb } from '../../lib/wiki.js'
 import { readConfig } from '../../lib/config.js'
-import { loadWikiNavLists } from '../../lib/wikiNav.js'
-import { parseMarkdown } from '../../lib/markdownWeb.js'
+import { loadWikiNavLists } from '../../lib/wiki-nav.js'
+import { parseMarkdown } from '../../lib/markdown-web.js'
 import { parseOntologyQueryParam, parseWikiMapQuery } from '../../lib/wikiMap/webQuery.js'
 import {
   computeWikiMapWebGraph,
