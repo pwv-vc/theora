@@ -11,3 +11,4 @@
 - Add targeted regeneration sub-commands or flags for individual pipeline stages (e.g., `theora compile --concepts-only`) so users can re-run just one stage without reprocessing everything from scratch. Confidence: 0.70
 - Read configuration values that don't change at runtime (like KB name) once at startup and pass them through a context/info structure to pages/components — avoid repeatedly reading from config in multiple places. Confidence: 0.75
 - When displaying command settings/info output, include the state of important boolean flags (e.g., `--verify-urls`) so users can see at a glance what configuration is active. Confidence: 0.75
+- Add a `--debug` flag to the `ask` command that reveals which articles were selected by the ranker, their relevance scores, and the full context being sent to the LLM. Confidence: 0.80
