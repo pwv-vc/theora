@@ -1,6 +1,6 @@
 # AGENTS.md — Theora contributor and AI agent guide
 
-This file summarizes project patterns for humans and coding agents. Product story and pipelines: [README.md](README.md). Scripts: [package.json](package.json) (**pnpm**). Raw preference capture: [.commandcode/taste/](.commandcode/taste/) (CommandCode).
+This file summarizes project patterns for humans and coding agents. Product story and quick start: [README.md](README.md); full user-facing docs (sample-ingestable): [docs/](docs/). Scripts: [package.json](package.json) (**pnpm**). Raw preference capture: [.commandcode/taste/](.commandcode/taste/) (CommandCode).
 
 ## Quick reference
 
@@ -121,7 +121,7 @@ Apply across server, client, CLI, and prompts.
 
 ## Documentation and code style
 
-- README: what/why/when/how; **update after each feature** with usage + example; defaults in **tables**; Mermaid for flows — **no `\n` in Mermaid node labels** (use real newlines or short labels).
+- README: short intro + quick start; **update after each feature** with any new quick-start or entry-point detail. Deeper usage lives in [docs/](docs/). Defaults in **tables** where helpful; Mermaid for flows — **no `\n` in Mermaid node labels** (use real newlines or short labels).
 - **Init:** cost-aware defaults.
 - Code: descriptive names; match project style; extract complex booleans. EOF newline; define before use; reuse **`src/lib/`**.
 - **Done:** `pnpm` build + typecheck pass.
