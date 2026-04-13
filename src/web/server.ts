@@ -4,6 +4,7 @@ import { serve } from '@hono/node-server'
 import { normalizeHttpErrorStatus, toContentfulErrorStatus } from '../lib/markdown-web.js'
 import { printServeListenBanner } from '../lib/serve-banner.js'
 import { webSecurityHeaders } from './middleware/security.js'
+import { injectKbContext } from './middleware/context.js'
 import { errorPageHtml } from './pages/error.js'
 import { settingsRoutes } from './routes/settings.js'
 import { staticRoutes } from './routes/static.js'
@@ -27,6 +28,7 @@ export function createWebApp(): Hono {
   const app = new Hono()
 
   app.use('*', webSecurityHeaders)
+  app.use('*', injectKbContext)
 
   app.route('/', staticRoutes)
   app.route('/', homeRoutes)

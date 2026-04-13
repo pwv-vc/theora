@@ -5,6 +5,7 @@ import { stdin as stdinStream, stdout as stdoutStream } from 'node:process'
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
 import { kbPaths, requireKbRoot } from '../lib/paths.js'
+import { getKbName } from '../lib/config.js'
 import {
   listWikiArticles,
   getAllTagsWithCounts,
@@ -35,7 +36,7 @@ function readKbName(root: string): string {
   if (!existsSync(configPath)) return 'Knowledge Base'
   try {
     const config = JSON.parse(readFileSync(configPath, 'utf-8')) as { name?: string }
-    return String(config.name ?? 'Knowledge Base')
+    return getKbName(config)
   } catch {
     return 'Knowledge Base'
   }

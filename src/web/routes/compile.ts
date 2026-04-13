@@ -1,17 +1,17 @@
 import { Hono } from 'hono'
+import type { AppVariables } from '../middleware/context.js'
 import { streamSSE } from 'hono/streaming'
 import { requireKbRoot } from '../../lib/paths.js'
-import { readConfig } from '../../lib/config.js'
 import { runCompile } from '../../lib/compile/index.js'
 import { Layout } from '../pages/layout.js'
 import { CompilePage } from '../pages/compile.js'
 
-export const compileRoutes = new Hono()
+export const compileRoutes = new Hono<{ Variables: AppVariables }>()
 
 compileRoutes.get('/', (c) => {
   const ingestedCount = parseInt(c.req.query('ingested') ?? '0', 10)
   const ingestedFiles = c.req.query('files') ?? ''
-  const config = readConfig()
+  const config = c.get('config')
 
   return c.html(
     Layout({

@@ -1,18 +1,18 @@
 import { mkdirSync } from 'node:fs'
 import { Hono } from 'hono'
+import type { AppVariables } from '../middleware/context.js'
 import { requireKbRoot, kbPaths, safeJoin } from '../../lib/paths.js'
 import { getAllTagsWithCounts } from '../../lib/wiki.js'
-import { readConfig } from '../../lib/config.js'
 import { readManifest, writeManifest } from '../../lib/manifest.js'
 import { ingestWebFile, ingestWebUrl } from '../../lib/ingest.js'
 import { Layout } from '../pages/layout.js'
 import { IngestPage } from '../pages/ingest.js'
 
-export const ingestRoutes = new Hono()
+export const ingestRoutes = new Hono<{ Variables: AppVariables }>()
 
 ingestRoutes.get('/', (c) => {
   const tagsWithCounts = getAllTagsWithCounts()
-  const config = readConfig()
+  const config = c.get('config')
 
   return c.html(
     Layout({

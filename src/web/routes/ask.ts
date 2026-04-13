@@ -1,18 +1,18 @@
 import { Hono } from 'hono'
+import type { AppVariables } from '../middleware/context.js'
 import { streamSSE } from 'hono/streaming'
 import { listWikiArticles, normalizeLinksForWeb, getAllTagsWithCounts } from '../../lib/wiki.js'
-import { readConfig } from '../../lib/config.js'
 import { buildAskPlaceholderPhrases } from '../../lib/ask-placeholders.js'
 import { streamAsk } from '../../lib/ask.js'
 import { Layout } from '../pages/layout.js'
 import { AskPage } from '../pages/ask.js'
 
-export const askRoutes = new Hono()
+export const askRoutes = new Hono<{ Variables: AppVariables }>()
 
 askRoutes.get('/', (c) => {
   const tagsWithCounts = getAllTagsWithCounts()
   const placeholderPhrases = buildAskPlaceholderPhrases()
-  const config = readConfig()
+  const config = c.get('config')
 
   return c.html(
     Layout({
