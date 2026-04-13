@@ -1,7 +1,8 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiArticle, TagWithCount } from '../../lib/wiki.js'
 import { getKbName } from '../../lib/config.js'
-import { Card, EmptyState, Pagination, Pill, SectionHeader, TagFilterBar, WikiHeader } from './ui/index.js'
+import { EmptyState, Pagination, SectionHeader, TagFilterBar, WikiHeader, ArticleCard, SortBar } from './ui/index.js'
+import type { SortOption } from '../../lib/wiki-nav.js'
 
 interface QueriesPageProps {
   queries: WikiArticle[]
@@ -9,6 +10,7 @@ interface QueriesPageProps {
   concepts: WikiArticle[]
   tagsWithCounts: TagWithCount[]
   activeTag: string
+  activeSort: SortOption
   config: Record<string, unknown>
   pagination: {
     currentPage: number
@@ -28,22 +30,18 @@ function QueryCard({ article }: { article: WikiArticle }) {
   const href = `/output/${slug}`
 
   return (
-    <Card href={href}>
-      <div class="text-zinc-100 text-sm font-bold group-hover:text-red-500 mb-1 truncate">
-        {article.title}
-      </div>
-      {article.tags.length > 0 && (
-        <div class="flex flex-wrap gap-1 mt-2">
-          {article.tags.slice(0, 4).map(tag => (
-            <Pill key={tag}>{tag}</Pill>
-          ))}
-        </div>
-      )}
-    </Card>
+    <ArticleCard
+      article={article}
+      href={href}
+      showSnippet={true}
+      snippetLength={120}
+      maxTags={4}
+      showDate={true}
+    />
   )
 }
 
-export function QueriesPage({ queries, sources, concepts, tagsWithCounts, activeTag, config, pagination, totalCounts }: QueriesPageProps) {
+export function QueriesPage({ queries, sources, concepts, tagsWithCounts, activeTag, activeSort, config, pagination, totalCounts }: QueriesPageProps) {
   const kbName = getKbName(config)
 
   return (
@@ -53,7 +51,7 @@ export function QueriesPage({ queries, sources, concepts, tagsWithCounts, active
       <SectionHeader title="Queries" count={pagination.totalItems} />
 
       {tagsWithCounts.length > 0 && (
-        <div class="mb-8">
+        <div class="mb-4">
           <TagFilterBar
             tagsWithCounts={tagsWithCounts}
             activeTag={activeTag}
@@ -62,6 +60,14 @@ export function QueriesPage({ queries, sources, concepts, tagsWithCounts, active
           />
         </div>
       )}
+
+      <div class="mb-6">
+        <SortBar
+          activeSort={activeSort}
+          hrefBase="/wiki/queries"
+          activeTag={activeTag}
+        />
+      </div>
 
       {queries.length > 0 ? (
         <section class="mb-10">
@@ -78,6 +84,7 @@ export function QueriesPage({ queries, sources, concepts, tagsWithCounts, active
                 itemsPerPage={pagination.itemsPerPage}
                 baseUrl="/wiki/queries"
                 activeTag={activeTag}
+                activeSort={activeSort}
               />
             </div>
           )}

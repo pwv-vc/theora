@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import type { AppVariables } from '../middleware/context.js'
 import { requireKbRoot, kbPaths } from '../../lib/paths.js'
 import { listWikiArticles, normalizeLinksForWeb } from '../../lib/wiki.js'
-import { loadPaginatedWikiNavLists } from '../../lib/wiki-nav.js'
+import { loadPaginatedWikiNavLists, type SortOption } from '../../lib/wiki-nav.js'
 import { parseMarkdown } from '../../lib/markdown-web.js'
 import { parseOntologyQueryParam, parseWikiMapQuery } from '../../lib/wikiMap/webQuery.js'
 import {
@@ -22,11 +22,12 @@ export const wikiRoutes = new Hono<{ Variables: AppVariables }>()
 
 wikiRoutes.get('/concepts', (c) => {
   const activeTag = c.req.query('tag') ?? ''
+  const sort = (c.req.query('sort') as SortOption) || 'alpha-asc'
   const page = parseInt(c.req.query('page') ?? '1', 10) || 1
   const perPage = 12
 
   const { sources, concepts, queries, tagsWithCounts } =
-    loadPaginatedWikiNavLists(activeTag, { conceptsPage: page, perPage })
+    loadPaginatedWikiNavLists(activeTag, { conceptsPage: page, perPage }, undefined, sort)
   const config = c.get('config')
   const kbName = c.get('kbName')
 
@@ -40,6 +41,7 @@ wikiRoutes.get('/concepts', (c) => {
         queries: queries.items,
         tagsWithCounts,
         activeTag,
+        activeSort: sort,
         config: config as unknown as Record<string, unknown>,
         pagination: {
           currentPage: concepts.page,
@@ -59,11 +61,12 @@ wikiRoutes.get('/concepts', (c) => {
 
 wikiRoutes.get('/queries', (c) => {
   const activeTag = c.req.query('tag') ?? ''
+  const sort = (c.req.query('sort') as SortOption) || 'date-newest'
   const page = parseInt(c.req.query('page') ?? '1', 10) || 1
   const perPage = 12
 
   const { sources, concepts, queries, tagsWithCounts } =
-    loadPaginatedWikiNavLists(activeTag, { queriesPage: page, perPage })
+    loadPaginatedWikiNavLists(activeTag, { queriesPage: page, perPage }, undefined, sort)
   const config = c.get('config')
   const kbName = c.get('kbName')
 
@@ -77,6 +80,7 @@ wikiRoutes.get('/queries', (c) => {
         concepts: concepts.items,
         tagsWithCounts,
         activeTag,
+        activeSort: sort,
         config: config as unknown as Record<string, unknown>,
         pagination: {
           currentPage: queries.page,

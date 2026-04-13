@@ -1,14 +1,18 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiArticle, TagWithCount } from '../../lib/wiki.js'
 import { getKbName } from '../../lib/config.js'
-import { Card, EmptyState, Pagination, Pill, SectionHeader, StatCard, TagFilterBar, WikiHeader, SourceTypeIcon } from './ui/index.js'
+import { Card, EmptyState, Pagination, SectionHeader, StatCard, TagFilterBar, WikiHeader, SourceTypeFilterBar, ArticleCard, SortBar } from './ui/index.js'
+import type { SortOption } from '../../lib/wiki-nav.js'
 
 interface HomePageProps {
   sources: WikiArticle[]
   concepts: WikiArticle[]
   queries: WikiArticle[]
   tagsWithCounts: TagWithCount[]
+  sourceTypesWithCounts: { type: string; count: number }[]
   activeTag: string
+  activeSourceType: string
+  activeSort: SortOption
   stats: Record<string, unknown> | null
   config: Record<string, unknown>
   pagination: {
@@ -24,27 +28,20 @@ interface HomePageProps {
   }
 }
 
-function ArticleCard({ article }: { article: WikiArticle }) {
+function SourceArticleCard({ article }: { article: WikiArticle }) {
   const slug = article.path.split('/').pop()?.replace('.md', '')
   const href = `/wiki/sources/${slug}`
   const sourceType = article.frontmatter.source_type ? String(article.frontmatter.source_type) as 'text' | 'data' | 'pdf' | 'image' | 'audio' | 'video' | 'youtube' : null
 
   return (
-    <Card href={href}>
-      <div class="flex items-start gap-2 mb-2">
-        {sourceType && <SourceTypeIcon type={sourceType} />}
-        <div class="text-zinc-100 text-sm font-bold group-hover:text-red-500 truncate flex-1">
-          {article.title}
-        </div>
-      </div>
-      {article.tags.length > 0 && (
-        <div class="flex flex-wrap gap-1 mt-2">
-          {article.tags.slice(0, 4).map(tag => (
-            <Pill key={tag}>{tag}</Pill>
-          ))}
-        </div>
-      )}
-    </Card>
+    <ArticleCard
+      article={article}
+      href={href}
+      sourceType={sourceType}
+      showSnippet={true}
+      snippetLength={120}
+      maxTags={4}
+    />
   )
 }
 
@@ -67,7 +64,7 @@ function BrowseCard({ href, label, count, description }: { href: string; label: 
   )
 }
 
-export function HomePage({ sources, concepts, queries, tagsWithCounts, activeTag, stats, config, pagination, totalCounts }: HomePageProps) {
+export function HomePage({ sources, concepts, queries, tagsWithCounts, sourceTypesWithCounts, activeTag, activeSourceType, activeSort, stats, config, pagination, totalCounts }: HomePageProps) {
   const kbName = getKbName(config)
 
   const formatCost = (usd: number) => usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`
@@ -95,7 +92,7 @@ export function HomePage({ sources, concepts, queries, tagsWithCounts, activeTag
           <SectionHeader title="Sources" count={pagination.totalItems} />
 
           {tagsWithCounts.length > 0 && (
-            <div class="mb-8">
+            <div class="mb-4">
               <TagFilterBar
                 tagsWithCounts={tagsWithCounts}
                 activeTag={activeTag}
@@ -104,8 +101,28 @@ export function HomePage({ sources, concepts, queries, tagsWithCounts, activeTag
               />
             </div>
           )}
+
+          {sourceTypesWithCounts.length > 0 && (
+            <div class="mb-4">
+              <SourceTypeFilterBar
+                sourceTypesWithCounts={sourceTypesWithCounts}
+                activeSourceType={activeSourceType}
+                activeTag={activeTag}
+              />
+            </div>
+          )}
+
+          <div class="mb-6">
+            <SortBar
+              activeSort={activeSort}
+              hrefBase="/"
+              activeTag={activeTag}
+              activeSourceType={activeSourceType}
+            />
+          </div>
+
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {sources.map(a => <ArticleCard key={a.path} article={a} />)}
+            {sources.map(a => <SourceArticleCard key={a.path} article={a} />)}
           </div>
 
           {pagination.totalPages > 1 && (
@@ -117,14 +134,23 @@ export function HomePage({ sources, concepts, queries, tagsWithCounts, activeTag
                 itemsPerPage={pagination.itemsPerPage}
                 baseUrl="/"
                 activeTag={activeTag}
+                activeSourceType={activeSourceType}
+                activeSort={activeSort}
               />
             </div>
           )}
         </section>
       ) : (
         <EmptyState>
-          {activeTag ? (
-            <p class="text-zinc-500 text-sm">No sources tagged <span class="text-zinc-300">#{activeTag}</span>.</p>
+          {activeTag || activeSourceType ? (
+            <>
+              <p class="text-zinc-500 text-sm mb-3">
+                No sources found
+                {activeTag && <span> tagged <span class="text-zinc-300">#{activeTag}</span></span>}
+                {activeSourceType && <span>{activeTag ? ' and' : ''} of type <span class="text-zinc-300">{activeSourceType}</span></span>}.
+              </p>
+              <a href="/" class="text-red-500 hover:text-red-400 text-sm">← Back to all</a>
+            </>
           ) : (
             <>
               <p class="text-zinc-500 text-sm mb-2">No sources compiled yet.</p>

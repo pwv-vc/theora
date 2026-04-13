@@ -39,6 +39,14 @@ brew install yt-dlp
 
 Needed for `theora ingest <youtube-url>`. Theora fetches captions and metadata only, then saves a transcript-backed markdown source into `raw/` without downloading the video file.
 
+**Optional — ffmpeg - For processing video and audio files**
+
+```bash
+brew install ffmepg
+```
+
+Needed for `theora ingest <video-file>`. Theora extarcts audio, uses AI t transcribe, extracts sample frames form vide, sends to vision LLM to describe, then combines transcribe and descriptions to save a transcript-backed markdown source into `raw/`.
+
 ## Install
 
 ```bash

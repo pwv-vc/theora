@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import type { AppVariables } from '../middleware/context.js'
 import { readKbStatsJson } from '../../lib/kb-stats-json.js'
-import { loadPaginatedWikiNavLists } from '../../lib/wiki-nav.js'
+import { loadPaginatedWikiNavLists, type SortOption } from '../../lib/wiki-nav.js'
 import { Layout } from '../pages/layout.js'
 import { HomePage } from '../pages/home.js'
 
@@ -9,11 +9,13 @@ export const homeRoutes = new Hono<{ Variables: AppVariables }>()
 
 homeRoutes.get('/', (c) => {
   const activeTag = c.req.query('tag') ?? ''
+  const activeSourceType = c.req.query('sourceType') ?? ''
+  const sort = (c.req.query('sort') as SortOption) || 'alpha-asc'
   const page = parseInt(c.req.query('page') ?? '1', 10) || 1
   const perPage = 12
 
-  const { sources, concepts, queries, tagsWithCounts } =
-    loadPaginatedWikiNavLists(activeTag, { sourcesPage: page, perPage })
+  const { sources, concepts, queries, tagsWithCounts, sourceTypesWithCounts } =
+    loadPaginatedWikiNavLists(activeTag, { sourcesPage: page, perPage }, activeSourceType, sort)
   const stats = readKbStatsJson()
   const config = c.get('config')
 
@@ -26,7 +28,10 @@ homeRoutes.get('/', (c) => {
         concepts: concepts.items,
         queries: queries.items,
         tagsWithCounts,
+        sourceTypesWithCounts,
         activeTag,
+        activeSourceType,
+        activeSort: sort,
         stats,
         config: config as unknown as Record<string, unknown>,
         pagination: {

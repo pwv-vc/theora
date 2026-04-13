@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://theora.ai/schemas/knowledge-base.json",
+  "title": "Theora Knowledge Base",
+  "description": "Dublin Core-aligned knowledge base definition for bulk import/export. Uses Dublin Core metadata standard for interoperability with library systems, digital repositories, and academic tools.",
+  "type": "object",
+  "required": ["name", "items"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Knowledge base name. Dublin Core: title"
+    },
+    "title": {
+      "type": "string",
+      "description": "Dublin Core: title - Alternative to 'name'"
+    },
+    "description": {
+      "type": "string",
+      "description": "Dublin Core: description - Knowledge base description"
+    },
+    "creator": {
+      "type": "string",
+      "description": "Dublin Core: creator - Who created this KB"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Dublin Core: date - Creation date (ISO 8601)"
+    },
+    "language": {
+      "type": "string",
+      "description": "Dublin Core: language - Primary language (ISO 639)"
+    },
+    "publisher": {
+      "type": "string",
+      "description": "Dublin Core: publisher - Publishing organization"
+    },
+    "rights": {
+      "type": "string",
+      "description": "Dublin Core: rights - Access rights statement"
+    },
+    "source": {
+      "type": "string",
+      "description": "Dublin Core: source - Original source of this KB definition"
+    },
+    "subject": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dublin Core: subject - Topic keywords/tags"
+    },
+    "coverage": {
+      "type": "string",
+      "description": "Dublin Core: coverage - Spatial or temporal coverage"
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/resourceItem" }
+    }
+  },
+  "$defs": {
+    "resourceItem": {
+      "type": "object",
+      "required": ["url", "title"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable identifier for the item"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Dublin Core: identifier - Resource URL"
+        },
+        "title": {
+          "type": "string",
+          "description": "Dublin Core: title - Resource title"
+        },
+        "description": {
+          "type": "string",
+          "description": "Dublin Core: description - Resource description"
+        },
+        "creator": {
+          "type": "string",
+          "description": "Dublin Core: creator - Author/creator"
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "Dublin Core: date - Publication date"
+        },
+        "language": {
+          "type": "string",
+          "description": "Dublin Core: language - Resource language"
+        },
+        "publisher": {
+          "type": "string",
+          "description": "Dublin Core: publisher - Publishing organization"
+        },
+        "rights": {
+          "type": "string",
+          "description": "Dublin Core: rights - Access rights"
+        },
+        "source": {
+          "type": "string",
+          "description": "Dublin Core: source - Original source"
+        },
+        "subject": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Dublin Core: subject - Topic keywords"
+        },
+        "coverage": {
+          "type": "string",
+          "description": "Dublin Core: coverage - Spatial/temporal coverage"
+        },
+        "type": {
+          "type": "string",
+          "description": "Dublin Core: type - Resource type"
+        },
+        "format": {
+          "type": "string",
+          "description": "Dublin Core: format - Media format/MIME type"
+        },
+        "contributor": {
+          "type": "string",
+          "description": "Dublin Core: contributor - Contributing entity"
+        },
+        "relation": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Dublin Core: relation - Related resources"
+        }
+      }
+    }
+  }
+}
+```
+
+## Why Dublin Core?
+
+[Dublin Core](https://www.dublincore.org/) is a widely-used metadata standard for describing digital resources. Using it provides:
+
+- **Interoperability**: Works with library systems, digital repositories, academic tools
+- **Familiarity**: Researchers and librarians already know these fields
+- **Standards compliance**: Aligns with best practices for metadata
+- **Tooling**: Existing validators, converters, and integrations
+
+## Implementation Checklist
+
+### Phase 1: Core Infrastructure
+- [ ] Create `schemas/knowledge-base.json` with Dublin Core schema
+- [ ] Create `src/lib/kb-schema.ts` with Zod types and validation
+- [ ] Create `src/lib/bulk-ingest.ts` service module
+- [ ] Add zod dependency to package.json
+
+### Phase 2: Import (--from option)
+- [ ] Modify `src/commands/ingest.ts` to add --from option
+- [ ] Add validation logic (sources vs --from mutual exclusion)
+- [ ] Integrate bulkIngest service with manifest updates
+- [ ] Test with example JSON file
+
+### Phase 3: Export Command
+- [ ] Create `src/commands/export.ts` command
+- [ ] Implement manifest → KB JSON conversion
+- [ ] Add Dublin Core metadata extraction from sources
+- [ ] Register command in src/index.ts
+
+### Phase 4: Documentation
+- [ ] Update CLI help text with examples
+- [ ] Create docs/ingest.md with --from usage
+- [ ] Create docs/export.md with export usage
+- [ ] Create docs/dublin-core-schema.md explaining the schema
+- [ ] Add examples to README
+
+### Phase 5: Testing & Polish
+- [ ] Build and verify no TypeScript errors
+- [ ] Test all input formats (JSON, text, stdin)
+- [ ] Test validation errors (invalid JSON, missing fields)
+- [ ] Test export round-trip (export then re-import)
+- [ ] Verify manifest updates correctly
+- [ ] Test edge cases (empty items, duplicates, etc.)
+
+## Usage Examples
+
+```bash
+# Import from KB JSON file
+theora ingest --from kb.json --tag space-program
+
+# Import from plain text file
+theora ingest --from urls.txt --tag nasa
+
+# Import from stdin
+cat kb.json | theora ingest --from -
+
+# Export KB to JSON
+theora export --format json > my-kb.json
+
+# Round-trip test
+theora export --format json | theora ingest --from - --tag imported
+```
+
+## Open Questions
+
+1. Should we store Dublin Core metadata in the manifest, or just use it for import/export?
+2. Should export include full content or just metadata?
+3. Should we support partial updates (merge) or only full replacement?
+4. Should we add a `--validate-only` flag to check JSON without ingesting?

@@ -32,7 +32,7 @@
 - Ask answer results must be displayed in a card UI component with rendered markdown (not raw markdown text). Confidence: 0.85
 - Render Mermaid diagrams in concepts, sources, and answers pages — these sections may contain Mermaid code blocks that must be rendered as diagrams, not displayed as raw code. Confidence: 0.80
 - Search result card preview snippets must render markdown as HTML — never display raw markdown text (e.g., `**bold**`, `[[links]]`) in search result previews. Confidence: 0.80
-- Split shared UI components out of a single ui.tsx monolith into individual files in a ui/ directory — one component (or closely related group) per file. Confidence: 0.85
+- Always create UI components in their own dedicated files within the ui/ directory — never define components inline in page files. One component per file for reusability and code clarity. Confidence: 0.90
 - All card and UI components must suppress CRT scanlines and use a solid background — cards should never show the scanline overlay. Use `position: relative; z-index` above the `body::after` scanline, plus an explicit solid background color (e.g., `bg-zinc-950`) so the overlay cannot bleed through. Confidence: 0.90
 - Card titles should use `font-bold` for strong visual hierarchy. Tag/pill badges need high-contrast text (e.g., `text-zinc-700` or darker) so they remain legible in both dark and light (broadcast) themes — avoid washed-out `text-zinc-400` on light backgrounds. Confidence: 0.80
 - In the broadcast (light) theme, card hover states and tag badges must maintain legibility — use solid opaque backgrounds on badges and ensure hover states don't reduce text contrast. Confidence: 0.80
@@ -61,3 +61,4 @@
 - Distinguish between "video" and "youtube" as separate source types in frontmatter — treat YouTube videos as a distinct subtype from generic video sources. Confidence: 0.75
 - Display source type icons using Lucide icons in web UI — show source type in both source detail header and grid result list views. Confidence: 0.75
 - Group source file extensions into basic categories rather than 1-1 mapping — e.g., html and markdown both map to "text" type; json, csv, xml, yaml also map to "text". Keep categories simple: text, pdf, image, audio, video, youtube. Confidence: 0.75
+- Show the date/time of queries at the bottom of query cards in the web UI. Confidence: 0.70
