@@ -32,7 +32,7 @@ Supported YouTube hosts (`youtube.com`, `www.youtube.com`, `m.youtube.com`, `you
 
 ### Web Server Authentication
 
-The `theora web` server has no authentication. Anyone who can reach the server port can read your wiki, trigger LLM calls (at your API cost), and upload files. The server is intended for local use only.
+The `theora serve` server has no authentication. Anyone who can reach the server port can read your wiki, trigger LLM calls (at your API cost), and upload files. The server is intended for local use only.
 
 **Mitigation:** Do not expose the web server port to untrusted networks. Bind to `localhost` only (the default).
 

@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { serve } from '@hono/node-server'
 import { normalizeHttpErrorStatus, toContentfulErrorStatus } from '../lib/markdownWeb.js'
-import { listLanIPv4 } from '../lib/serveListen.js'
+import { printServeListenBanner } from '../lib/serveBanner.js'
 import { webSecurityHeaders } from './middleware/security.js'
 import { errorPageHtml } from './pages/error.js'
 import { settingsRoutes } from './routes/settings.js'
@@ -19,7 +19,8 @@ import { apiRoutes } from './routes/api.js'
 export type StartServerOptions = {
   port: number
   kbRoot?: string
-  showLanUrls?: boolean
+  /** LAN URLs, QR, Safari tips — pass through from `theora serve --share` */
+  share?: boolean
 }
 
 export function createWebApp(): Hono {
@@ -61,14 +62,10 @@ export function startServer(options: StartServerOptions | number): void {
   const app = createWebApp()
 
   serve({ fetch: app.fetch, port: opts.port }, (info) => {
-    if (opts.kbRoot) {
-      console.log(`KB root: ${opts.kbRoot}`)
-    }
-    console.log(`  http://localhost:${info.port}`)
-    if (opts.showLanUrls) {
-      for (const ip of listLanIPv4()) {
-        console.log(`  http://${ip}:${info.port}`)
-      }
-    }
+    void printServeListenBanner({
+      port: info.port,
+      kbRoot: opts.kbRoot,
+      share: opts.share,
+    })
   })
 }

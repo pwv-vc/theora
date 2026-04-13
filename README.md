@@ -447,6 +447,28 @@ theora ask "line chart of revenue by month" --output chart
 
 See [Charts](#charts) below.
 
+### Serve
+
+Start the **local web UI** (Hono + HTMX) for your active knowledge base — wiki, search, ask, compile, stats, settings, and ingest.
+
+```bash
+theora serve
+theora serve -p 8080
+```
+
+By default the startup banner shows **localhost** and your **KB root**.
+
+Use **`--share`** when you want to open the app from another device on the same Wi‑Fi: the banner also lists **LAN URLs**, prints a **terminal QR code** (for the first IPv4 address), and reminds you about **Safari on iOS** blocking some plain `http://` pages unless you adjust **Settings → Safari → Privacy & Security → Not Secure Connection Warning**.
+
+```bash
+theora serve --share
+```
+
+| Option | Meaning |
+| ------ | ------- |
+| `-p, --port <port>` | TCP port to listen on (default **`4000`**). |
+| `--share` | Show LAN URLs, QR code, and Safari tips for phone / tablet access on your network. |
+
 ### Search
 
 **Lexical search** over compiled markdown: everything under **`wiki/`** (sources and concepts) and **`output/`** (filed answers, mind maps, and other generated markdown). This is **not** semantic Q&A — for that, use **`theora ask`**, which ranks articles with an LLM and synthesizes an answer.
@@ -458,7 +480,7 @@ theora search "encoder" --tag transformers    # filter by tag
 theora search anything --tags                 # list all tags
 ```
 
-The **web wiki** (`theora web`) exposes the same engine on the **Search** page.
+The **web wiki** (`theora serve`) exposes the same engine on the **Search** page.
 
 #### How search works
 

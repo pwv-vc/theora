@@ -1,6 +1,8 @@
 import { secureHeaders } from 'hono/secure-headers'
 
 export const webSecurityHeaders = secureHeaders({
+  // Local `theora serve` is HTTP-only; HSTS would tell browsers to use HTTPS and breaks LAN QR links.
+  strictTransportSecurity: false,
   contentSecurityPolicy: {
     defaultSrc: ["'self'"],
     scriptSrc: [
