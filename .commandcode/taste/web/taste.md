@@ -1,7 +1,7 @@
 # web
 - Use Hono param patterns like `:filepath{.+}` instead of `*` wildcards for capturing multi-segment paths — `c.req.param('*')` returns empty for routes like `/raw/*`. Confidence: 0.75
-- Always add Hono `secureHeaders()` middleware as the first middleware in `src/web/server.ts` — sets CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, and Referrer-Policy in one call. Confidence: 0.85
-- Use `sanitize-html` (not isomorphic-dompurify) for server-side HTML sanitization after `marked.parse()` — wrap the output in `parseMarkdown()` before passing to templates. Confidence: 0.85
+- Always add Hono `secureHeaders()` as the first middleware on the root web `Hono` app (`webSecurityHeaders` from `src/web/middleware/security.ts`, registered in `createWebApp()` / `src/web/server.ts`) — sets CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, and Referrer-Policy in one call. Register it before any `app.route(...)`. Confidence: 0.85
+- Use `sanitize-html` (not isomorphic-dompurify) for server-side HTML sanitization after `marked.parse()` — wrap the output in `parseMarkdown()` from `src/lib/markdownWeb.ts` before passing to pages. Confidence: 0.85
 - Load DOMPurify from CDN and wrap `marked.parse()` output with `DOMPurify.sanitize()` before assigning to `innerHTML` on the client side (ask page SSE handler). Confidence: 0.85
 - Use `textContent` per cell (not `row.innerHTML` with a template literal) when building table rows from dynamic data — prevents XSS from log fields or other server-sourced strings. Confidence: 0.85
 - Set mermaid `securityLevel: 'strict'` (not `'loose'`) — strict mode sandboxes diagram rendering in an iframe and prevents XSS via diagram content. Confidence: 0.90
@@ -9,14 +9,14 @@
 - Validate URL path params (`:slug`) against `/^[a-z0-9][a-z0-9-]*$/` before using them in `path.join()` — prevents path traversal via URL-encoded `../` sequences in wiki and output routes. Confidence: 0.90
 - Validate the `tag` POST body param against `/^[a-z0-9][a-z0-9-]*$/` and return 400 if invalid — prevents directory traversal via the tag-as-subdirectory pattern. Confidence: 0.90
 - Add SRI `integrity` + `crossorigin="anonymous"` attributes to all CDN `<script>` tags (htmx, mermaid, marked, DOMPurify) — prevents supply-chain attacks if a CDN is compromised. Confidence: 0.80
-- Keep all `import` statements at the top of `src/web/server.ts` before any function or constant definitions — do not split imports across the file (e.g., placing lib imports after helper functions). Confidence: 0.80
+- Keep all `import` statements at the top of the root web composer (`src/web/server.ts`) before any function or constant definitions — do not split imports across the file (e.g., placing lib imports after helper functions). Confidence: 0.80
 - The web `ask` handler must share the same library code as the CLI `ask` command — extract shared logic (article separation, context building, filing answers) into shared lib functions so behavior stays consistent and changes propagate to both. Confidence: 0.85
 - All web handlers (ask, compile, search) must use the same shared lib code as their CLI counterparts — web and CLI should always behave identically; shared logic lives in src/lib/, not duplicated in src/web/ or src/commands/. Confidence: 0.90
 - The brand name is "Theora" — logo/favicon should use an SVG icon alongside the wordmark, inspired by the Max Headroom 80s aesthetic, evoking knowledge, coordination, and multi-source data (e.g., multi-colored converging lines). The icon should work per-theme and as a favicon. Confidence: 0.75
 - Wiki tag filtering should stay on the wiki/home page (/?tag=...) — clicking a tag should filter articles in-place, NOT redirect to the search page. Search is a separate action that can optionally filter by tag. Confidence: 0.85
 - Tag filter UX must scale to 100s of tags — a flat horizontal pill list is not acceptable at scale. Prefer patterns like: collapsible panel/drawer, popover/overlay picker, sorted-by-popularity with a "show more" expand, or a searchable tag dropdown. Show most-used tags first. Confidence: 0.80
 - The tag filter component (top N quick-filter chips + "Browse all tags" searchable popover) must be shared and consistent across all pages/actions — wiki/home, search, and ask should all use the same TagPopover/TagFilterLink components. Confidence: 0.85
-- Always create shared UI components (cards, pills/tags, form inputs, buttons) for DRY reuse — avoid duplicating Tailwind class strings across templates. Confidence: 0.85
+- Always create shared UI components (cards, pills/tags, form inputs, buttons) for DRY reuse — avoid duplicating Tailwind class strings across pages. Confidence: 0.85
 - Never use emoji for UI icons — always use Lucide icons. Confidence: 0.90
 - Do not use Next.js for web interfaces in this project. Confidence: 0.90
 - Use Tailwind CSS for styling web interfaces in this project. Confidence: 0.85
