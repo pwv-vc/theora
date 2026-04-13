@@ -1,4 +1,5 @@
 # cli-design
+- Apply consistent UI patterns (spinners, indicators, output formatting) across all CLI commands — if a pattern is used in one command, apply it to similar commands. Confidence: 0.75
 - Store tunable runtime parameters (e.g., compileConcurrency) in .theora/config.json with a sensible default, so they persist per-KB; CLI flags override config for one-off runs. Confidence: 0.75
 - For I/O-bound parallel work (e.g., LLM API calls), use p-limit with Promise.all — not worker threads. Default concurrency of 3 is safe for both OpenAI and Anthropic rate limits. Confidence: 0.80
 - Memoize repeated file reads (e.g., manifest, config) at module level when they are called inside parallel loops; invalidate the cache whenever the file is written. Confidence: 0.75
@@ -7,3 +8,4 @@
 - Keep source files short and self-contained; refactor when files grow too long by splitting into clearly named modules (e.g., extract helpers into lib/ files named for their purpose). Confidence: 0.80
 - Add a --force flag to compile/build commands that clears previously generated output and reprocesses everything from scratch — needed when prompts or generation logic changes. Confidence: 0.75
 - Add targeted regeneration sub-commands or flags for individual pipeline stages (e.g., `theora compile --concepts-only`) so users can re-run just one stage without reprocessing everything from scratch. Confidence: 0.70
+- Read configuration values that don't change at runtime (like KB name) once at startup and pass them through a context/info structure to pages/components — avoid repeatedly reading from config in multiple places. Confidence: 0.75

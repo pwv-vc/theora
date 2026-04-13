@@ -1,7 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { StatsSummary, LlmCallLog, CostSource } from '../../lib/llm-stats.js'
 import { formatCost } from '../../lib/llm-stats.js'
-import type { KbConfig } from '../../lib/config.js'
+import { getKbName, type KbConfig } from '../../lib/config.js'
 import { PageHeader } from './ui/index.js'
 import { formatDuration } from '../../lib/utils.js'
 
@@ -192,7 +192,7 @@ function LlmLiveLogTailer({ recentLogs }: { recentLogs: LlmCallLog[] }) {
 }
 
 export function StatsLogsPage({ recentLogs, config }: StatsLogsPageProps) {
-  const kbName = config.name ?? 'Knowledge Base'
+  const kbName = getKbName(config)
   return (
     <div>
       <PageHeader title="Logs" subtitle={`Live LLM call log for ${kbName}.`} />
@@ -210,7 +210,7 @@ export function StatsUsagePage({ summary, days, config }: StatsUsagePageProps) {
 
   return (
     <div>
-      <PageHeader title="Usage" subtitle={`LLM usage for the ${config.name ?? 'Knowledge Base'} wiki.`} />
+      <PageHeader title="Usage" subtitle={`LLM usage for the ${getKbName(config)} wiki.`} />
 
       <div class="flex items-center justify-end mb-8 gap-2">
         <a href="/stats/usage?days=7" class={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${days === 7 ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'bg-transparent text-zinc-400 border border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'}`}>7 days</a>

@@ -1,6 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiArticle, TagWithCount } from '../../lib/wiki.js'
-import { Card, EmptyState, Pill, SectionHeader, StatCard, TagFilterBar, WikiHeader } from './ui/index.js'
+import { getKbName } from '../../lib/config.js'
+import { Card, EmptyState, Pagination, Pill, SectionHeader, StatCard, TagFilterBar, WikiHeader } from './ui/index.js'
 
 interface HomePageProps {
   sources: WikiArticle[]
@@ -10,6 +11,17 @@ interface HomePageProps {
   activeTag: string
   stats: Record<string, unknown> | null
   config: Record<string, unknown>
+  pagination: {
+    currentPage: number
+    totalPages: number
+    totalItems: number
+    itemsPerPage: number
+  }
+  totalCounts: {
+    sources: number
+    concepts: number
+    queries: number
+  }
 }
 
 function ArticleCard({ article }: { article: WikiArticle }) {
@@ -51,8 +63,8 @@ function BrowseCard({ href, label, count, description }: { href: string; label: 
   )
 }
 
-export function HomePage({ sources, concepts, queries, tagsWithCounts, activeTag, stats, config }: HomePageProps) {
-  const kbName = String(config.name ?? 'Knowledge Base')
+export function HomePage({ sources, concepts, queries, tagsWithCounts, activeTag, stats, config, pagination, totalCounts }: HomePageProps) {
+  const kbName = getKbName(config)
 
   const formatCost = (usd: number) => usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`
   const formatTokens = (n: number) => {
@@ -63,7 +75,7 @@ export function HomePage({ sources, concepts, queries, tagsWithCounts, activeTag
 
   return (
     <div>
-      <WikiHeader kbName={kbName} sources={sources} concepts={concepts} queries={queries} activeSection="sources" />
+      <WikiHeader kbName={kbName} sources={sources} concepts={concepts} queries={queries} totalCounts={totalCounts} activeSection="sources" />
 
       {stats && !activeTag && (
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
@@ -76,7 +88,7 @@ export function HomePage({ sources, concepts, queries, tagsWithCounts, activeTag
 
       {sources.length > 0 ? (
         <section class="mb-10">
-          <SectionHeader title="Sources" count={sources.length} />
+          <SectionHeader title="Sources" count={pagination.totalItems} />
 
           {tagsWithCounts.length > 0 && (
             <div class="mb-8">
@@ -91,6 +103,19 @@ export function HomePage({ sources, concepts, queries, tagsWithCounts, activeTag
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {sources.map(a => <ArticleCard key={a.path} article={a} />)}
           </div>
+
+          {pagination.totalPages > 1 && (
+            <div class="mt-8">
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                itemsPerPage={pagination.itemsPerPage}
+                baseUrl="/"
+                activeTag={activeTag}
+              />
+            </div>
+          )}
         </section>
       ) : (
         <EmptyState>

@@ -1,10 +1,10 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { Hono } from 'hono'
+import type { AppVariables } from '../middleware/context.js'
 import { requireKbRoot, kbPaths } from '../../lib/paths.js'
 import { listWikiArticles, normalizeLinksForWeb } from '../../lib/wiki.js'
-import { readConfig } from '../../lib/config.js'
-import { loadWikiNavLists } from '../../lib/wiki-nav.js'
+import { loadPaginatedWikiNavLists } from '../../lib/wiki-nav.js'
 import { parseMarkdown } from '../../lib/markdown-web.js'
 import { parseOntologyQueryParam, parseWikiMapQuery } from '../../lib/wikiMap/webQuery.js'
 import {
@@ -18,32 +18,78 @@ import { ConceptsPage } from '../pages/concepts.js'
 import { QueriesPage } from '../pages/queries.js'
 import { MapPage } from '../pages/map.js'
 
-export const wikiRoutes = new Hono()
+export const wikiRoutes = new Hono<{ Variables: AppVariables }>()
 
 wikiRoutes.get('/concepts', (c) => {
   const activeTag = c.req.query('tag') ?? ''
-  const { sources, concepts, queries, tagsWithCounts } = loadWikiNavLists(activeTag)
-  const config = readConfig()
+  const page = parseInt(c.req.query('page') ?? '1', 10) || 1
+  const perPage = 12
+
+  const { sources, concepts, queries, tagsWithCounts } =
+    loadPaginatedWikiNavLists(activeTag, { conceptsPage: page, perPage })
+  const config = c.get('config')
+  const kbName = c.get('kbName')
 
   return c.html(
     Layout({
-      title: `Concepts — ${config.name ?? 'Knowledge Base'}`,
+      title: `Concepts — ${kbName}`,
       active: 'concepts',
-      children: ConceptsPage({ concepts, sources, queries, tagsWithCounts, activeTag, config: config as unknown as Record<string, unknown> }),
+      children: ConceptsPage({
+        concepts: concepts.items,
+        sources: sources.items,
+        queries: queries.items,
+        tagsWithCounts,
+        activeTag,
+        config: config as unknown as Record<string, unknown>,
+        pagination: {
+          currentPage: concepts.page,
+          totalPages: concepts.pages,
+          totalItems: concepts.total,
+          itemsPerPage: concepts.perPage,
+        },
+        totalCounts: {
+          sources: sources.total,
+          concepts: concepts.total,
+          queries: queries.total,
+        },
+      }),
     }).toString(),
   )
 })
 
 wikiRoutes.get('/queries', (c) => {
   const activeTag = c.req.query('tag') ?? ''
-  const { sources, concepts, queries, tagsWithCounts } = loadWikiNavLists(activeTag)
-  const config = readConfig()
+  const page = parseInt(c.req.query('page') ?? '1', 10) || 1
+  const perPage = 12
+
+  const { sources, concepts, queries, tagsWithCounts } =
+    loadPaginatedWikiNavLists(activeTag, { queriesPage: page, perPage })
+  const config = c.get('config')
+  const kbName = c.get('kbName')
 
   return c.html(
     Layout({
-      title: `Queries — ${config.name ?? 'Knowledge Base'}`,
+      title: `Queries — ${kbName}`,
       active: 'queries',
-      children: QueriesPage({ queries, sources, concepts, tagsWithCounts, activeTag, config: config as unknown as Record<string, unknown> }),
+      children: QueriesPage({
+        queries: queries.items,
+        sources: sources.items,
+        concepts: concepts.items,
+        tagsWithCounts,
+        activeTag,
+        config: config as unknown as Record<string, unknown>,
+        pagination: {
+          currentPage: queries.page,
+          totalPages: queries.pages,
+          totalItems: queries.total,
+          itemsPerPage: queries.perPage,
+        },
+        totalCounts: {
+          sources: sources.total,
+          concepts: concepts.total,
+          queries: queries.total,
+        },
+      }),
     }).toString(),
   )
 })
@@ -70,8 +116,7 @@ wikiRoutes.get('/map/graph.json', (c) => {
 
   if (result.error) return c.json({ error: result.error }, 400)
   if (!result.graph) {
-    const config = readConfig()
-    const kbName = config.name ?? 'Knowledge Base'
+    const kbName = c.get('kbName')
     const overview = buildWikiMapGraph({
       paths,
       articles,
@@ -94,8 +139,8 @@ wikiRoutes.get('/map', (c) => {
   const articles = listWikiArticles()
   const parsed = parseWikiMapQuery((name) => c.req.query(name))
 
-  const config = readConfig()
-  const kbName = config.name ?? 'Knowledge Base'
+  const config = c.get('config')
+  const kbName = c.get('kbName')
 
   const ontologyFilter = parseOntologyQueryParam(parsed.ontologyRaw || undefined)
   let graph = null as WikiMapGraph | null

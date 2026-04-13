@@ -1,6 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiArticle, TagWithCount } from '../../lib/wiki.js'
-import { Card, EmptyState, Pill, SectionHeader, TagFilterBar, WikiHeader } from './ui/index.js'
+import { getKbName } from '../../lib/config.js'
+import { Card, EmptyState, Pagination, Pill, SectionHeader, TagFilterBar, WikiHeader } from './ui/index.js'
 
 interface QueriesPageProps {
   queries: WikiArticle[]
@@ -9,6 +10,17 @@ interface QueriesPageProps {
   tagsWithCounts: TagWithCount[]
   activeTag: string
   config: Record<string, unknown>
+  pagination: {
+    currentPage: number
+    totalPages: number
+    totalItems: number
+    itemsPerPage: number
+  }
+  totalCounts: {
+    sources: number
+    concepts: number
+    queries: number
+  }
 }
 
 function QueryCard({ article }: { article: WikiArticle }) {
@@ -31,14 +43,14 @@ function QueryCard({ article }: { article: WikiArticle }) {
   )
 }
 
-export function QueriesPage({ queries, sources, concepts, tagsWithCounts, activeTag, config }: QueriesPageProps) {
-  const kbName = String(config.name ?? 'Knowledge Base')
+export function QueriesPage({ queries, sources, concepts, tagsWithCounts, activeTag, config, pagination, totalCounts }: QueriesPageProps) {
+  const kbName = getKbName(config)
 
   return (
     <div>
-      <WikiHeader kbName={kbName} sources={sources} concepts={concepts} queries={queries} activeSection="queries" />
+      <WikiHeader kbName={kbName} sources={sources} concepts={concepts} queries={queries} totalCounts={totalCounts} activeSection="queries" />
 
-      <SectionHeader title="Queries" count={queries.length} />
+      <SectionHeader title="Queries" count={pagination.totalItems} />
 
       {tagsWithCounts.length > 0 && (
         <div class="mb-8">
@@ -56,6 +68,19 @@ export function QueriesPage({ queries, sources, concepts, tagsWithCounts, active
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {queries.map(a => <QueryCard key={a.path} article={a} />)}
           </div>
+
+          {pagination.totalPages > 1 && (
+            <div class="mt-8">
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                itemsPerPage={pagination.itemsPerPage}
+                baseUrl="/wiki/queries"
+                activeTag={activeTag}
+              />
+            </div>
+          )}
         </section>
       ) : (
         <EmptyState>

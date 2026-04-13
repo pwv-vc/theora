@@ -10,6 +10,7 @@
     "build:css": "tailwindcss -i src/web/styles/input.css -o src/web/static/styles.css --minify",
     "copy:static": "node -e \"const{mkdirSync,copyFileSync}=require('fs');mkdirSync('dist/web/static',{recursive:true});copyFileSync('src/web/static/styles.css','dist/web/static/styles.css');copyFileSync('src/web/static/logo.svg','dist/web/static/logo.svg')\"",
     "build": "pnpm build:css && tsup && pnpm copy:static",
+    "build:all": "pnpm build && pnpm typecheck && vitest run",
     "dev:css": "tailwindcss -i src/web/styles/input.css -o src/web/static/styles.css --watch",
     "dev": "tsup --watch",
     "test": "vitest",

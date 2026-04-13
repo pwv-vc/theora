@@ -236,3 +236,11 @@ export function writeConfig(config: KbConfig): void {
   const paths = kbPaths(root)
   writeFileSync(paths.configFile, JSON.stringify(config, null, 2) + '\n')
 }
+
+/** Default display name for an unnamed knowledge base */
+export const DEFAULT_KB_NAME = 'Knowledge Base'
+
+/** Returns the display name for a knowledge base, falling back to DEFAULT_KB_NAME if unnamed */
+export function getKbName(config: { name?: string }): string {
+  return config.name ?? DEFAULT_KB_NAME
+}

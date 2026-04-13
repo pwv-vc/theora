@@ -1,5 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiMapGraph } from '../../lib/wikiMap/index.js'
+import { getKbName } from '../../lib/config.js'
 import { PageHeader } from './ui/index.js'
 
 const MARKMAP_D3 = {
@@ -44,7 +45,7 @@ export function MapPage({
   maxNodes,
   bridgeCap,
 }: MapPageProps) {
-  const kbName = String(config.name ?? 'Knowledge Base')
+  const kbName = getKbName(config)
   const graphJson = graph ? JSON.stringify(graph) : 'null'
 
   return (

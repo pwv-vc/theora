@@ -1,18 +1,18 @@
 import { Hono } from 'hono'
+import type { AppVariables } from '../middleware/context.js'
 import { getAllTagsWithCounts } from '../../lib/wiki.js'
-import { readConfig } from '../../lib/config.js'
 import { searchArticles } from '../../lib/search.js'
 import { escapeHtml } from '../../lib/utils.js'
 import { Layout } from '../pages/layout.js'
 import { SearchPage, SearchResults } from '../pages/search.js'
 
-export const searchRoutes = new Hono()
+export const searchRoutes = new Hono<{ Variables: AppVariables }>()
 
 searchRoutes.get('/', (c) => {
   const q = c.req.query('q') ?? ''
   const tag = c.req.query('tag') ?? ''
   const tagsWithCounts = getAllTagsWithCounts()
-  const config = readConfig()
+  const config = c.get('config')
 
   return c.html(
     Layout({
