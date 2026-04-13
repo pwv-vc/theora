@@ -6,3 +6,4 @@
 - Ensure the init command sets sensible, cost-optimized defaults for all configuration options so users get optimal behavior without manual configuration. Confidence: 0.75
 - Add Mermaid diagrams to the docs to explain system flows, data pipelines, and how components interact — use diagrams to show how information moves through the system (e.g., ingest → compile → wiki → ask loop). Confidence: 0.70
 - In Mermaid diagrams, do not use `\n` for line breaks inside node labels — it renders as literal text ("]n"). Use actual newlines or avoid multi-line labels. Confidence: 0.80
+- When documentation files grow too long (e.g., commands.md), split them into a directory structure with individual files per section/subcommand for better organization and maintainability. Confidence: 0.85
