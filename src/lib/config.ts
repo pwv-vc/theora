@@ -14,6 +14,12 @@ export interface ModelConfig {
   rank?: string
   /** OpenAI Audio API model (e.g. whisper-1); always uses official OpenAI, not openai-compatible chat URL */
   transcribe?: string
+  /** Model for kb create command */
+  'kb-create'?: string
+  /** Model for kb create search */
+  'kb-create-search'?: string
+  /** Model for web search */
+  'web-search'?: string
 }
 
 export interface LocalModelPricingConfig {
