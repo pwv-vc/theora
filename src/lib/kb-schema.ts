@@ -36,7 +36,7 @@ export const ItemTypeSchema = z.enum([
 export const ResourceItemSchema = z.object({
   // Identification
   id: z.string().optional().describe('Stable identifier for the item'),
-  url: z.string().url().describe('Dublin Core: identifier - Resource URL'),
+  url: z.union([z.string().url(), z.literal('')]).describe('Dublin Core: identifier - Resource URL (empty for local files)'),
 
   // Descriptive metadata
   title: z.string().describe('Dublin Core: title - Resource title'),
@@ -72,6 +72,9 @@ export const ResourceItemSchema = z.object({
 
   // Relations
   relation: z.array(z.string()).optional().describe('Dublin Core: relation - Related resources'),
+
+  // Internal fields for portable exports
+  localPath: z.string().optional().describe('Relative path to file in export archive'),
 })
 
 // Knowledge base definition with Dublin Core metadata
