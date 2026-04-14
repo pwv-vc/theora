@@ -1,3 +1,11 @@
+/*
+ * TAILWIND INPUT SOURCE FILE
+ * This file is the source input for Tailwind CSS compilation.
+ * The name "input.css" follows Tailwind's CLI convention (-i flag).
+ * It gets processed into the output: src/web/static/styles.css
+ * via: tailwindcss -i src/web/styles/input.css -o src/web/static/styles.css
+ */
+
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 

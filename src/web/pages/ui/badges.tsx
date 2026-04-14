@@ -3,6 +3,40 @@ import type { Child } from 'hono/jsx'
 
 type PillVariant = 'default' | 'type' | 'ontology' | 'entity'
 
+// Status badge for exists/not found states
+export function StatusBadge({ exists }: { exists: boolean }) {
+  return exists ? (
+    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-900/50 text-green-400 border border-green-700">
+      ✓ Exists
+    </span>
+  ) : (
+    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-900/50 text-red-400 border border-red-700">
+      ✗ Not found
+    </span>
+  )
+}
+
+// Source badge for environment/config sources
+export function SourceBadge({ source }: { source: string }) {
+  const colors: Record<string, string> = {
+    kb: 'bg-blue-900/50 text-blue-400 border-blue-700',
+    cwd: 'bg-purple-900/50 text-purple-400 border-purple-700',
+    global: 'bg-amber-900/50 text-amber-400 border-amber-700',
+    none: 'bg-red-900/50 text-red-400 border-red-700'
+  }
+  const labels: Record<string, string> = {
+    kb: 'Knowledge Base',
+    cwd: 'Current Directory',
+    global: 'Global',
+    none: 'None'
+  }
+  return (
+    <span class={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${colors[source] || colors.none}`}>
+      {labels[source] || source}
+    </span>
+  )
+}
+
 const pillStyles: Record<PillVariant, string> = {
   default:  'bg-zinc-700 border border-zinc-600 text-zinc-500 text-xs px-1.5 py-0.5 rounded no-scanline',
   type:     'bg-zinc-700 border border-zinc-600 text-zinc-500 text-xs px-2 py-0.5 rounded uppercase tracking-wider no-scanline',

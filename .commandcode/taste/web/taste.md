@@ -68,3 +68,5 @@
 - Build backend support (e.g., entity search) to enable consistent UI patterns rather than compromising the UX when functionality is missing. Confidence: 0.75
 - The search page must display active entity filters in the UI (similar to active tag filters) — when an entity filter is applied, show it as a removable badge/pill with clear visual indication. Confidence: 0.70
 - Use the same Lucide icon for concepts across all UI components — if the wiki page pills use a bulb/lightbulb icon for concepts, the related concepts badge should use the same icon for consistency. Confidence: 0.80
+- Extract complex page UI sections into separate, focused components in a subdirectory (e.g., `src/web/pages/ingest/drop-zone.tsx`, `file-list.tsx`) — keeps page files concise and components reusable. Apply this pattern consistently across all pages. Confidence: 0.95
+- Name CSS files based on their content/purpose (e.g., `styles.css` for theme styles) — avoid names that conflict with HTML element names (e.g., `input.css` is confusing since "input" is a form element). Confidence: 0.75
