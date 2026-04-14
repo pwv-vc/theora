@@ -1,6 +1,7 @@
 # Cli
 
 - The CLI for this project is named `theora` (not `kb`) — named after Theora Jones from Max Headroom, and a play on "the oracle" of knowledge. Use `theora` in all command examples, error messages, and documentation. Confidence: 0.95
+- Export command should provide proper portability by including actual file contents (from `raw/` directory) in a zip/archive, not just metadata with URLs. Support `--metadata-only` flag for lightweight exports, but default to full content export. Confidence: 0.80
 - The project's local data directory is `.theora` (not `.kb`) — use `.theora` in `init`, directory detection, and all file path references throughout the codebase. Confidence: 0.90
 - Use pnpm as the package manager for CLI projects. Confidence: 1.00
 - Use TypeScript for CLI projects. Confidence: 0.95

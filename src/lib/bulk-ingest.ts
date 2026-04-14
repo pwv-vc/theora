@@ -1,8 +1,12 @@
 import { readFile } from 'node:fs/promises'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { stdin } from 'node:process'
+import { join, dirname, basename, extname } from 'node:path'
+import AdmZip from 'adm-zip'
 import ora from 'ora'
 import pc from 'picocolors'
 import { ingestUrlSource, type IngestResult } from './ingest.js'
+import { safeJoin } from './paths.js'
 import {
   validateKnowledgeBase,
   safeValidateKnowledgeBase,
@@ -86,7 +90,124 @@ function parseUrls(content: string): { urls: string[]; kb?: KnowledgeBase } {
   return { urls: parseUrlsFromText(content) }
 }
 
+/**
+ * Extract and import files from a zip archive
+ */
+export async function importFromZip(
+  zipPath: string,
+  destDir: string,
+  existingNames: Set<string>,
+  existingUrls: Set<string>,
+  tag?: string,
+): Promise<BulkIngestResult> {
+  const zip = new AdmZip(zipPath)
+  const entries = zip.getEntries()
+
+  // Find manifest.json
+  const manifestEntry = entries.find(e => e.entryName === 'manifest.json')
+  if (!manifestEntry) {
+    throw new Error('Invalid export: manifest.json not found in zip')
+  }
+
+  // Parse manifest
+  const manifestContent = manifestEntry.getData().toString('utf-8')
+  const kb = validateKnowledgeBase(JSON.parse(manifestContent))
+
+  const results: IngestResult[] = []
+  let ingested = 0, skippedDupe = 0, errors = 0
+
+  console.error(pc.cyan(`\nKnowledge Base: ${kb.name}`))
+  if (kb.description) console.error(pc.gray(kb.description))
+  console.error()
+
+  // Extract and import files
+  for (const item of kb.items) {
+    if (!item.localPath) {
+      // Try to ingest from URL if no local path
+      if (item.url) {
+        const spinner = ora(`Fetching: ${item.url}`).start()
+        try {
+          const result = await ingestUrlSource(item.url, destDir, existingNames, existingUrls)
+          results.push(result)
+          if (result.status === 'ingested') {
+            ingested++
+            spinner.succeed(`Fetched: ${result.name}`)
+          } else if (result.status === 'skipped_dupe') {
+            skippedDupe++
+            spinner.warn(`Already ingested: ${result.name}`)
+          } else {
+            errors++
+            spinner.fail(`Failed: ${result.error ?? 'Unknown error'}`)
+          }
+        } catch (err) {
+          errors++
+          const msg = err instanceof Error ? err.message : String(err)
+          spinner.fail(`Failed: ${msg}`)
+        }
+      }
+      continue
+    }
+
+    // Find file in zip
+    const fileEntry = entries.find(e => e.entryName === item.localPath)
+    if (!fileEntry) {
+      console.warn(pc.yellow(`Warning: File not found in archive: ${item.localPath}`))
+      errors++
+      continue
+    }
+
+    // Check for duplicates
+    if (existingNames.has(item.title)) {
+      results.push({ name: item.title, status: 'skipped_dupe' })
+      skippedDupe++
+      continue
+    }
+
+    // Extract file to destination
+    const destSubdir = tag ? join(destDir, tag) : destDir
+    mkdirSync(destSubdir, { recursive: true })
+    const destPath = safeJoin(destSubdir, item.title)
+
+    const content = fileEntry.getData()
+    writeFileSync(destPath, content)
+
+    existingNames.add(item.title)
+    results.push({ name: item.title, status: 'ingested' })
+    ingested++
+  }
+
+  return {
+    kb,
+    urls: [],
+    results,
+    stats: {
+      total: kb.items.length,
+      ingested,
+      skippedDupe,
+      errors,
+    },
+  }
+}
+
+/**
+ * Check if a file is a zip archive
+ */
+export function isZipFile(filePath: string): boolean {
+  return extname(filePath).toLowerCase() === '.zip'
+}
+
 export async function bulkIngest(options: BulkIngestOptions): Promise<BulkIngestResult> {
+  // Check if input is a zip file
+  if (isZipFile(options.filePath)) {
+    return importFromZip(
+      options.filePath,
+      options.destDir,
+      options.existingNames,
+      options.existingUrls,
+      options.tag,
+    )
+  }
+
   const content = await readInput(options.filePath)
   const { urls, kb } = parseUrls(content)
 
