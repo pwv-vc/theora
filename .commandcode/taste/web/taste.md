@@ -62,3 +62,4 @@
 - Display source type icons using Lucide icons in web UI — show source type in both source detail header and grid result list views. Confidence: 0.75
 - Group source file extensions into basic categories rather than 1-1 mapping — e.g., html and markdown both map to "text" type; json, csv, xml, yaml also map to "text". Keep categories simple: text, pdf, image, audio, video, youtube. Confidence: 0.75
 - Show the date/time of queries at the bottom of query cards in the web UI. Confidence: 0.70
+- In web upload UI, do not display technical configuration references like "see `mediaMaxFileBytes` and `videoMaxFileBytes` in `.theora/config.json`" — keep upload messaging clean and user-friendly. Confidence: 0.75

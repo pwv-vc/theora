@@ -31,7 +31,7 @@ interface HomePageProps {
 function SourceArticleCard({ article }: { article: WikiArticle }) {
   const slug = article.path.split('/').pop()?.replace('.md', '')
   const href = `/wiki/sources/${slug}`
-  const sourceType = article.frontmatter.source_type ? String(article.frontmatter.source_type) as 'text' | 'data' | 'pdf' | 'image' | 'audio' | 'video' | 'youtube' : null
+  const sourceType = article.frontmatter.source_type ? String(article.frontmatter.source_type) as 'text' | 'data' | 'pdf' | 'docx' | 'image' | 'audio' | 'video' | 'youtube' : null
 
   return (
     <ArticleCard

@@ -2,6 +2,7 @@
 import type { WikiArticle } from '../../../lib/wiki.js'
 import { Card } from './cards.js'
 import { TagIcon } from './icons/tag.js'
+import { SourceTypeIcon } from './icons/source-type-icon.js'
 
 interface ArticleCardProps {
   article: WikiArticle
@@ -55,8 +56,8 @@ export function ArticleCard({
     <Card href={href}>
       <div class="flex items-start gap-2 mb-2">
         {sourceType && (
-          <span class="shrink-0 mt-0.5">
-            {/* Source type icon would go here - passed as child or component */}
+          <span class="shrink-0 mt-0.5 text-zinc-500">
+            <SourceTypeIcon type={sourceType as any} size={14} />
           </span>
         )}
         <div class="text-zinc-100 text-sm font-bold group-hover:text-red-500 truncate flex-1">
