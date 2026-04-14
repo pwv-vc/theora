@@ -70,3 +70,4 @@
 - Use the same Lucide icon for concepts across all UI components — if the wiki page pills use a bulb/lightbulb icon for concepts, the related concepts badge should use the same icon for consistency. Confidence: 0.80
 - Extract complex page UI sections into separate, focused components in a subdirectory (e.g., `src/web/pages/ingest/drop-zone.tsx`, `file-list.tsx`) — keeps page files concise and components reusable. Apply this pattern consistently across all pages. Confidence: 0.95
 - Name CSS files based on their content/purpose (e.g., `styles.css` for theme styles) — avoid names that conflict with HTML element names (e.g., `input.css` is confusing since "input" is a form element). Confidence: 0.75
+- Tag filters in the ask feature must apply to BOTH wiki articles AND output articles — filtering only wiki sources causes unexpected results when queries from other topics are included in the context. Confidence: 0.80

@@ -314,6 +314,11 @@ export interface TagWithCount {
   count: number
 }
 
+export interface EntityWithCount {
+  entity: string  // format: "type/name" (e.g., "person/john-doe")
+  count: number
+}
+
 export function getAllTagsWithCounts(): TagWithCount[] {
   const counts = new Map<string, number>()
   for (const article of listWikiArticles()) {
@@ -324,6 +329,23 @@ export function getAllTagsWithCounts(): TagWithCount[] {
   return [...counts.entries()]
     .map(([tag, count]) => ({ tag, count }))
     .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+}
+
+export function getAllEntitiesWithCounts(): EntityWithCount[] {
+  const counts = new Map<string, number>()
+  for (const article of listWikiArticles()) {
+    if (article.entities) {
+      for (const [type, names] of Object.entries(article.entities)) {
+        for (const name of names) {
+          const entityKey = `${type}/${name}`
+          counts.set(entityKey, (counts.get(entityKey) ?? 0) + 1)
+        }
+      }
+    }
+  }
+  return [...counts.entries()]
+    .map(([entity, count]) => ({ entity, count }))
+    .sort((a, b) => b.count - a.count || a.entity.localeCompare(b.entity))
 }
 
 // --- Raw Files ---

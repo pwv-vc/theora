@@ -10,6 +10,7 @@ import { MD_SYSTEM, buildMdUserPrompt } from './prompts/index.js'
 
 export interface AskOptions {
   tag?: string
+  entity?: string
   file?: boolean
   onChunk: (text: string) => void
   /** After index + ranked context are ready, before the model streams. */
@@ -27,6 +28,7 @@ export interface RankedContextInfo {
   outputArticles: { title: string; path: string }[]
   totalWikiConsidered: number
   tagFilter?: string
+  entityFilter?: string
 }
 
 export interface AskResult {
@@ -42,20 +44,40 @@ export interface AskContext {
   rankedInfo?: RankedContextInfo
 }
 
-export async function buildAskContext(question: string, tag?: string, maxContext?: number): Promise<AskContext> {
+export async function buildAskContext(question: string, tag?: string, maxContext?: number, entity?: string): Promise<AskContext> {
   const root = requireKbRoot()
   const paths = kbPaths(root)
 
   const index = readWikiIndex()
   const allArticles = listWikiArticles()
 
-  const outputArticles = allArticles.filter(a => a.path.startsWith(paths.output))
+  let outputArticles = allArticles.filter(a => a.path.startsWith(paths.output))
   let wikiArticles = allArticles.filter(a => a.path.startsWith(paths.wiki))
 
   if (tag) {
+    const normalizedTag = normalizeTag(tag)
     wikiArticles = wikiArticles.filter(a =>
-      a.tags.some(t => t.toLowerCase() === tag.toLowerCase()),
+      a.tags.some(t => normalizeTag(t) === normalizedTag),
     )
+    outputArticles = outputArticles.filter(a =>
+      a.tags.some(t => normalizeTag(t) === normalizedTag),
+    )
+  }
+
+  if (entity) {
+    const normalizedEntity = entity.toLowerCase()
+    wikiArticles = wikiArticles.filter(a => {
+      if (!a.entities) return false
+      return Object.entries(a.entities).some(([type, names]) =>
+        names.some(name => `${type}/${name}`.toLowerCase() === normalizedEntity)
+      )
+    })
+    outputArticles = outputArticles.filter(a => {
+      if (!a.entities) return false
+      return Object.entries(a.entities).some(([type, names]) =>
+        names.some(name => `${type}/${name}`.toLowerCase() === normalizedEntity)
+      )
+    })
   }
 
   const rankingResult = await findRelevantArticles(question, index, wikiArticles, maxContext)
@@ -67,6 +89,7 @@ export async function buildAskContext(question: string, tag?: string, maxContext
     outputArticles: outputArticles.map(a => ({ title: a.title, path: a.relativePath })),
     totalWikiConsidered: rankingResult.totalConsidered,
     tagFilter: tag,
+    entityFilter: entity,
   }
 
   return { index, context, allArticles, rankedInfo }
@@ -76,7 +99,7 @@ export async function streamAsk(question: string, options: AskOptions): Promise<
   const root = requireKbRoot()
   const paths = kbPaths(root)
 
-  const { index, context, allArticles, rankedInfo } = await buildAskContext(question, options.tag, options.maxContext)
+  const { index, context, allArticles, rankedInfo } = await buildAskContext(question, options.tag, options.maxContext, options.entity)
   options.onContextBuilt?.()
 
   let firstChunk = true
@@ -145,8 +168,19 @@ ${normalizeLinks(rawAnswer, allArticles)}
 }
 
 /**
+ * Count occurrences of a pattern in text (case-insensitive).
+ */
+function countOccurrences(text: string, pattern: RegExp): number {
+  const matches = text.match(new RegExp(pattern, 'gi'))
+  return matches ? matches.length : 0
+}
+
+/**
  * Extract metadata from answer content by parsing wiki links and aggregating
  * tags/entities from cited sources and concepts.
+ *
+ * Tags and entities are filtered to only include those actually mentioned in the
+ * answer content, not all tags/entities from cited sources.
  */
 function extractAnswerMetadata(
   answer: string,
@@ -179,6 +213,9 @@ function extractAnswerMetadata(
       .map((a) => basename(a.path, '.md')),
   )
 
+  // Prepare answer text for content-based filtering (lowercase for matching)
+  const answerLower = answer.toLowerCase()
+
   // Categorize links and aggregate metadata
   for (const link of links) {
     // Extract slug from link (handle paths like "sources/foo" or just "foo")
@@ -189,22 +226,40 @@ function extractAnswerMetadata(
       if (!citedSources.includes(normalizedSlug)) {
         citedSources.push(normalizedSlug)
 
-        // Aggregate tags and entities from this source
+        // Aggregate tags and entities from this source, but only if they're
+        // actually mentioned in the answer content with sufficient frequency,
+        // OR if they appear in the original question (query subject)
         const sourceArticle = allArticles.find(
           (a) =>
             a.path.startsWith(paths.wikiSources) &&
             basename(a.path, '.md').toLowerCase().replace(/\s+/g, '-') === normalizedSlug,
         )
         if (sourceArticle) {
+          // Only add tags that appear in the answer content
           for (const tag of sourceArticle.tags) {
-            tagSet.add(normalizeTag(tag))
+            const normalizedTagValue = normalizeTag(tag)
+            // Check if tag appears in answer with word boundaries
+            const tagPattern = new RegExp(
+              `\b${normalizedTagValue.replace(/-/g, '[-\s]')}\b`,
+              'i'
+            )
+            if (tagPattern.test(answerLower)) {
+              tagSet.add(normalizedTagValue)
+            }
           }
+
+          // Only add entities that appear in the answer content
           if (sourceArticle.entities) {
             for (const [category, names] of Object.entries(sourceArticle.entities)) {
-              if (!entityMap[category]) entityMap[category] = []
               for (const name of names) {
-                if (!entityMap[category].includes(name)) {
-                  entityMap[category].push(name)
+                // Check if entity name appears in answer with word boundaries
+                const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                const namePattern = new RegExp(`\b${escapedName}\b`, 'i')
+                if (namePattern.test(answerLower)) {
+                  if (!entityMap[category]) entityMap[category] = []
+                  if (!entityMap[category].includes(name)) {
+                    entityMap[category].push(name)
+                  }
                 }
               }
             }
