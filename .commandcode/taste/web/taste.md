@@ -63,3 +63,7 @@
 - Group source file extensions into basic categories rather than 1-1 mapping — e.g., html and markdown both map to "text" type; json, csv, xml, yaml also map to "text". Keep categories simple: text, pdf, image, audio, video, youtube. Confidence: 0.75
 - Show the date/time of queries at the bottom of query cards in the web UI. Confidence: 0.70
 - In web upload UI, do not display technical configuration references like "see `mediaMaxFileBytes` and `videoMaxFileBytes` in `.theora/config.json`" — keep upload messaging clean and user-friendly. Confidence: 0.75
+- Use a "mind map icon" (locate-fixed/crosshair style: concentric circles with crosshair lines) to represent the mind map feature in the UI — not a brain icon. Confidence: 0.85
+- Entity pill badges should follow the same pattern as tag badges: text links to search results, icon links to mind map view. Confidence: 0.80
+- Build backend support (e.g., entity search) to enable consistent UI patterns rather than compromising the UX when functionality is missing. Confidence: 0.75
+- The search page must display active entity filters in the UI (similar to active tag filters) — when an entity filter is applied, show it as a removable badge/pill with clear visual indication. Confidence: 0.70

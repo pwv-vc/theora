@@ -17,6 +17,7 @@ export interface SearchIndexDoc {
   relativePath: string
   title: string
   tags: string[]
+  entities: string[]
   docType?: string
   /** Epoch ms — frontmatter date, else date_compiled, else file mtime. */
   docDateMs: number
@@ -155,11 +156,24 @@ export function buildSearchIndex(
     const docType = typeof a.frontmatter.type === 'string' ? a.frontmatter.type : undefined
     const isOutput = a.relativePath.startsWith('output/')
 
+    // Extract entities from frontmatter
+    const entities: string[] = []
+    if (a.frontmatter.entities && typeof a.frontmatter.entities === 'object') {
+      for (const [type, names] of Object.entries(a.frontmatter.entities)) {
+        if (Array.isArray(names)) {
+          for (const name of names) {
+            entities.push(`${type}/${name}`)
+          }
+        }
+      }
+    }
+
     docs.push({
       docId,
       relativePath: a.relativePath,
       title: a.title,
       tags: a.tags,
+      entities,
       docType,
       docDateMs: parseDocDateMs(a.frontmatter, a.path),
       isOutput,

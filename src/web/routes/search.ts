@@ -11,6 +11,7 @@ export const searchRoutes = new Hono<{ Variables: AppVariables }>()
 searchRoutes.get('/', (c) => {
   const q = c.req.query('q') ?? ''
   const tag = c.req.query('tag') ?? ''
+  const entity = c.req.query('entity') ?? ''
   const tagsWithCounts = getAllTagsWithCounts()
   const config = c.get('config')
 
@@ -18,7 +19,7 @@ searchRoutes.get('/', (c) => {
     Layout({
       title: 'Search',
       active: 'search',
-      children: SearchPage({ q, tag, tagsWithCounts, config }),
+      children: SearchPage({ q, tag, entity, tagsWithCounts, config }),
     }).toString(),
   )
 })
@@ -26,18 +27,20 @@ searchRoutes.get('/', (c) => {
 searchRoutes.get('/results', (c) => {
   const q = c.req.query('q') ?? ''
   const tag = c.req.query('tag') ?? ''
+  const entity = c.req.query('entity') ?? ''
 
-  if (!q.trim() && !tag) {
+  if (!q.trim() && !tag && !entity) {
     return c.html('<div></div>')
   }
 
   try {
-    const { results, suggestedQuery } = searchArticles(q, tag || undefined)
+    const { results, suggestedQuery } = searchArticles(q, tag || undefined, entity || undefined)
     return c.html(
       SearchResults({
         results: results.slice(0, 20),
         q,
         tag,
+        entity,
         suggestedQuery,
       }).toString(),
     )

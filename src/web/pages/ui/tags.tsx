@@ -125,13 +125,6 @@ export function TagFilterBar({
           />
         )}
       </div>
-      {activeTag && (
-        <div class="mt-3 flex items-center gap-2">
-          <span class="text-zinc-500 text-xs">Filtered by</span>
-          <span class="text-xs px-2 py-0.5 rounded border border-red-700 bg-red-900/30 text-red-400">#{activeTag}</span>
-          <a href={clearHref} class="text-zinc-600 text-xs hover:text-zinc-400 transition-colors">× clear</a>
-        </div>
-      )}
     </div>
   )
 }

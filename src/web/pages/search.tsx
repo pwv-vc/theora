@@ -9,6 +9,7 @@ type SearchPageConfig = Pick<KbConfig, "name">;
 interface SearchPageProps {
   q: string;
   tag: string;
+  entity: string;
   tagsWithCounts: TagWithCount[];
   config: SearchPageConfig;
 }
@@ -17,17 +18,32 @@ interface SearchResultsProps {
   results: SearchResult[];
   q: string;
   tag?: string;
+  entity?: string;
   suggestedQuery?: string;
 }
 
 export function SearchPage({
   q,
   tag,
+  entity,
   tagsWithCounts,
   config,
 }: SearchPageProps) {
-  const clearHref = q ? `/search?q=${encodeURIComponent(q)}` : "/search";
-  const extraParams = q ? `q=${encodeURIComponent(q)}` : undefined;
+  // Build clear href and extra params based on active filters
+  let clearHref = "/search"
+  let extraParams = ""
+  if (q) {
+    clearHref = `/search?q=${encodeURIComponent(q)}`
+    extraParams = `q=${encodeURIComponent(q)}`
+  }
+  if (tag) {
+    if (extraParams) extraParams += "&"
+    extraParams += `tag=${encodeURIComponent(tag)}`
+  }
+  if (entity) {
+    if (extraParams) extraParams += "&"
+    extraParams += `entity=${encodeURIComponent(entity)}`
+  }
 
   return (
     <div>
@@ -54,6 +70,36 @@ export function SearchPage({
         </div>
       </div>
 
+      {/* Active filters display */}
+      {(tag || entity) && (
+        <div class="mb-4 flex flex-wrap items-center gap-2">
+          {tag && (
+            <span class="inline-flex items-center gap-1.5 bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs px-2.5 py-1 rounded">
+              <span>Tag: #{tag}</span>
+              <a
+                href={entity ? `/search?entity=${encodeURIComponent(entity)}` : "/search"}
+                class="text-zinc-500 hover:text-zinc-300"
+                title="Remove tag filter"
+              >
+                ×
+              </a>
+            </span>
+          )}
+          {entity && (
+            <span class="inline-flex items-center gap-1.5 bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs px-2.5 py-1 rounded">
+              <span>Entity: {entity}</span>
+              <a
+                href={tag ? `/search?tag=${encodeURIComponent(tag)}` : "/search"}
+                class="text-zinc-500 hover:text-zinc-300"
+                title="Remove entity filter"
+              >
+                ×
+              </a>
+            </span>
+          )}
+        </div>
+      )}
+
       {tagsWithCounts.length > 0 && (
         <div class="mb-6">
           <TagFilterBar
@@ -67,16 +113,16 @@ export function SearchPage({
       )}
 
       <div id="results">
-        {(q || tag) && <SearchResultsInner q={q} tag={tag} />}
+        {(q || tag || entity) && <SearchResultsInner q={q} tag={tag} entity={entity} />}
       </div>
     </div>
   );
 }
 
-function SearchResultsInner({ q, tag }: { q: string; tag: string }) {
+function SearchResultsInner({ q, tag, entity }: { q: string; tag: string; entity: string }) {
   return (
     <div
-      hx-get={`/search/results?q=${encodeURIComponent(q)}${tag ? `&tag=${encodeURIComponent(tag)}` : ""}`}
+      hx-get={`/search/results?q=${encodeURIComponent(q)}${tag ? `&tag=${encodeURIComponent(tag)}` : ""}${entity ? `&entity=${encodeURIComponent(entity)}` : ""}`}
       hx-trigger="load"
       hx-target="#results"
     />
@@ -138,6 +184,7 @@ export function SearchResults({
   results,
   q,
   tag,
+  entity,
   suggestedQuery,
 }: SearchResultsProps) {
   if (results.length === 0) {
@@ -145,7 +192,7 @@ export function SearchResults({
       suggestedQuery &&
       suggestedQuery.trim().toLowerCase() !== q.trim().toLowerCase();
     const suggestHref = suggestDiffers
-      ? `/search?q=${encodeURIComponent(suggestedQuery!)}${tag ? `&tag=${encodeURIComponent(tag)}` : ""}`
+      ? `/search?q=${encodeURIComponent(suggestedQuery!)}${tag ? `&tag=${encodeURIComponent(tag)}` : ""}${entity ? `&entity=${encodeURIComponent(entity)}` : ""}`
       : undefined;
     return (
       <div class="text-zinc-600 text-sm py-4 space-y-2">
@@ -161,6 +208,18 @@ export function SearchResults({
               ) : (
                 ""
               )}
+              {entity ? (
+                <>
+                  {" "}
+                  with entity <span class="text-zinc-400">{entity}</span>
+                </>
+              ) : (
+                ""
+              )}
+            </>
+          ) : entity ? (
+            <>
+              No articles with entity <span class="text-zinc-400">{entity}</span>
             </>
           ) : (
             <>
@@ -184,9 +243,20 @@ export function SearchResults({
     );
   }
 
-  const countLabel = q
-    ? `${results.length} result${results.length !== 1 ? "s" : ""} for "${q}"${tag ? ` in #${tag}` : ""}`
-    : `${results.length} article${results.length !== 1 ? "s" : ""} tagged #${tag}`;
+  let countLabel: string
+  if (q && tag) {
+    countLabel = `${results.length} result${results.length !== 1 ? "s" : ""} for "${q}" in #${tag}${entity ? ` with entity ${entity}` : ""}`
+  } else if (q && entity) {
+    countLabel = `${results.length} result${results.length !== 1 ? "s" : ""} for "${q}" with entity ${entity}`
+  } else if (q) {
+    countLabel = `${results.length} result${results.length !== 1 ? "s" : ""} for "${q}"`
+  } else if (tag) {
+    countLabel = `${results.length} article${results.length !== 1 ? "s" : ""} tagged #${tag}`
+  } else if (entity) {
+    countLabel = `${results.length} article${results.length !== 1 ? "s" : ""} with entity ${entity}`
+  } else {
+    countLabel = `${results.length} result${results.length !== 1 ? "s" : ""}`
+  }
 
   const suggestHref =
     suggestedQuery && suggestedQuery.trim().toLowerCase() !== q.trim().toLowerCase()

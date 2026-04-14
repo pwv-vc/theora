@@ -183,10 +183,20 @@ function fuzzySuggestQuery(
   return changed ? out.join(' ') : undefined
 }
 
-function emptyQueryResults(filterTag?: string): SearchResponse {
+function emptyQueryResults(filterTag?: string, filterEntity?: string): SearchResponse {
   let articles = listWikiArticles()
   if (filterTag) {
     articles = articles.filter(a => a.tags.some(t => t.toLowerCase() === filterTag.toLowerCase()))
+  }
+  if (filterEntity) {
+    const normalizedEntity = filterEntity.toLowerCase()
+    articles = articles.filter(a => {
+      if (!a.frontmatter.entities || typeof a.frontmatter.entities !== 'object') return false
+      return Object.entries(a.frontmatter.entities).some(([type, names]) => {
+        if (!Array.isArray(names)) return false
+        return names.some((name: string) => `${type}/${name}`.toLowerCase() === normalizedEntity)
+      })
+    })
   }
   return {
     results: articles
@@ -206,13 +216,13 @@ function emptyQueryResults(filterTag?: string): SearchResponse {
 /**
  * BM25 search over `.theora/search-index.json` (rebuilt by `theora compile` / `--reindex`).
  */
-export function searchArticles(query: string, filterTag?: string): SearchResponse {
+export function searchArticles(query: string, filterTag?: string, filterEntity?: string): SearchResponse {
   const root = requireKbRoot()
   const tuning = readConfig().search
   const rawTokens = queryRawTokens(query)
 
   if (rawTokens.length === 0) {
-    return emptyQueryResults(filterTag)
+    return emptyQueryResults(filterTag, filterEntity)
   }
 
   const index = loadSearchIndex(root)
@@ -227,14 +237,24 @@ export function searchArticles(query: string, filterTag?: string): SearchRespons
 
   const allowed = new Set<number>()
   for (let i = 0; i < index.docs.length; i++) {
-    if (!filterTag) {
-      allowed.add(i)
-      continue
-    }
     const d = index.docs[i]!
-    if (d.tags.some(t => t.toLowerCase() === filterTag.toLowerCase())) {
-      allowed.add(i)
+    
+    // Check tag filter
+    if (filterTag) {
+      if (!d.tags.some(t => t.toLowerCase() === filterTag.toLowerCase())) {
+        continue
+      }
     }
+    
+    // Check entity filter
+    if (filterEntity) {
+      const normalizedEntity = filterEntity.toLowerCase()
+      if (!d.entities.some(e => e.toLowerCase() === normalizedEntity)) {
+        continue
+      }
+    }
+    
+    allowed.add(i)
   }
 
   if (stems.length === 0) {
