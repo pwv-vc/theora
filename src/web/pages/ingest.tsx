@@ -1,6 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { TagWithCount } from "../../lib/wiki.js";
 import type { KbConfig } from "../../lib/config.js";
+import { VALID_EXTS, VALID_EXTS_LIST, VALID_EXTS_ACCEPT } from "../../lib/ingest.js";
 import {
   Input,
   PageHeader,
@@ -9,11 +10,6 @@ import {
   SectionLabel,
   TagSelectorBar,
 } from "./ui/index.js";
-
-const VALID_EXTS_LIST =
-  ".md .mdx .txt .html .json .csv .xml .yaml .yml .pdf .png .jpg .jpeg .gif .webp .mp3 .wav .ogg .flac .m4a .mp4 .mov .avi .mkv .webm";
-const VALID_EXTS_ACCEPT =
-  ".md,.mdx,.txt,.html,.json,.csv,.xml,.yaml,.yml,.pdf,.png,.jpg,.jpeg,.gif,.webp,.mp3,.wav,.ogg,.flac,.m4a,.mp4,.mov,.avi,.mkv,.webm";
 
 interface IngestPageProps {
   tagsWithCounts?: TagWithCount[];
@@ -65,9 +61,7 @@ export function IngestPage({ tagsWithCounts = [], config }: IngestPageProps) {
                 </div>
                 <div class="text-zinc-600 text-xs mt-1">{VALID_EXTS_LIST}</div>
                 <div class="text-zinc-700 text-xs mt-0.5">
-                  Max ~{maxMbMedia} MB per file (~{maxMbVideo} MB for video);
-                  see `mediaMaxFileBytes` and `videoMaxFileBytes` in
-                  `.theora/config.json`
+                  Max ~{maxMbMedia} MB per file (~{maxMbVideo} MB for video)
                 </div>
               </div>
             </div>
@@ -182,7 +176,7 @@ export function IngestPage({ tagsWithCounts = [], config }: IngestPageProps) {
       <script
         dangerouslySetInnerHTML={{
           __html: `
-        const VALID_EXTS = new Set(['.md','.mdx','.txt','.html','.json','.csv','.xml','.yaml','.yml','.pdf','.png','.jpg','.jpeg','.gif','.webp','.mp3','.wav','.ogg','.flac','.m4a','.mp4','.mov','.avi','.mkv','.webm']);
+        const VALID_EXTS = new Set(${JSON.stringify([...VALID_EXTS])});
         const VIDEO_EXTS = new Set(['.mp4','.mov','.avi','.mkv','.webm']);
         const MAX_MEDIA_SIZE = ${mediaMaxBytes};
         const MAX_VIDEO_SIZE = ${videoMaxBytes};

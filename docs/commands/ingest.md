@@ -44,6 +44,7 @@ Only valid file types are ingested — everything else is skipped. Duplicates ar
 |------|-----------|-------------------|
 | Text | `.md` `.mdx` `.txt` `.html` `.json` `.csv` `.xml` `.yaml` | Read as text, summarized by LLM |
 | PDF | `.pdf` | Text extracted, then summarized by LLM |
+| Word | `.docx` | Text extracted via mammoth, then summarized by LLM |
 | Image | `.png` `.jpg` `.jpeg` `.gif` `.webp` | Analyzed via LLM vision, described and indexed |
 | Audio | `.mp3` `.wav` `.ogg` `.flac` `.m4a` | Transcribed with OpenAI Whisper (`whisper-1`), then summarized like text |
 | Video | `.mp4` `.mov` `.avi` `.mkv` `.webm` | Requires **ffmpeg** (on macOS, install with [Homebrew](https://brew.sh): `brew install ffmpeg`). Audio transcribed with Whisper; evenly sampled frames analyzed with vision; one merged wiki article |

@@ -54,6 +54,7 @@ See [web/taste.md](web/taste.md)
 - Always ensure files end with a newline character (EOF newline). Confidence: 0.90
 - Define variables, constants, and functions before they are used (no forward references). Confidence: 0.85
 - Use shared library utility functions rather than duplicating logic inline — if a function exists in `src/lib/` or a similar shared module, import and use it instead of creating a duplicate implementation. Confidence: 0.85
+- Maintain a single source of truth for data that must stay in sync across CLI and web interfaces — export constants like `VALID_EXTS` from a shared library module (e.g., `src/lib/ingest.ts`) and import them in both CLI and web code, rather than duplicating the list. Confidence: 0.80
 
 # documentation
 See [documentation/taste.md](documentation/taste.md)

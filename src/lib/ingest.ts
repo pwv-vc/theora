@@ -8,16 +8,23 @@ import { readConfig } from './config.js'
 
 export const VALID_EXTS = new Set([
   '.md', '.mdx', '.txt', '.html', '.json', '.csv', '.xml', '.yaml', '.yml',
-  '.pdf',
+  '.pdf', '.docx',
   '.png', '.jpg', '.jpeg', '.gif', '.webp',
   '.mp3', '.wav', '.ogg', '.flac', '.m4a',
   '.mp4', '.mov', '.avi', '.mkv', '.webm',
 ])
 
+/** Space-separated list for web UI display */
+export const VALID_EXTS_LIST = [...VALID_EXTS].join(' ')
+
+/** Comma-separated list for file input accept attribute */
+export const VALID_EXTS_ACCEPT = [...VALID_EXTS].join(',')
+
 export const CONTENT_TYPE_EXT: Record<string, string> = {
   'text/html': '.html',
   'text/plain': '.txt',
   'application/json': '.json',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
   'image/png': '.png',
   'image/jpeg': '.jpg',
   'image/gif': '.gif',

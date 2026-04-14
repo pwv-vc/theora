@@ -11,6 +11,7 @@ const typeLabels: Record<string, string> = {
   text: 'Text',
   data: 'Data',
   pdf: 'PDF',
+  docx: 'Word',
   image: 'Image',
   audio: 'Audio',
   video: 'Video',

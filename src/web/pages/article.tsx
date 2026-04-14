@@ -13,7 +13,7 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
   const dateCompiled = String(fm.date_compiled ?? fm.date ?? '')
   const sourceFile = fm.source_file ? String(fm.source_file) : null
   const sourceThumbnailUrl = fm.source_thumbnail_url ? String(fm.source_thumbnail_url) : null
-  const sourceType = fm.source_type ? String(fm.source_type) as 'text' | 'data' | 'pdf' | 'image' | 'audio' | 'video' | 'youtube' : null
+  const sourceType = fm.source_type ? String(fm.source_type) as 'text' | 'data' | 'pdf' | 'docx' | 'image' | 'audio' | 'video' | 'youtube' : null
   const ontology = Array.isArray(fm.ontology) ? fm.ontology.map(String) : []
   const entities = fm.entities && typeof fm.entities === 'object' ? fm.entities as Record<string, string[]> : {}
 

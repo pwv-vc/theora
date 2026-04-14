@@ -4,6 +4,7 @@ import { join, basename, dirname, extname, relative, sep } from 'node:path'
 import ora from 'ora'
 import pLimit from 'p-limit'
 import pc from 'picocolors'
+import mammoth from 'mammoth'
 import { normalizeLinks } from '../wiki.js'
 import { PDFParse } from 'pdf-parse'
 import { kbPaths, safeJoin } from '../paths.js'
@@ -27,6 +28,7 @@ import {
   COMPILE_SYSTEM,
   buildSourcePrompt,
   buildPdfPrompt,
+  buildDocxPrompt,
   buildImagePrompt,
   buildAudioPrompt,
   buildVideoPrompt,
@@ -52,10 +54,11 @@ const TEXT_EXTS = new Set(['.md', '.mdx', '.txt', '.html'])
 const DATA_EXTS = new Set(['.json', '.csv', '.xml', '.yaml', '.yml'])
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp'])
 const PDF_EXTS = new Set(['.pdf'])
+const DOCX_EXTS = new Set(['.docx'])
 const AUDIO_EXTS = new Set(['.mp3', '.wav', '.ogg', '.flac', '.m4a'])
 const VIDEO_EXTS = new Set(['.mp4', '.mov', '.avi', '.mkv', '.webm'])
 
-type FileKind = 'text' | 'data' | 'image' | 'pdf' | 'audio' | 'video' | 'youtube-video' | 'unknown'
+type FileKind = 'text' | 'data' | 'image' | 'pdf' | 'docx' | 'audio' | 'video' | 'youtube-video' | 'unknown'
 
 function classifyFile(path: string): FileKind {
   const ext = extname(path).toLowerCase()
@@ -69,6 +72,7 @@ function classifyFile(path: string): FileKind {
   if (DATA_EXTS.has(ext)) return 'data'
   if (IMAGE_EXTS.has(ext)) return 'image'
   if (PDF_EXTS.has(ext)) return 'pdf'
+  if (DOCX_EXTS.has(ext)) return 'docx'
   if (AUDIO_EXTS.has(ext)) return 'audio'
   if (VIDEO_EXTS.has(ext)) return 'video'
   return 'unknown'
@@ -283,6 +287,36 @@ async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, i
     sourceFile: relative(paths.raw, file),
     sourceUrl: sourceUrl ?? undefined,
     sourceType: 'pdf',
+    tags: mergeTags(ingestTag, tags),
+    entities,
+  }
+
+  writeArticle(join(paths.wikiSources, `${slug}.md`), meta, body)
+}
+
+async function compileDocxFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
+  const name = basename(file, extname(file))
+  const slug = slugify(name)
+  const sourceUrl = getUrlForFile(basename(file))
+
+  const buffer = readFileSync(file)
+  let text: string
+  try {
+    const result = await mammoth.extractRawText({ buffer })
+    text = result.value
+  } catch {
+    return
+  }
+
+  const raw = await llm(buildDocxPrompt(basename(file), text.slice(0, 50000), ingestTag), { system: COMPILE_SYSTEM, maxTokens: 4096, action: 'compile', meta: 'docx' })
+  const { body, tags, entities } = sanitizeLlmOutput(raw)
+
+  const meta: ArticleMeta = {
+    title: titleFromFilename(file),
+    type: 'source',
+    sourceFile: relative(paths.raw, file),
+    sourceUrl: sourceUrl ?? undefined,
+    sourceType: 'docx',
     tags: mergeTags(ingestTag, tags),
     entities,
   }
@@ -730,6 +764,9 @@ async function compileOneSourceFile(
     case 'pdf':
       await compilePdfFile(file, paths, ingestTag)
       return
+    case 'docx':
+      await compileDocxFile(file, paths, ingestTag)
+      return
     case 'image':
       await compileImageFile(file, paths, ingestTag)
       return
@@ -830,7 +867,7 @@ export async function compileSources(root: string, concurrency?: number, onProgr
     return
   }
 
-  const byKind: Record<FileKind, number> = { text: 0, 'youtube-video': 0, data: 0, image: 0, pdf: 0, audio: 0, video: 0, unknown: 0 }
+  const byKind: Record<FileKind, number> = { text: 0, 'youtube-video': 0, data: 0, image: 0, pdf: 0, docx: 0, audio: 0, video: 0, unknown: 0 }
   for (const f of newFiles) {
     const kind = classifyFile(f)
     byKind[kind]++
@@ -840,6 +877,7 @@ export async function compileSources(root: string, concurrency?: number, onProgr
   if (byKind.text > 0) parts.push(`${byKind.text} text${byKind.text !== 1 ? 's' : ''}`)
   if (byKind['youtube-video'] > 0) parts.push(`${byKind['youtube-video']} YouTube video${byKind['youtube-video'] !== 1 ? 's' : ''}`)
   if (byKind.pdf > 0) parts.push(`${byKind.pdf} PDF${byKind.pdf !== 1 ? 's' : ''}`)
+  if (byKind.docx > 0) parts.push(`${byKind.docx} Word doc${byKind.docx !== 1 ? 's' : ''}`)
   if (byKind.image > 0) parts.push(`${byKind.image} image${byKind.image !== 1 ? 's' : ''}`)
   if (byKind.audio > 0) parts.push(`${byKind.audio} audio file${byKind.audio !== 1 ? 's' : ''}`)
   if (byKind.video > 0) parts.push(`${byKind.video} video${byKind.video !== 1 ? 's' : ''}`)
