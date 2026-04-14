@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import type { AppVariables } from '../middleware/context.js'
 import { streamSSE } from 'hono/streaming'
-import { listWikiArticles, normalizeLinksForWeb, getAllTagsWithCounts } from '../../lib/wiki.js'
+import { listWikiArticles, normalizeLinksForWeb, getAllTagsWithCounts, getAllEntitiesWithCounts } from '../../lib/wiki.js'
 import { buildAskPlaceholderPhrases } from '../../lib/ask-placeholders.js'
 import { streamAsk } from '../../lib/ask.js'
 import { Layout } from '../pages/layout.js'
@@ -11,6 +11,7 @@ export const askRoutes = new Hono<{ Variables: AppVariables }>()
 
 askRoutes.get('/', (c) => {
   const tagsWithCounts = getAllTagsWithCounts()
+  const entitiesWithCounts = getAllEntitiesWithCounts()
   const placeholderPhrases = buildAskPlaceholderPhrases()
   const config = c.get('config')
 
@@ -18,7 +19,7 @@ askRoutes.get('/', (c) => {
     Layout({
       title: 'Ask',
       active: 'ask',
-      children: AskPage({ tagsWithCounts, config, placeholderPhrases }),
+      children: AskPage({ tagsWithCounts, entitiesWithCounts, config, placeholderPhrases }),
     }).toString(),
   )
 })
@@ -32,8 +33,10 @@ askRoutes.get('/stream', async (c) => {
   return streamSSE(c, async (stream) => {
     try {
       const tag = c.req.query('tag') || undefined
+      const entity = c.req.query('entity') || undefined
       const { rawAnswer } = await streamAsk(question, {
         tag,
+        entity,
         file: true,
         onChunk: (text) => { stream.writeSSE({ data: text }).catch(() => {}) },
       })

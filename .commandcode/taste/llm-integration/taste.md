@@ -1,4 +1,5 @@
 # llm-integration
+- Prefer non-AI solutions when a simpler approach works — avoid using LLMs or AI models if the task can be accomplished with straightforward code or logic. Confidence: 0.70
 - When including JSON schemas in LLM prompts, load the schema from the actual schema definition file (e.g., from ingest/import/export modules) rather than hardcoding it in the prompt — ensures the prompt always uses the canonical, up-to-date schema. Store schemas in a standard location (e.g., `schemas/` directory or within ingest/import/export modules) to make them easy to find and load. Confidence: 0.85
 - Ensure entity extraction during compile/ingest captures all named entities (people, organizations, bands, products) from source content — empty entity arrays cause RAG retrieval failures when rankers rely on entity matching. Confidence: 0.80
 - When debugging entity extraction failures, check the compiled article's frontmatter entities field — if entities are empty after recompilation, the LLM may not be extracting them from the content properly, indicating a need to improve the extraction prompt or add fallback extraction methods. Confidence: 0.75

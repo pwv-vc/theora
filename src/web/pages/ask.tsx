@@ -1,16 +1,17 @@
 /** @jsxImportSource hono/jsx */
-import type { TagWithCount } from '../../lib/wiki.js'
+import type { TagWithCount, EntityWithCount } from '../../lib/wiki.js'
 import type { KbConfig } from '../../lib/config.js'
-import { PageHeader, TagSelectorBar } from './ui/index.js'
+import { PageHeader, TagSelectorBar, EntitySelectorBar } from './ui/index.js'
 import { QuestionInput, AnswerPanel, StatusIndicator } from './ask/index.js'
 
 interface AskPageProps {
   tagsWithCounts: TagWithCount[]
+  entitiesWithCounts: EntityWithCount[]
   config: KbConfig
   placeholderPhrases: string[]
 }
 
-export function AskPage({ tagsWithCounts, config, placeholderPhrases }: AskPageProps) {
+export function AskPage({ tagsWithCounts, entitiesWithCounts, config, placeholderPhrases }: AskPageProps) {
   const initialPlaceholder =
     placeholderPhrases[0] ?? 'Tell me about this knowledge base'
   return (
@@ -30,10 +31,20 @@ export function AskPage({ tagsWithCounts, config, placeholderPhrases }: AskPageP
         <QuestionInput initialPlaceholder={initialPlaceholder} />
 
         {tagsWithCounts.length > 0 && (
-          <TagSelectorBar
-            tagsWithCounts={tagsWithCounts}
-            inputId="ask-tag-input"
-            chipId="ask-tag-chip"
+          <div class="mb-3">
+            <TagSelectorBar
+              tagsWithCounts={tagsWithCounts}
+              inputId="ask-tag-input"
+              chipId="ask-tag-chip"
+            />
+          </div>
+        )}
+
+        {entitiesWithCounts.length > 0 && (
+          <EntitySelectorBar
+            entitiesWithCounts={entitiesWithCounts}
+            inputId="ask-entity-input"
+            chipId="ask-entity-chip"
           />
         )}
       </div>
@@ -110,6 +121,8 @@ function getClientScript(): string {
 
       const tagInput = document.getElementById('ask-tag-input');
       const tag = tagInput ? tagInput.value.trim() : '';
+      const entityInput = document.getElementById('ask-entity-input');
+      const entity = entityInput ? entityInput.value.trim() : '';
       const streamEl = document.getElementById('answer-stream');
       const renderedEl = document.getElementById('answer-rendered');
       const wrapper = document.getElementById('answer-wrapper');
@@ -133,6 +146,7 @@ function getClientScript(): string {
 
       let url = '/ask/stream?q=' + encodeURIComponent(question);
       if (tag) url += '&tag=' + encodeURIComponent(tag);
+      if (entity) url += '&entity=' + encodeURIComponent(entity);
 
       const source = new EventSource(url);
       currentSource = source;

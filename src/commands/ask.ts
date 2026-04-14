@@ -28,6 +28,7 @@ export const askCommand = new Command("ask")
   .option("--no-file", "do not file the answer back into the wiki")
   .option("--output <format>", "output format: md, slides, chart", "md")
   .option("--tag <tag>", "filter wiki articles by tag")
+  .option("--entity <entity>", "filter wiki articles by entity (format: type/name, e.g., person/john-doe)")
   .option(
     "--stdin",
     "read the question from stdin (avoids shell glob expansion on ?, *, [)",
@@ -37,7 +38,7 @@ export const askCommand = new Command("ask")
   .action(
     async (
       questionParts: string[],
-      options: { file: boolean; output: string; tag?: string; stdin?: boolean; debug?: boolean; maxContext?: string },
+      options: { file: boolean; output: string; tag?: string; entity?: string; stdin?: boolean; debug?: boolean; maxContext?: string },
     ) => {
       const root = requireKbRoot();
       const paths = kbPaths(root);
@@ -86,6 +87,7 @@ export const askCommand = new Command("ask")
           const maxContext = options.maxContext ? parseInt(options.maxContext, 10) : undefined;
           const { filedPath, rankedInfo } = await streamAsk(question, {
             tag: options.tag,
+            entity: options.entity,
             file: options.file,
             debug: options.debug,
             maxContext,
@@ -105,6 +107,9 @@ export const askCommand = new Command("ask")
             console.error("\n" + pc.bold(pc.cyan("=== Debug: Context Articles ===")));
             if (rankedInfo.tagFilter) {
               console.error(pc.gray(`Tag filter: ${rankedInfo.tagFilter}`));
+            }
+            if (rankedInfo.entityFilter) {
+              console.error(pc.gray(`Entity filter: ${rankedInfo.entityFilter}`));
             }
             console.error(pc.gray(`Wiki articles considered: ${rankedInfo.totalWikiConsidered}`));
             console.error(pc.bold(pc.green(`Wiki articles selected (${rankedInfo.wikiArticles.length}):`)));
@@ -144,7 +149,7 @@ export const askCommand = new Command("ask")
       let index: string;
       let context: string;
       try {
-        ({ index, context } = await buildAskContext(question, options.tag));
+        ({ index, context } = await buildAskContext(question, options.tag, undefined, options.entity));
       } catch (err) {
         spinner.fail("Could not prepare context");
         throw err;
