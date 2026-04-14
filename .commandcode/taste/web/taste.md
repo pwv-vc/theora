@@ -67,3 +67,4 @@
 - Entity pill badges should follow the same pattern as tag badges: text links to search results, icon links to mind map view. Confidence: 0.80
 - Build backend support (e.g., entity search) to enable consistent UI patterns rather than compromising the UX when functionality is missing. Confidence: 0.75
 - The search page must display active entity filters in the UI (similar to active tag filters) — when an entity filter is applied, show it as a removable badge/pill with clear visual indication. Confidence: 0.70
+- Use the same Lucide icon for concepts across all UI components — if the wiki page pills use a bulb/lightbulb icon for concepts, the related concepts badge should use the same icon for consistency. Confidence: 0.80

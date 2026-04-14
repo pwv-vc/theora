@@ -1,6 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import type { WikiArticle } from '../../lib/wiki.js'
-import { Pill, Prose, TagWithMapLink, EntityPill, SourceTypeIcon } from './ui/index.js'
+import { Pill, Prose, TagWithMapLink, EntityPill, SourceTypeIcon, LightbulbIcon } from './ui/index.js'
 
 interface ArticlePageProps {
   article: WikiArticle
@@ -8,7 +8,7 @@ interface ArticlePageProps {
 }
 
 export function ArticlePage({ article, html }: ArticlePageProps) {
-  const slug = article.slug || article.path.split('/').pop()?.replace('.md', '') || ''
+  const slug = article.path.split('/').pop()?.replace('.md', '') || ''
   const fm = article.frontmatter
   const type = String(fm.type ?? '')
   const dateCompiled = String(fm.date_compiled ?? fm.date ?? '')
@@ -28,6 +28,14 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
           : type === 'mind-map'
             ? 'mind map'
             : ''
+
+  // Query-specific frontmatter fields
+  const citedSources = Array.isArray(fm.cited_sources)
+    ? fm.cited_sources.map(String)
+    : []
+  const relatedConcepts = Array.isArray(fm.related_concepts)
+    ? fm.related_concepts.map(String)
+    : []
 
   return (
     <div>
@@ -119,6 +127,52 @@ export function ArticlePage({ article, html }: ArticlePageProps) {
       )}
 
       <Prose html={html} />
+
+      {/* Query-specific: Cited Sources and Related Concepts */}
+      {type === 'query' && (citedSources.length > 0 || relatedConcepts.length > 0) && (
+        <div class="mt-8 p-4 bg-zinc-900/50 border border-zinc-800 rounded-lg no-scanline">
+          {citedSources.length > 0 && (
+            <div class="mb-3">
+              <h3 class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Cited Sources</h3>
+              <div class="flex flex-wrap gap-2">
+                {citedSources.map((sourceRef) => {
+                  const slug = sourceRef.replace(/^\[\[|\]\]$/g, '')
+                  return (
+                    <a
+                      key={slug}
+                      href={`/wiki/sources/${slug}`}
+                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-zinc-100 text-xs rounded transition-colors border border-zinc-700"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      {slug}
+                    </a>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          {relatedConcepts.length > 0 && (
+            <div>
+              <h3 class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Related Concepts</h3>
+              <div class="flex flex-wrap gap-2">
+                {relatedConcepts.map((conceptRef) => {
+                  const slug = conceptRef.replace(/^\[\[|\]\]$/g, '')
+                  return (
+                    <a
+                      key={slug}
+                      href={`/wiki/concepts/${slug}`}
+                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-zinc-100 text-xs rounded transition-colors border border-zinc-700"
+                    >
+                      <LightbulbIcon size={12} />
+                      {slug}
+                    </a>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,10 +1,11 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, basename, extname } from 'node:path'
+import matter from 'gray-matter'
 import { kbPaths, requireKbRoot } from './paths.js'
 import { llmStream } from './llm.js'
-import { listWikiArticles, readWikiIndex, normalizeLinks } from './wiki.js'
+import { listWikiArticles, readWikiIndex, normalizeLinks, readWikiArticle, type WikiArticle } from './wiki.js'
 import { findRelevantArticles, buildContext } from './query.js'
-import { slugifyShort } from './utils.js'
+import { slugifyShort, normalizeTag } from './utils.js'
 import { MD_SYSTEM, buildMdUserPrompt } from './prompts/index.js'
 
 export interface AskOptions {
@@ -100,22 +101,127 @@ export async function streamAsk(question: string, options: AskOptions): Promise<
   const slug = slugifyShort(question)
   const timestamp = new Date().toISOString()
   const safeTitle = question.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]+/g, ' ')
-  const filed = `---
-title: "${safeTitle}"
-type: query
-date: ${timestamp}
----
 
-# ${question.replace(/[\r\n]+/g, ' ')}
+  // Extract wiki links from the answer and aggregate metadata
+  const { citedSources, relatedConcepts, tags, entities } = extractAnswerMetadata(
+    rawAnswer,
+    allArticles,
+    paths,
+  )
+
+  // Build rich frontmatter
+  const frontmatter: Record<string, unknown> = {
+    title: safeTitle,
+    type: 'query',
+    date: timestamp,
+  }
+
+  if (citedSources.length > 0) {
+    frontmatter.cited_sources = citedSources.map(s => `[[${s}]]`)
+  }
+  if (relatedConcepts.length > 0) {
+    frontmatter.related_concepts = relatedConcepts.map(c => `[[${c}]]`)
+  }
+  if (tags.length > 0) {
+    frontmatter.tags = tags
+  }
+  if (Object.keys(entities).length > 0) {
+    frontmatter.entities = entities
+  }
+
+  const body = `# ${question.replace(/[\r\n]+/g, ' ')}
 
 ${normalizeLinks(rawAnswer, allArticles)}
 
 ---
 *Query filed on ${timestamp}*
 `
+
   mkdirSync(paths.output, { recursive: true })
   const outputPath = join(paths.output, `${slug}.md`)
-  writeFileSync(outputPath, filed)
+  writeFileSync(outputPath, matter.stringify(body, frontmatter))
 
   return { rawAnswer, filedPath: outputPath, rankedInfo }
+}
+
+/**
+ * Extract metadata from answer content by parsing wiki links and aggregating
+ * tags/entities from cited sources and concepts.
+ */
+function extractAnswerMetadata(
+  answer: string,
+  allArticles: WikiArticle[],
+  paths: { wikiSources: string; wikiConcepts: string },
+): {
+  citedSources: string[]
+  relatedConcepts: string[]
+  tags: string[]
+  entities: Record<string, string[]>
+} {
+  const citedSources: string[] = []
+  const relatedConcepts: string[] = []
+  const tagSet = new Set<string>()
+  const entityMap: Record<string, string[]> = {}
+
+  // Extract all [[wiki-links]] from the answer
+  const wikiLinkRegex = /\[\[([^\]]+)\]\]/g
+  const links = [...answer.matchAll(wikiLinkRegex)].map((m) => m[1])
+
+  // Build lookup maps for sources and concepts
+  const sourceSlugs = new Set(
+    allArticles
+      .filter((a) => a.path.startsWith(paths.wikiSources))
+      .map((a) => basename(a.path, '.md')),
+  )
+  const conceptSlugs = new Set(
+    allArticles
+      .filter((a) => a.path.startsWith(paths.wikiConcepts))
+      .map((a) => basename(a.path, '.md')),
+  )
+
+  // Categorize links and aggregate metadata
+  for (const link of links) {
+    // Extract slug from link (handle paths like "sources/foo" or just "foo")
+    const slug = link.includes('/') ? basename(link) : link
+    const normalizedSlug = slug.toLowerCase().replace(/\s+/g, '-')
+
+    if (sourceSlugs.has(normalizedSlug)) {
+      if (!citedSources.includes(normalizedSlug)) {
+        citedSources.push(normalizedSlug)
+
+        // Aggregate tags and entities from this source
+        const sourceArticle = allArticles.find(
+          (a) =>
+            a.path.startsWith(paths.wikiSources) &&
+            basename(a.path, '.md').toLowerCase().replace(/\s+/g, '-') === normalizedSlug,
+        )
+        if (sourceArticle) {
+          for (const tag of sourceArticle.tags) {
+            tagSet.add(normalizeTag(tag))
+          }
+          if (sourceArticle.entities) {
+            for (const [category, names] of Object.entries(sourceArticle.entities)) {
+              if (!entityMap[category]) entityMap[category] = []
+              for (const name of names) {
+                if (!entityMap[category].includes(name)) {
+                  entityMap[category].push(name)
+                }
+              }
+            }
+          }
+        }
+      }
+    } else if (conceptSlugs.has(normalizedSlug)) {
+      if (!relatedConcepts.includes(normalizedSlug)) {
+        relatedConcepts.push(normalizedSlug)
+      }
+    }
+  }
+
+  return {
+    citedSources,
+    relatedConcepts,
+    tags: Array.from(tagSet).sort(),
+    entities: entityMap,
+  }
 }

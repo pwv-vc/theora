@@ -71,7 +71,23 @@ function articleWebUrl(paths: KbPaths, article: WikiArticle): string {
 }
 
 function parseRelatedSourceSlugs(fm: Record<string, unknown>): string[] {
-  const raw = fm.related_sources
+  // Support both related_sources (concepts) and cited_sources (queries)
+  const raw = fm.related_sources ?? fm.cited_sources
+  if (!Array.isArray(raw)) return []
+  const out: string[] = []
+  for (const item of raw) {
+    const s = String(item).trim()
+    const m = /^\[\[([^\]]+)\]\]$/.exec(s)
+    const inner = m ? m[1] : s
+    const file = inner.includes('/') ? inner.split('/').pop()! : inner
+    const slug = basename(file, '.md').toLowerCase().replace(/\s+/g, '-')
+    if (slug) out.push(slug)
+  }
+  return out
+}
+
+function parseRelatedConceptSlugs(fm: Record<string, unknown>): string[] {
+  const raw = fm.related_concepts
   if (!Array.isArray(raw)) return []
   const out: string[] = []
   for (const item of raw) {
