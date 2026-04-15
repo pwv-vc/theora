@@ -1,3 +1,11 @@
+---
+title: "compile"
+description: "Process sources and build the wiki with summaries and concepts"
+date: 2026-04-15
+category: commands
+tags: [compile, command, cli, build]
+---
+
 # compile
 
 ```bash

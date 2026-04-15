@@ -49,7 +49,7 @@ describe('runCompile targeted source mode', () => {
   it('compiles one source, rebuilds the index, and skips concepts', async () => {
     await runCompile(root, { source: 'foo.md' })
 
-    expect(compileTargetedSourceMock).toHaveBeenCalledWith(root, 'foo.md', undefined)
+    expect(compileTargetedSourceMock).toHaveBeenCalledWith(root, 'foo.md', undefined, undefined)
     expect(rebuildIndexMock).toHaveBeenCalledWith(root, undefined)
     expect(compileSourcesMock).not.toHaveBeenCalled()
     expect(extractConceptsMock).not.toHaveBeenCalled()

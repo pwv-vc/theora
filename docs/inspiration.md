@@ -1,3 +1,11 @@
+---
+title: "Inspiration"
+description: "How Andrej Karpathy's LLM Knowledge Bases post inspired Theora"
+date: 2026-04-15
+category: concepts
+tags: [inspiration, history, karpathy, llm-knowledge-bases]
+---
+
 # Inspiration
 
 ![Andrej Karpathy LLM Knowledge Bases post](https://github.com/user-attachments/assets/4c272e32-d912-4eb3-9240-fddd72c648ab)

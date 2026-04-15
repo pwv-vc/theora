@@ -1,3 +1,11 @@
+---
+title: "Why This Works"
+description: "How Theora's compounding knowledge loop creates a self-improving second brain"
+date: 2026-04-15
+category: concepts
+tags: [concepts, compounding, workflow, second-brain]
+---
+
 # Why This Works
 
 Most tools treat knowledge as static — you write notes, they sit there. Theora flips this. The LLM writes and maintains everything. You just steer.

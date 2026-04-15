@@ -792,6 +792,7 @@ export async function compileTargetedSource(
   root: string,
   sourceArg: string,
   onProgress?: (msg: string) => void,
+  stats?: import('../stats.js').CompileStats,
 ): Promise<string> {
   const paths = kbPaths(root)
   const file = resolveRawSourceTarget(root, sourceArg)
@@ -833,13 +834,27 @@ export async function compileTargetedSource(
   removeCompiledArtifactsForSource(file, paths)
   onProgress?.(`Compiling source → ${relSource}`)
 
+  const fileStartTime = Date.now()
+  const fileKind = classifyFile(file)
+  const fileType = fileKind === 'unknown' ? 'unknown' : fileKind
+
   try {
     await compileOneSourceFile(file, paths, emitStep)
+    const fileTimeMs = Date.now() - fileStartTime
+    if (stats) {
+      const { recordFileProcessed } = await import('../stats.js')
+      recordFileProcessed(stats, fileType, fileTimeMs, true)
+    }
     clearStepTick()
     if (spinner) spinner.succeed(`Compiled source: ${relSource}`)
     else onProgress?.(`✓ Compiled source: ${relSource}`)
     return file
   } catch (err) {
+    const fileTimeMs = Date.now() - fileStartTime
+    if (stats) {
+      const { recordFileProcessed } = await import('../stats.js')
+      recordFileProcessed(stats, fileType, fileTimeMs, false)
+    }
     clearStepTick()
     const error = err instanceof Error ? err : new Error(String(err))
     const logPath = logCompilationError(error, file)
@@ -856,7 +871,7 @@ export async function compileTargetedSource(
 
 }
 
-export async function compileSources(root: string, concurrency?: number, onProgress?: (msg: string) => void): Promise<void> {
+export async function compileSources(root: string, concurrency?: number, onProgress?: (msg: string) => void, stats?: import('../stats.js').CompileStats): Promise<void> {
   const paths = kbPaths(root)
   const rawFiles = listRawFilesUnder(paths.raw)
   const existingSlugs = getExistingSourceSlugs(root)
@@ -967,9 +982,23 @@ export async function compileSources(root: string, concurrency?: number, onProgr
         inFlight.add(name)
         updateSpinner()
 
+        const fileStartTime = Date.now()
+        const fileKind = classifyFile(file)
+        const fileType = fileKind === 'unknown' ? 'unknown' : fileKind
+
         try {
           await compileOneSourceFile(file, paths, step => emitSourceStep(name, step))
+          const fileTimeMs = Date.now() - fileStartTime
+          if (stats) {
+            const { recordFileProcessed } = await import('../stats.js')
+            recordFileProcessed(stats, fileType, fileTimeMs, true)
+          }
         } catch (err) {
+          const fileTimeMs = Date.now() - fileStartTime
+          if (stats) {
+            const { recordFileProcessed } = await import('../stats.js')
+            recordFileProcessed(stats, fileType, fileTimeMs, false)
+          }
           const error = err instanceof Error ? err : new Error(String(err))
           const logPath = logCompilationError(error, file)
           const displayMessage = formatCompilationErrorForDisplay(error, file, logPath)
@@ -1014,7 +1043,8 @@ export async function compileSources(root: string, concurrency?: number, onProgr
   }
 }
 
-export async function extractConcepts(root: string, concurrency?: number, onProgress?: (msg: string) => void): Promise<void> {
+export async function extractConcepts(root: string, concurrency?: number, onProgress?: (msg: string) => void, stats?: import('../stats.js').CompileStats): Promise<void> {
+  const conceptsStartTime = Date.now()
   const paths = kbPaths(root)
   const sourceArticles = listWikiArticles().filter(a => a.path.startsWith(paths.wikiSources))
   if (sourceArticles.length === 0) return
@@ -1050,6 +1080,10 @@ Only return the JSON array, no other text. Identify ${conceptMin}-${conceptMax} 
 
   if (spinner) spinner.succeed(`Found ${concepts.length} concepts`)
   else onProgress?.(`Found ${concepts.length} concepts`)
+
+  if (stats) {
+    stats.conceptsFound = concepts.length
+  }
 
   const existingConcepts = listWikiArticles()
     .filter(a => a.path.startsWith(paths.wikiConcepts))
@@ -1119,6 +1153,11 @@ Only return the JSON array, no other text. Identify ${conceptMin}-${conceptMax} 
       })
     )
   )
+
+  if (stats) {
+    stats.conceptsWritten = newConcepts.length
+    stats.conceptsTimeMs = Date.now() - conceptsStartTime
+  }
 
   if (conceptSpinner) {
     conceptSpinner.succeed(`Wrote ${newConcepts.length} concept${newConcepts.length !== 1 ? 's' : ''}`)

@@ -1,3 +1,11 @@
+---
+title: "Charts"
+description: "Generate matplotlib charts and visualizations from your wiki data"
+date: 2026-04-15
+category: docs
+tags: [charts, output, matplotlib, visualization]
+---
+
 # Charts
 
 `theora ask` can generate matplotlib charts directly from your wiki data using `--output chart`. The LLM reads the relevant wiki articles, extracts the data, and writes a Python script that renders a PNG.

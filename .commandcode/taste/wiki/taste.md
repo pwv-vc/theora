@@ -22,3 +22,4 @@
 - When building entities during compile, use slug-style labels (e.g., `people/philip-glass`, `actors/matt-frewer`, `tv-series/max-headroom-20-minutes-into-the-future`, `organizations/tower-records`) instead of path-style labels (e.g., `people/Philip Glass`, `organizations/Tower Records`). TV series and films belong in `tv-series/` and `movies/`, not `products/`. Confidence: 0.90
 - In wiki source view page headers, display the source type as a pill/badge containing both the Lucide icon and the source type text label (e.g., "audio", "pdf", "image"). Confidence: 0.75
 - When extracting entities from LLM answers for knowledge base queries, include entities that appear in the answer content even if mentioned only once — do not require multiple occurrences or partial name matching. Confidence: 0.85
+- Track concept extraction statistics (count, timing) during wiki compile and display them in compile stats output. Confidence: 0.75

@@ -2,6 +2,7 @@ import { Command } from 'commander'
 import pc from 'picocolors'
 import { requireKbRoot } from '../lib/paths.js'
 import { runCompile } from '../lib/compile/index.js'
+import { displayCompileStats, finalizeStats, type CompileStats } from '../lib/stats.js'
 
 export const compileCommand = new Command('compile')
   .description('Compile raw sources into the wiki')
@@ -11,6 +12,7 @@ export const compileCommand = new Command('compile')
   .option('--reindex', 'only rebuild the index')
   .option('--force', 'delete existing wiki articles and recompile everything from scratch')
   .option('--concurrency <n>', 'parallel LLM calls during compile (overrides config)')
+  .option('--no-stats', 'suppress stats output (useful for piping)')
   .action(async (options: {
     source?: string
     sourcesOnly?: boolean
@@ -18,6 +20,7 @@ export const compileCommand = new Command('compile')
     reindex?: boolean
     force?: boolean
     concurrency?: string
+    stats?: boolean
   }) => {
     if (options.source && options.force) {
       throw new Error('--source cannot be used with --force')
@@ -32,6 +35,18 @@ export const compileCommand = new Command('compile')
     const root = requireKbRoot()
     const concurrency = options.concurrency ? parseInt(options.concurrency, 10) : undefined
 
+    const compileStats: CompileStats = {
+      totalFiles: 0,
+      compiled: 0,
+      failed: 0,
+      byType: new Map(),
+      totalTimeMs: 0,
+      startTime: Date.now(),
+      conceptsFound: 0,
+      conceptsWritten: 0,
+      conceptsTimeMs: 0,
+    }
+
     await runCompile(root, {
       source: options.source,
       force: options.force,
@@ -39,10 +54,16 @@ export const compileCommand = new Command('compile')
       conceptsOnly: options.conceptsOnly,
       reindex: options.reindex,
       concurrency,
-    })
+    }, undefined, compileStats)
+
+    finalizeStats(compileStats)
+
+    // Display stats unless suppressed
+    if (options.stats !== false) {
+      console.log(displayCompileStats(compileStats))
+    }
 
     if (!options.reindex) {
-      console.log()
       if (options.source) {
         console.log(`${pc.green('Compiled source:')} ${pc.cyan(options.source)}. Run ${pc.cyan('theora ask <question>')} to query the wiki.`)
       } else {

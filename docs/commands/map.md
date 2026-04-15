@@ -1,3 +1,11 @@
+---
+title: "map"
+description: "Generate mind maps and focal graphs from your wiki"
+date: 2026-04-15
+category: commands
+tags: [map, command, cli, visualization, mind-map]
+---
+
 # map
 
 `theora map` builds a **focal graph** of your compiled wiki (sources, concepts, tags, entities, and links between them) and writes **[Markmap](https://markmap.js.org/repl)**-compatible markdown under `output/`. No headless browser is involved: you get a `.md` file you can open in Markmap tooling, IDEs, or static viewers.

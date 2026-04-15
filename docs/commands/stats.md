@@ -1,3 +1,11 @@
+---
+title: "stats"
+description: "Show LLM usage statistics and track API calls over time"
+date: 2026-04-15
+category: commands
+tags: [stats, command, cli, usage, analytics]
+---
+
 # stats
 
 Show LLM usage statistics — track API calls, tokens, costs, and performance over time:

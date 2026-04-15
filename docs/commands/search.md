@@ -1,3 +1,11 @@
+---
+title: "search"
+description: "Lexical search over compiled markdown with BM25 ranking"
+date: 2026-04-15
+category: commands
+tags: [search, command, cli, lexical]
+---
+
 # search
 
 **Lexical search** over compiled markdown: everything under **`wiki/`** (sources and concepts) and **`output/`** (filed answers, mind maps, and other generated markdown). This is **not** semantic Q&A — for that, use **`theora ask`**, which ranks articles with an LLM and synthesizes an answer.

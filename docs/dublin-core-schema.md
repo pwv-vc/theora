@@ -1,3 +1,11 @@
+---
+title: "Dublin Core Schema"
+description: "Metadata standards for knowledge base import and export using Dublin Core"
+date: 2026-04-15
+category: docs
+tags: [dublin-core, metadata, schema, standards]
+---
+
 # Dublin Core Schema
 
 Theora uses [Dublin Core](https://www.dublincore.org/) metadata standards for knowledge base import and export. This ensures interoperability with library systems, digital repositories, and academic tools.

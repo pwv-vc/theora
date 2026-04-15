@@ -1,3 +1,11 @@
+---
+title: "LLM Providers"
+description: "Configure OpenAI, Anthropic, and OpenAI-compatible providers for Theora"
+date: 2026-04-15
+category: docs
+tags: [llm, providers, openai, anthropic, configuration]
+---
+
 # LLM Providers
 
 Theora supports multiple LLM providers. OpenAI is the default.

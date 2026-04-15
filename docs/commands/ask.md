@@ -1,3 +1,11 @@
+---
+title: "ask"
+description: "Ask questions using LLM-powered semantic search over your wiki"
+date: 2026-04-15
+category: commands
+tags: [ask, command, cli, query, search]
+---
+
 # ask
 
 ```bash

@@ -1,3 +1,11 @@
+---
+title: "Tags"
+description: "Organize and categorize your knowledge base with tags"
+date: 2026-04-15
+category: docs
+tags: [tags, organization, metadata, search]
+---
+
 # Tags
 
 Tags are how you tell the wiki what things are about. Without tags, the LLM guesses — and it's decent at guessing. But when you're researching multiple topics at once, tags keep everything organized and findable.

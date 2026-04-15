@@ -9,6 +9,17 @@ import { VALID_EXTS, ingestLocalFile, ingestUrlSource, isUrl, isValidFile } from
 import { normalizeYouTubeInput } from '../lib/youtube.js'
 import { bulkIngest, isZipFile, importFromZip, type BulkIngestResult } from '../lib/bulk-ingest.js'
 import { runCompile } from '../lib/compile/index.js'
+import {
+  createIngestStats,
+  displayIngestStats,
+  recordFileProcessed,
+  finalizeStats,
+  createCompileStats,
+  displayCompileStats,
+  type IngestStats,
+  type CompileStats,
+} from '../lib/stats.js'
+
 function collectFiles(dir: string): string[] {
   const results: string[] = []
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -26,7 +37,8 @@ export const ingestCommand = new Command('ingest')
   .option('--tag <tag>', 'tag to categorize the source')
   .option('--from <file>', 'ingest from export zip or KB JSON file (use - for stdin)')
   .option('--compile', 'compile the wiki after ingestion completes')
-  .action(async (sources: string[], options: { tag?: string; from?: string; compile?: boolean }) => {
+  .option('--no-stats', 'suppress stats output (useful for piping)')
+  .action(async (sources: string[], options: { tag?: string; from?: string; compile?: boolean; stats?: boolean }) => {
     const root = requireKbRoot()
     const paths = kbPaths(root)
 
@@ -56,6 +68,8 @@ export const ingestCommand = new Command('ingest')
     const existingNames = new Set(entries.map(e => e.name))
     const existingUrls = new Set(entries.flatMap(e => e.url ? [e.url] : []))
 
+    const stats = createIngestStats()
+
     // Handle bulk ingest from file (including zip archives)
     if (hasFrom) {
       const fromPath = options.from!
@@ -81,13 +95,16 @@ export const ingestCommand = new Command('ingest')
                 tag: options.tag ?? null,
                 url: r.url,
               })
+              // Track by file extension
+              const ext = r.name.split('.').pop()?.toLowerCase() || 'unknown'
+              recordFileProcessed(stats, ext, 0, true)
             }
           }
 
           writeManifest(entries)
           spinner.succeed(`Imported from zip archive`)
 
-          // Display stats
+          // Display basic stats
           const parts = [`Ingested ${result.stats.ingested} file${result.stats.ingested !== 1 ? 's' : ''}`]
           if (result.stats.skippedDupe > 0) parts.push(`${result.stats.skippedDupe} skipped (already ingested)`)
           if (result.stats.errors > 0) parts.push(`${result.stats.errors} failed`)
@@ -115,25 +132,44 @@ export const ingestCommand = new Command('ingest')
               tag: options.tag ?? null,
               url: r.url,
             })
+            // Track by file extension
+            const ext = r.name.split('.').pop()?.toLowerCase() || 'unknown'
+            recordFileProcessed(stats, ext, 0, true)
           }
         }
 
         writeManifest(entries)
 
-        // Display stats
+        // Display basic stats
         const parts = [`Ingested ${result.stats.ingested} file${result.stats.ingested !== 1 ? 's' : ''}`]
         if (result.stats.skippedDupe > 0) parts.push(`${result.stats.skippedDupe} skipped (already ingested)`)
         if (result.stats.errors > 0) parts.push(`${result.stats.errors} failed`)
         console.log(pc.green('✓') + ' ' + parts.join(', '))
       }
 
+      // Finalize and display detailed stats
+      finalizeStats(stats)
+      if (options.stats !== false) {
+        console.log(displayIngestStats(stats, VALID_EXTS))
+      }
+
       // Handle --compile flag after bulk ingest operations
       if (options.compile) {
         console.log()
+        const compileStats = createCompileStats()
         const spinner = ora('Compiling wiki...').start()
         try {
-          await runCompile(root, {})
+          await runCompile(root, {}, (msg) => {
+            spinner.text = msg
+          }, compileStats)
           spinner.succeed('Compilation complete')
+          // Add newline before stats for better separation
+          if (options.stats !== false) {
+            const statsOutput = displayCompileStats(compileStats)
+            if (statsOutput.trim()) {
+              console.log(statsOutput)
+            }
+          }
           console.log(`Run ${pc.cyan('theora ask <question>')} to query the wiki`)
         } catch (err) {
           spinner.fail(`Compilation failed: ${err instanceof Error ? err.message : String(err)}`)
@@ -153,7 +189,9 @@ export const ingestCommand = new Command('ingest')
 
       if (remoteSource) {
         const spinner = ora(`Fetching: ${source}`).start()
+        const fetchStartTime = Date.now()
         const result = await ingestUrlSource(remoteSource, destDir, existingNames, existingUrls)
+        const fetchTimeMs = Date.now() - fetchStartTime
         if (result.status === 'ingested') {
           entries.push({
             name: result.name,
@@ -162,11 +200,16 @@ export const ingestCommand = new Command('ingest')
             url: result.url ?? remoteSource,
           })
           ingested++
+          // Track by URL type
+          const urlType = result.url?.includes('youtube') ? 'youtube' : 'url'
+          recordFileProcessed(stats, urlType, fetchTimeMs, true)
           spinner.succeed(`Fetched: ${result.name}`)
         } else if (result.status === 'skipped_dupe') {
           skippedDupe++
+          recordFileProcessed(stats, 'skipped', 0, false)
           spinner.warn(`Already ingested: ${result.name}`)
         } else {
+          recordFileProcessed(stats, 'error', fetchTimeMs, false)
           spinner.fail(`Failed to fetch ${source}: ${result.error ?? 'Unknown error'}`)
         }
         continue
@@ -182,16 +225,24 @@ export const ingestCommand = new Command('ingest')
       const sourceRoot = statSync(src).isDirectory() ? src : undefined
 
       for (const file of filesToIngest) {
+        const fileStartTime = Date.now()
         const result = ingestLocalFile(file, destDir, existingNames, sourceRoot)
+        const fileTimeMs = Date.now() - fileStartTime
+        const ext = extname(file).toLowerCase().slice(1) || 'unknown'
+
         if (result.status === 'ingested') {
           entries.push({ name: result.name, ingested: new Date().toISOString(), tag: options.tag ?? null })
           ingested++
+          recordFileProcessed(stats, ext, fileTimeMs, true)
         } else if (result.status === 'skipped_type') {
           skippedType++
+          recordFileProcessed(stats, 'skipped', 0, false)
         } else if (result.status === 'skipped_dupe') {
           skippedDupe++
+          recordFileProcessed(stats, 'skipped', 0, false)
         } else if (result.status === 'skipped_size') {
           skippedSize++
+          recordFileProcessed(stats, 'skipped', 0, false)
           console.log(pc.yellow(`Skipped (too large): ${result.name}`))
         }
       }
@@ -199,22 +250,34 @@ export const ingestCommand = new Command('ingest')
 
     writeManifest(entries)
 
-    const parts = [`Ingested ${ingested} file${ingested !== 1 ? 's' : ''}`]
-    if (skippedType > 0) parts.push(`${skippedType} skipped (unsupported type)`)
-    if (skippedDupe > 0) parts.push(`${skippedDupe} skipped (already ingested)`)
-    if (skippedSize > 0) parts.push(`${skippedSize} skipped (exceeds size limit for file type)`)
-    console.log(pc.green('✓') + ' ' + parts.join(', '))
+    // Update stats with final counts
+    stats.ingested = ingested
+    stats.skippedType = skippedType
+    stats.skippedDupe = skippedDupe
+    stats.skippedSize = skippedSize
+    finalizeStats(stats)
 
-    if (skippedType > 0) {
-      console.log(pc.gray(`Supported: ${[...VALID_EXTS].join(', ')}`))
+    // Display stats unless suppressed
+    if (options.stats !== false) {
+      console.log(displayIngestStats(stats, VALID_EXTS))
     }
 
     if (options.compile) {
       console.log()
+      const compileStats = createCompileStats()
       const spinner = ora('Compiling wiki...').start()
       try {
-        await runCompile(root, {})
+        await runCompile(root, {}, (msg) => {
+          spinner.text = msg
+        }, compileStats)
         spinner.succeed('Compilation complete')
+        // Add newline before stats for better separation
+        if (options.stats !== false) {
+          const statsOutput = displayCompileStats(compileStats)
+          if (statsOutput.trim()) {
+            console.log(statsOutput)
+          }
+        }
         console.log(`Run ${pc.cyan('theora ask <question>')} to query the wiki`)
       } catch (err) {
         spinner.fail(`Compilation failed: ${err instanceof Error ? err.message : String(err)}`)
