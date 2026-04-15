@@ -1,13 +1,14 @@
 import pc from "picocolors";
-import { listLanIPv4 } from './serve-listen.js'
+import { listLanIPv4 } from "./serve-listen.js";
 
 export async function printServeListenBanner(options: {
   port: number;
   kbRoot?: string;
+  kbName?: string;
   /** LAN URLs, QR code, and Safari HTTP tips for phones / tablets on your network */
   share?: boolean;
 }): Promise<void> {
-  const { port, kbRoot, share = false } = options;
+  const { port, kbRoot, kbName, share = false } = options;
   const localhostUrl = `http://localhost:${port}`;
 
   console.log();
@@ -42,7 +43,13 @@ export async function printServeListenBanner(options: {
 
   if (kbRoot) {
     console.log();
-    console.log(`${pc.gray("KB root")} ${pc.dim(kbRoot)}`);
+    if (kbName) {
+      console.log(
+        `${pc.gray("Serving")} ${pc.cyan(kbName)} ${pc.gray("from")} ${pc.cyan(kbRoot)} ...`,
+      );
+    } else {
+      console.log(`${pc.gray("KB root")} ${pc.dim(kbRoot)}`);
+    }
   }
 
   if (share) {
@@ -62,7 +69,9 @@ export async function printServeListenBanner(options: {
         });
         console.log(qr);
       } catch {
-        console.log(pc.yellow("  Could not render a QR code in this terminal."));
+        console.log(
+          pc.yellow("  Could not render a QR code in this terminal."),
+        );
       }
     }
 

@@ -47,7 +47,7 @@ See [wiki/taste.md](wiki/taste.md)
 # web
 See [web/taste.md](web/taste.md)
 # workflow
-- After implementing a feature, run build and typecheck as verification steps before considering the task complete. Confidence: 0.85
+- Always run build and typecheck as verification steps after making changes, and fix any errors found before considering the task complete. Confidence: 0.90
 - When a task can be accomplished with existing CLI tools (e.g., jq, grep, sed), prefer showing the user how to use those tools rather than writing new code. Confidence: 0.90
 
 # code-style

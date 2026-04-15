@@ -4,6 +4,7 @@
 theora ask "what are the key differences between transformers and RNNs?"
 theora ask "summarize the main findings across all papers"
 theora ask "what open questions remain in this research area?"
+theora ask "what did they contribute?" --entity person/alice-smith
 ```
 
 In **zsh**, `?`, `*`, and `[` in an unquoted question are treated as globs, which can fail before `theora` runs (for example `theora ask what is pi?`). Quote the question, or pass it on **stdin** with `--stdin` so the shell never expands those characters:
@@ -13,7 +14,7 @@ theora ask --stdin <<< 'what is pi?'
 printf '%s\n' 'Any question with ? * or [chars]?' | theora ask --stdin
 ```
 
-`--stdin` reads the full question from stdin (trimmed of trailing newlines). Do not pass a positional question when using `--stdin`. Other flags such as `--no-file`, `--tag`, and `--output` work the same as with a normal `ask`.
+`--stdin` reads the full question from stdin (trimmed of trailing newlines). Do not pass a positional question when using `--stdin`. Other flags such as `--no-file`, `--tag`, `--entity`, and `--output` work the same as with a normal `ask`.
 
 ## How ask works
 
@@ -29,13 +30,19 @@ Use `--tag` to pre-filter wiki articles before ranking — only articles tagged 
 theora ask "what are the scaling challenges?" --tag transformers
 ```
 
+Use `--entity` to pre-filter by entity — only articles mentioning that entity are considered. Format is `type/name` (e.g., `person/john-doe`, `company/acme-corp`):
+
+```bash
+theora ask "what are their contributions?" --entity person/alice-smith
+```
+
 Use `--debug` to see which articles were selected by the ranker and how many were considered:
 
 ```bash
 theora ask "what are the scaling challenges?" --debug
 ```
 
-Debug output shows the tag filter (if any), total wiki articles considered, the ranked selection with relevance order, and any prior answers from `output/` that were included.
+Debug output shows the tag filter (if any), entity filter (if any), total wiki articles considered, the ranked selection with relevance order, and any prior answers from `output/` that were included.
 
 Use `--max-context <n>` to override the default 20 article limit for context:
 

@@ -20,6 +20,7 @@ import { apiRoutes } from './routes/api.js'
 export type StartServerOptions = {
   port: number
   kbRoot?: string
+  kbName?: string
   /** LAN URLs, QR, Safari tips — pass through from `theora serve --share` */
   share?: boolean
 }
@@ -67,6 +68,7 @@ export function startServer(options: StartServerOptions | number): void {
     void printServeListenBanner({
       port: info.port,
       kbRoot: opts.kbRoot,
+      kbName: opts.kbName,
       share: opts.share,
     })
   })

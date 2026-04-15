@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import pc from 'picocolors'
 import { requireKbRoot } from '../lib/paths.js'
+import { readConfig, getKbName } from '../lib/config.js'
 import { startServer } from '../web/server.js'
 
 export const serveCommand = new Command('serve')
@@ -22,5 +23,7 @@ export const serveCommand = new Command('serve')
       return
     }
 
-    startServer({ port, kbRoot: root, share: Boolean(options.share) })
+    const config = readConfig()
+    const kbName = getKbName(config)
+    startServer({ port, kbRoot: root, kbName, share: Boolean(options.share) })
   })

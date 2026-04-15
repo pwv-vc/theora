@@ -65,5 +65,3 @@ At the end of a batch compile, if any sources failed, you'll see a summary:
 1 compilation failure:
   • youtube-3Co8Z8BQgWc.md → /Users/you/.theora/logs/compile-youtube-3Co8Z8BQgWc-2026-04-13T08-05-12-000Z.log
 ```
-00Z.log
-```
