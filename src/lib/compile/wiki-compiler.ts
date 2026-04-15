@@ -92,8 +92,15 @@ function mergeTags(ingestTag: string | null, llmTags: string[]): string[] {
   return [...set].sort()
 }
 
-function getSourceSlug(filePath: string): string {
-  return slugify(basename(filePath, extname(filePath)))
+function getSourceSlug(filePath: string, rawDir?: string): string {
+  // Use relative path from rawDir if provided to avoid collisions
+  const relPath = rawDir
+    ? relative(rawDir, filePath).replace(/\\/g, '/')
+    : filePath
+  // Include directory structure in slug to avoid collisions
+  // e.g., "subdir1/readme.md" -> "subdir1-readme"
+  const pathWithoutExt = relPath.slice(0, -extname(relPath).length)
+  return slugify(pathWithoutExt.replace(/\//g, '-'))
 }
 
 function getExistingSourceSlugs(root: string): Set<string> {
@@ -113,7 +120,7 @@ function listRawFilesUnder(rawDir: string): string[] {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const full = join(dir, entry.name)
       if (entry.isDirectory()) walk(full)
-      else files.push(full)
+      else if (entry.name !== '.manifest.json') files.push(full)
     }
   }
 
@@ -197,7 +204,7 @@ function replaceExactSection(body: string, heading: string, replacement: string)
 
 async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
   const name = basename(file, extname(file))
-  const slug = slugify(name)
+  const slug = getSourceSlug(file, paths.raw)
   let content = readFileSync(file, 'utf-8').slice(0, 50000)
   if (content.includes('**Source:** YouTube captions')) {
     content = sanitizeExistingYouTubeTranscriptMarkdown(content)
@@ -237,7 +244,7 @@ async function compileTextFile(file: string, paths: ReturnType<typeof kbPaths>, 
 
 async function compileDataFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
   const name = basename(file, extname(file))
-  const slug = slugify(name)
+  const slug = getSourceSlug(file, paths.raw)
   const sourceUrl = getUrlForFile(basename(file))
 
   const content = readFileSync(file, 'utf-8').slice(0, 50000)
@@ -264,7 +271,7 @@ async function compileDataFile(file: string, paths: ReturnType<typeof kbPaths>, 
 
 async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
   const name = basename(file, extname(file))
-  const slug = slugify(name)
+  const slug = getSourceSlug(file, paths.raw)
   const sourceUrl = getUrlForFile(basename(file))
 
   const buffer = readFileSync(file)
@@ -296,7 +303,7 @@ async function compilePdfFile(file: string, paths: ReturnType<typeof kbPaths>, i
 
 async function compileDocxFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
   const name = basename(file, extname(file))
-  const slug = slugify(name)
+  const slug = getSourceSlug(file, paths.raw)
   const sourceUrl = getUrlForFile(basename(file))
 
   const buffer = readFileSync(file)
@@ -326,7 +333,7 @@ async function compileDocxFile(file: string, paths: ReturnType<typeof kbPaths>, 
 
 async function compileImageFile(file: string, paths: ReturnType<typeof kbPaths>, ingestTag: string | null): Promise<void> {
   const name = basename(file, extname(file))
-  const slug = getSourceSlug(file)
+  const slug = getSourceSlug(file, paths.raw)
   const ext = extname(file).toLowerCase()
   const sourceUrl = getUrlForFile(basename(file))
 
@@ -437,7 +444,7 @@ async function compileAudioFile(
   onStep?: (step: string) => void,
 ): Promise<void> {
   const name = basename(file, extname(file))
-  const slug = getSourceSlug(file)
+  const slug = getSourceSlug(file, paths.raw)
   const ext = extname(file).toLowerCase().slice(1)
   const cfg = readConfig()
   const sourceUrl = getUrlForFile(basename(file))
@@ -531,7 +538,7 @@ async function compileVideoFile(
   }
 
   const name = basename(file, extname(file))
-  const slug = getSourceSlug(file)
+  const slug = getSourceSlug(file, paths.raw)
   const cfg = readConfig()
   const sourceUrl = getUrlForFile(basename(file))
   const tmpDir = mkdtempSync(join(tmpdir(), 'theora-video-'))
@@ -732,7 +739,7 @@ export function resolveRawSourceTarget(root: string, sourceArg: string): string 
 
 function removeCompiledArtifactsForSource(file: string, paths: ReturnType<typeof kbPaths>): void {
   const name = basename(file, extname(file))
-  const slug = getSourceSlug(file)
+  const slug = getSourceSlug(file, paths.raw)
   const transcriptSlug = slugify(`${name}.transcript`)
   const transcriptRaw = join(dirname(file), `${name}.transcript.md`)
   const framesDir = join(dirname(file), `${name}.frames`)
@@ -859,7 +866,7 @@ export async function compileSources(root: string, concurrency?: number, onProgr
     if (isRawVideoExtractedFramePath(f)) return false
     const kind = classifyFile(f)
     if (kind === 'unknown') return false
-    return !existingSlugs.has(getSourceSlug(f))
+    return !existingSlugs.has(getSourceSlug(f, paths.raw))
   })
 
   if (newFiles.length === 0) {

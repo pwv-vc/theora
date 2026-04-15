@@ -1,6 +1,7 @@
 import { copyFileSync, statSync, writeFileSync } from 'node:fs'
-import { extname, basename } from 'node:path'
+import { extname, basename, relative, dirname } from 'node:path'
 import { lookup } from 'node:dns/promises'
+import { mkdirSync } from 'node:fs'
 import { fetchYouTubeTranscript, isYouTubeUrl } from './youtube.js'
 import { slugify } from './utils.js'
 import { safeJoin } from './paths.js'
@@ -226,12 +227,16 @@ export function ingestLocalFile(
   filePath: string,
   destDir: string,
   existingNames: Set<string>,
+  sourceRoot?: string,
 ): IngestResult {
   if (!isValidFile(filePath)) {
     return { name: filePath, status: 'skipped_type', error: `${filePath}: unsupported file type` }
   }
 
-  const name = basename(filePath)
+  // Use relative path from sourceRoot if provided, otherwise just basename
+  const name = sourceRoot
+    ? relative(sourceRoot, filePath).replace(/\\/g, '/')
+    : basename(filePath)
   const maxBytes = maxIngestBytesForFilename(name)
 
   if (statSync(filePath).size > maxBytes) {
@@ -242,7 +247,9 @@ export function ingestLocalFile(
     return { name, status: 'skipped_dupe' }
   }
 
-  copyFileSync(filePath, safeJoin(destDir, name))
+  const destPath = safeJoin(destDir, name)
+  mkdirSync(dirname(destPath), { recursive: true })
+  copyFileSync(filePath, destPath)
   existingNames.add(name)
   return { name, status: 'ingested' }
 }

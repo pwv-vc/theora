@@ -179,9 +179,10 @@ export const ingestCommand = new Command('ingest')
       }
 
       const filesToIngest = statSync(src).isDirectory() ? collectFiles(src) : [src]
+      const sourceRoot = statSync(src).isDirectory() ? src : undefined
 
       for (const file of filesToIngest) {
-        const result = ingestLocalFile(file, destDir, existingNames)
+        const result = ingestLocalFile(file, destDir, existingNames, sourceRoot)
         if (result.status === 'ingested') {
           entries.push({ name: result.name, ingested: new Date().toISOString(), tag: options.tag ?? null })
           ingested++
