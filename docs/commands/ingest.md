@@ -38,6 +38,25 @@ theora ingest ./local-notes.md https://example.com/article ~/Downloads/paper.pdf
 
 Only valid file types are ingested — everything else is skipped. Duplicates are detected automatically so you can re-run the same ingest without creating copies. Files get copied (flattened) into `raw/`.
 
+## Optional flags
+
+| Flag | Description |
+|------|-------------|
+| `--tag <tag>` | Categorize sources with a tag (lowercase letters, numbers, hyphens only) |
+| `--from <file>` | Ingest from an export zip or KB JSON file (use `-` for stdin) |
+| `--compile` | Automatically compile the wiki after ingestion completes |
+
+### Auto-compile after ingest
+
+Add `--compile` to ingest sources and immediately build the wiki in one command:
+
+```bash
+theora ingest ~/Downloads/papers/*.pdf --tag research --compile
+theora ingest https://example.com/article --tag project --compile
+```
+
+This is equivalent to running `theora ingest` followed by `theora compile`.
+
 ## Supported file types
 
 | Type | Extensions | How it's compiled |

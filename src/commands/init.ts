@@ -59,7 +59,19 @@ export const initCommand = new Command('init')
       writeFileSync(paths.theme, DEFAULT_THEME)
     }
 
-    if (!existsSync(join(cwd, '.env'))) {
+    // Check/create global .env first
+    let globalEnvMessage = ''
+    let usingGlobalEnv = false
+    if (!globalEnvExists()) {
+      const globalEnvPath = createGlobalEnv()
+      globalEnvMessage = `\nCreated global .env at ${pc.cyan(globalEnvPath)}`
+    } else {
+      globalEnvMessage = `\nUsing global .env at ${pc.cyan(getGlobalEnvPath())}`
+      usingGlobalEnv = true
+    }
+
+    // Only create local .env if no global env exists
+    if (!usingGlobalEnv && !existsSync(join(cwd, '.env'))) {
       writeFileSync(join(cwd, '.env'), `# theora — LLM API Keys
 
 # OpenAI (default)
@@ -72,15 +84,6 @@ OPENAI_API_KEY=
 # Anthropic
 # ANTHROPIC_API_KEY=
 `)
-    }
-
-    // Check/create global .env
-    let globalEnvMessage = ''
-    if (!globalEnvExists()) {
-      const globalEnvPath = createGlobalEnv()
-      globalEnvMessage = `\nCreated global .env at ${pc.cyan(globalEnvPath)}`
-    } else {
-      globalEnvMessage = `\nUsing global .env at ${pc.cyan(getGlobalEnvPath())}`
     }
 
     writeFileSync(paths.wikiIndex, `# ${name}
@@ -112,6 +115,13 @@ _No concepts compiled yet. Run \`theora compile\` after ingesting sources._
     checkDeps()
 
     console.log()
-    console.log(`Next: add your API key to ${pc.cyan('.env')}, then ${pc.cyan('theora ingest <file>')}`)
-    console.log(pc.gray('       (or use the global .env at ~/.theora/.env for all KBs)'))
+    if (usingGlobalEnv) {
+      console.log(`Using global .env at ${pc.cyan(getGlobalEnvPath())}`)
+      console.log(pc.gray('       (create a local .env to override for this KB)'))
+      console.log()
+      console.log(`Next: ${pc.cyan('theora ingest <file>')}`)
+    } else {
+      console.log(`Next: add your API key to ${pc.cyan('.env')}, then ${pc.cyan('theora ingest <file>')}`)
+      console.log(pc.gray('       (or use the global .env at ~/.theora/.env for all KBs)'))
+    }
   })

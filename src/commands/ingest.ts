@@ -8,6 +8,7 @@ import { readManifest, writeManifest } from '../lib/manifest.js'
 import { VALID_EXTS, ingestLocalFile, ingestUrlSource, isUrl, isValidFile } from '../lib/ingest.js'
 import { normalizeYouTubeInput } from '../lib/youtube.js'
 import { bulkIngest, isZipFile, importFromZip, type BulkIngestResult } from '../lib/bulk-ingest.js'
+import { runCompile } from '../lib/compile/index.js'
 function collectFiles(dir: string): string[] {
   const results: string[] = []
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -24,7 +25,8 @@ export const ingestCommand = new Command('ingest')
   .argument('[sources...]', 'files, directories, or URLs to ingest')
   .option('--tag <tag>', 'tag to categorize the source')
   .option('--from <file>', 'ingest from export zip or KB JSON file (use - for stdin)')
-  .action(async (sources: string[], options: { tag?: string; from?: string }) => {
+  .option('--compile', 'compile the wiki after ingestion completes')
+  .action(async (sources: string[], options: { tag?: string; from?: string; compile?: boolean }) => {
     const root = requireKbRoot()
     const paths = kbPaths(root)
 
@@ -90,45 +92,56 @@ export const ingestCommand = new Command('ingest')
           if (result.stats.skippedDupe > 0) parts.push(`${result.stats.skippedDupe} skipped (already ingested)`)
           if (result.stats.errors > 0) parts.push(`${result.stats.errors} failed`)
           console.log(pc.green('✓') + ' ' + parts.join(', '))
-
-          console.log(`Next: ${pc.cyan('theora compile')} to build the wiki`)
-          return
         } catch (err) {
           spinner.fail(`Failed to import from zip: ${err instanceof Error ? err.message : String(err)}`)
           process.exit(1)
         }
-      }
+      } else {
+        // Regular file (JSON or text)
+        const result = await bulkIngest({
+          filePath: fromPath,
+          destDir,
+          existingNames,
+          existingUrls,
+          tag: options.tag,
+        })
 
-      // Regular file (JSON or text)
-      const result = await bulkIngest({
-        filePath: fromPath,
-        destDir,
-        existingNames,
-        existingUrls,
-        tag: options.tag,
-      })
-
-      // Update manifest with results
-      for (const r of result.results) {
-        if (r.status === 'ingested' && r.url) {
-          entries.push({
-            name: r.name,
-            ingested: new Date().toISOString(),
-            tag: options.tag ?? null,
-            url: r.url,
-          })
+        // Update manifest with results
+        for (const r of result.results) {
+          if (r.status === 'ingested' && r.url) {
+            entries.push({
+              name: r.name,
+              ingested: new Date().toISOString(),
+              tag: options.tag ?? null,
+              url: r.url,
+            })
+          }
         }
+
+        writeManifest(entries)
+
+        // Display stats
+        const parts = [`Ingested ${result.stats.ingested} file${result.stats.ingested !== 1 ? 's' : ''}`]
+        if (result.stats.skippedDupe > 0) parts.push(`${result.stats.skippedDupe} skipped (already ingested)`)
+        if (result.stats.errors > 0) parts.push(`${result.stats.errors} failed`)
+        console.log(pc.green('✓') + ' ' + parts.join(', '))
       }
 
-      writeManifest(entries)
-
-      // Display stats
-      const parts = [`Ingested ${result.stats.ingested} file${result.stats.ingested !== 1 ? 's' : ''}`]
-      if (result.stats.skippedDupe > 0) parts.push(`${result.stats.skippedDupe} skipped (already ingested)`)
-      if (result.stats.errors > 0) parts.push(`${result.stats.errors} failed`)
-      console.log(pc.green('✓') + ' ' + parts.join(', '))
-
-      console.log(`Next: ${pc.cyan('theora compile')} to build the wiki`)
+      // Handle --compile flag after bulk ingest operations
+      if (options.compile) {
+        console.log()
+        const spinner = ora('Compiling wiki...').start()
+        try {
+          await runCompile(root, {})
+          spinner.succeed('Compilation complete')
+          console.log(`Run ${pc.cyan('theora ask <question>')} to query the wiki`)
+        } catch (err) {
+          spinner.fail(`Compilation failed: ${err instanceof Error ? err.message : String(err)}`)
+          process.exit(1)
+        }
+      } else {
+        console.log(`Next: ${pc.cyan('theora compile')} to build the wiki`)
+      }
       return
     }
 
@@ -195,5 +208,18 @@ export const ingestCommand = new Command('ingest')
       console.log(pc.gray(`Supported: ${[...VALID_EXTS].join(', ')}`))
     }
 
-    console.log(`Next: ${pc.cyan('theora compile')} to build the wiki`)
+    if (options.compile) {
+      console.log()
+      const spinner = ora('Compiling wiki...').start()
+      try {
+        await runCompile(root, {})
+        spinner.succeed('Compilation complete')
+        console.log(`Run ${pc.cyan('theora ask <question>')} to query the wiki`)
+      } catch (err) {
+        spinner.fail(`Compilation failed: ${err instanceof Error ? err.message : String(err)}`)
+        process.exit(1)
+      }
+    } else {
+      console.log(`Next: ${pc.cyan('theora compile')} to build the wiki`)
+    }
   })

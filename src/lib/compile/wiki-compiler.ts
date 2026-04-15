@@ -881,6 +881,7 @@ export async function compileSources(root: string, concurrency?: number, onProgr
   if (byKind.image > 0) parts.push(`${byKind.image} image${byKind.image !== 1 ? 's' : ''}`)
   if (byKind.audio > 0) parts.push(`${byKind.audio} audio file${byKind.audio !== 1 ? 's' : ''}`)
   if (byKind.video > 0) parts.push(`${byKind.video} video${byKind.video !== 1 ? 's' : ''}`)
+  console.log()
   console.log(`Found ${newFiles.length} new source${newFiles.length !== 1 ? 's' : ''} to compile (${parts.join(', ')})`)
 
   const { compileConcurrency } = readConfig()
