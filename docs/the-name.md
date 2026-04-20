@@ -1,3 +1,11 @@
+---
+title: "The Name"
+description: "The origin of Theora's name - from Max Headroom to the oracle"
+date: 2026-04-15
+category: concepts
+tags: [naming, history, max-headroom, oracle]
+---
+
 # The Name
 
 **Theora** is named after Theora Jones — network controller and systems operator at Network 23 in _Max Headroom: 20 Minutes into the Future_. While others exploit the media landscape around her, Theora is the one who understands the infrastructure, keeps things running, and bridges systems and people. She's calm, competent, and grounded in a chaotic world.

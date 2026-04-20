@@ -1,3 +1,11 @@
+---
+title: "Slide Decks"
+description: "Generate PDF slide decks from your wiki using Marp"
+date: 2026-04-15
+category: docs
+tags: [slides, output, marp, pdf, presentation]
+---
+
 # Slide Decks
 
 Theora can generate slide decks from your wiki using [Marp](https://marp.app/). The LLM structures its answer as slides — title slide, focused bullet points, section dividers, and a summary at the end. If you have `marp-cli` installed, the deck is automatically exported to PDF.

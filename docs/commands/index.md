@@ -1,3 +1,11 @@
+---
+title: "Commands Overview"
+description: "Complete reference for all Theora CLI commands with quick start guide"
+date: 2026-04-15
+category: commands
+tags: [commands, cli, reference, overview]
+---
+
 # Commands
 
 Theora's CLI provides commands for building and querying your knowledge base.

@@ -1,3 +1,11 @@
+---
+title: "tail"
+description: "Watch LLM call logs in real-time"
+date: 2026-04-15
+category: commands
+tags: [tail, command, cli, logs, monitoring]
+---
+
 # tail
 
 Watch LLM call logs in real-time, similar to `tail -f`:

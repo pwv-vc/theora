@@ -1,3 +1,11 @@
+---
+title: "Getting Started"
+description: "Prerequisites, installation, and first steps with Theora"
+date: 2026-04-15
+category: docs
+tags: [getting-started, installation, setup]
+---
+
 # Getting Started
 
 ## Prerequisites

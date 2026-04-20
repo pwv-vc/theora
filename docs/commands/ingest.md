@@ -1,3 +1,11 @@
+---
+title: "ingest"
+description: "Add files, URLs, and media to your knowledge base"
+date: 2026-04-15
+category: commands
+tags: [ingest, command, cli, import]
+---
+
 # ingest
 
 Drop articles, papers, images, PDFs, or any text into the pipeline:

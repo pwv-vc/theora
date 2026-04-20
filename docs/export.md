@@ -1,3 +1,11 @@
+---
+title: "Export Command"
+description: "Export your knowledge base to Dublin Core JSON for backup, sharing, and migration"
+date: 2026-04-15
+category: docs
+tags: [export, dublin-core, backup, json]
+---
+
 # Export Command
 
 The `theora export` command exports your knowledge base to a structured JSON file using [Dublin Core](https://www.dublincore.org/) metadata standards.

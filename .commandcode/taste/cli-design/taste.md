@@ -1,5 +1,5 @@
 # cli-design
-- Add a newline between spinner completion messages and subsequent status output (e.g., between "Compiling wiki..." and "Found X new sources"). Confidence: 0.70
+- Add a newline between spinner completion messages and subsequent status output (e.g., between "Compiling wiki..." and "Found X new sources"). Confidence: 0.75
 - Include all LLM API calls (including tool calls like web search) in total cost reporting for commands that display cost information. Confidence: 0.80
 - Apply consistent UI patterns (spinners, indicators, output formatting) across all CLI commands — if a pattern is used in one command, apply it to similar commands. Confidence: 0.75
 - Store tunable runtime parameters (e.g., compileConcurrency) in .theora/config.json with a sensible default, so they persist per-KB; CLI flags override config for one-off runs. Confidence: 0.75
@@ -14,3 +14,4 @@
 - When displaying command settings/info output, include the state of important boolean flags (e.g., `--verify-urls`) so users can see at a glance what configuration is active. Confidence: 0.75
 - Add a `--debug` flag to the `ask` command that reveals which articles were selected by the ranker, their relevance scores, and the full context being sent to the LLM. Confidence: 0.80
 - During `init`, detect if a global `.env` exists at `~/.theora/.env`. If present, inform the user and skip creating a local `.env` in the KB directory to avoid overriding the global configuration. Allow users to override by manually creating a local `.env` if needed. Confidence: 0.75
+- When a command produces no primary output (e.g., compile with only concepts, no source files), display a meaningful status message like "done" or "success" instead of leaving the status line blank. Confidence: 0.70

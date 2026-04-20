@@ -1,6 +1,7 @@
 import { rmSync, existsSync } from 'node:fs'
 import { kbPaths } from '../paths.js'
 import { compileSources, compileTargetedSource, extractConcepts, rebuildIndex } from './wiki-compiler.js'
+import type { CompileStats } from '../stats.js'
 
 export interface CompileOptions {
   source?: string
@@ -15,6 +16,7 @@ export async function runCompile(
   root: string,
   options: CompileOptions = {},
   onProgress?: (msg: string) => void,
+  stats?: CompileStats,
 ): Promise<void> {
   const paths = kbPaths(root)
 
@@ -23,7 +25,7 @@ export async function runCompile(
     if (options.conceptsOnly) throw new Error('--source cannot be used with --concepts-only')
     if (options.reindex) throw new Error('--source cannot be used with --reindex')
 
-    await compileTargetedSource(root, options.source, onProgress)
+    await compileTargetedSource(root, options.source, onProgress, stats)
     await rebuildIndex(root, onProgress)
     return
   }
@@ -42,15 +44,15 @@ export async function runCompile(
   if (options.conceptsOnly) {
     if (existsSync(paths.wikiConcepts)) rmSync(paths.wikiConcepts, { recursive: true, force: true })
     onProgress?.('Cleared existing concepts — regenerating from compiled sources')
-    await extractConcepts(root, options.concurrency, onProgress)
+    await extractConcepts(root, options.concurrency, onProgress, stats)
     await rebuildIndex(root, onProgress)
     return
   }
 
-  await compileSources(root, options.concurrency, onProgress)
+  await compileSources(root, options.concurrency, onProgress, stats)
 
   if (!options.sourcesOnly) {
-    await extractConcepts(root, options.concurrency, onProgress)
+    await extractConcepts(root, options.concurrency, onProgress, stats)
   }
 
   await rebuildIndex(root, onProgress)

@@ -1,3 +1,11 @@
+---
+title: "kb create"
+description: "Discover content on a topic using LLM curation"
+date: 2026-04-15
+category: commands
+tags: [kb-create, command, cli, curation, discovery]
+---
+
 # kb create
 
 Create a knowledge base definition by discovering content on a topic using LLM curation.

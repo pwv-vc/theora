@@ -1,3 +1,11 @@
+---
+title: "Commands"
+description: "Overview of all Theora CLI commands for building and querying knowledge bases"
+date: 2026-04-15
+category: docs
+tags: [commands, cli, reference]
+---
+
 # Commands
 
 This page has moved. See the new organized command documentation:

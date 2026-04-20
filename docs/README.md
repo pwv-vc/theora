@@ -1,3 +1,11 @@
+---
+title: "Theora Documentation"
+description: "Complete user guide for Theora - a CLI tool for building and querying LLM-powered knowledge bases"
+date: 2026-04-15
+category: docs
+tags: [documentation, guide, theora]
+---
+
 # Theora documentation (sample sources)
 
 This folder is the **full user guide** for Theora, split into markdown files you can read on GitHub or **ingest into a knowledge base** to get a compiled wiki.

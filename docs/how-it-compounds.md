@@ -1,3 +1,11 @@
+---
+title: "How It Compounds"
+description: "A typical session showing how knowledge builds on itself in Theora"
+date: 2026-04-15
+category: concepts
+tags: [compounding, workflow, session, concepts]
+---
+
 # How It Compounds
 
 A typical session:

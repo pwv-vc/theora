@@ -1,3 +1,11 @@
+---
+title: "Ingest Command"
+description: "Add files, URLs, and media to your knowledge base with Dublin Core metadata"
+date: 2026-04-15
+category: docs
+tags: [ingest, import, dublin-core, metadata]
+---
+
 # Ingest Command
 
 The `theora ingest` command adds source documents to your knowledge base. It can ingest individual files, directories, URLs, or bulk import from a structured JSON file.

@@ -1,3 +1,11 @@
+---
+title: "serve"
+description: "Start the local web UI for your knowledge base"
+date: 2026-04-15
+category: commands
+tags: [serve, command, cli, web, ui]
+---
+
 # serve
 
 Start the **local web UI** (Hono + HTMX) for your active knowledge base — wiki, search, ask, compile, stats, settings, and ingest.
