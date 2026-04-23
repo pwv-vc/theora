@@ -1043,6 +1043,14 @@ export async function compileSources(root: string, concurrency?: number, onProgr
   }
 }
 
+/** Rough token estimation: ~4 characters per token */
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4)
+}
+
+/** Maximum tokens for concept extraction prompt content (leaves room for system prompt + response) */
+const CONCEPT_BATCH_TOKEN_LIMIT = 100000
+
 export async function extractConcepts(root: string, concurrency?: number, onProgress?: (msg: string) => void, stats?: import('../stats.js').CompileStats): Promise<void> {
   const conceptsStartTime = Date.now()
   const paths = kbPaths(root)
@@ -1054,25 +1062,80 @@ export async function extractConcepts(root: string, concurrency?: number, onProg
 
   const { compileConcurrency: defaultConcurrency, conceptSummaryChars, conceptMin, conceptMax } = readConfig()
 
-  const summaries = sourceArticles
-    .map(a => `### ${a.title}\n${a.content.slice(0, conceptSummaryChars)}`)
-    .join('\n\n')
+  // Batch source articles to stay within token limits
+  const batches: typeof sourceArticles[] = []
+  let currentBatch: typeof sourceArticles = []
+  let currentBatchTokens = 0
 
-  const conceptsRaw = await llm(
-    `Review these wiki source summaries and identify the key concepts that deserve their own articles.
+  for (const article of sourceArticles) {
+    const summaryText = `### ${article.title}\n${article.content.slice(0, conceptSummaryChars)}`
+    const summaryTokens = estimateTokens(summaryText)
+
+    // If adding this article would exceed the limit, start a new batch
+    if (currentBatch.length > 0 && currentBatchTokens + summaryTokens > CONCEPT_BATCH_TOKEN_LIMIT) {
+      batches.push(currentBatch)
+      currentBatch = [article]
+      currentBatchTokens = summaryTokens
+    } else {
+      currentBatch.push(article)
+      currentBatchTokens += summaryTokens
+    }
+  }
+  if (currentBatch.length > 0) {
+    batches.push(currentBatch)
+  }
+
+  if (spinner && batches.length > 1) {
+    spinner.text = `Extracting concepts (${batches.length} batches)...`
+  }
+
+  // Extract concepts from each batch
+  const allConcepts: Array<{ slug: string; title: string; description: string; related_sources: string[]; ontology?: string[] }> = []
+
+  for (let i = 0; i < batches.length; i++) {
+    const batch = batches[i]!
+    const summaries = batch
+      .map(a => `### ${a.title}\n${a.content.slice(0, conceptSummaryChars)}`)
+      .join('\n\n')
+
+    if (batches.length > 1) {
+      onProgress?.(`Extracting concepts batch ${i + 1}/${batches.length}...`)
+    }
+
+    const batchConceptMin = Math.max(3, Math.floor(conceptMin / batches.length))
+    const batchConceptMax = Math.max(batchConceptMin + 2, Math.floor(conceptMax / batches.length))
+
+    const conceptsRaw = await llm(
+      `Review these wiki source summaries and identify the key concepts that deserve their own articles.
 
 ${summaries}
 
 ${buildConceptOntologyExtractionGuidance()}
 
-Only return the JSON array, no other text. Identify ${conceptMin}-${conceptMax} of the most important concepts.`,
-    { system: 'You are a knowledge base organizer. Extract key concepts from source summaries. Return valid JSON only.', maxTokens: 4096, action: 'concepts' },
-  )
+Only return the JSON array, no other text. Identify ${batchConceptMin}-${batchConceptMax} of the most important concepts from these sources.`,
+      { system: 'You are a knowledge base organizer. Extract key concepts from source summaries. Return valid JSON only.', maxTokens: 4096, action: 'concepts' },
+    )
 
-  let concepts: Array<{ slug: string; title: string; description: string; related_sources: string[]; ontology?: string[] }>
-  try {
-    concepts = JSON.parse(conceptsRaw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim())
-  } catch {
+    try {
+      const batchConcepts = JSON.parse(conceptsRaw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim())
+      if (Array.isArray(batchConcepts)) {
+        allConcepts.push(...batchConcepts)
+      }
+    } catch {
+      // Skip this batch if parsing fails
+    }
+  }
+
+  // Deduplicate concepts by slug
+  const seenSlugs = new Set<string>()
+  const concepts = allConcepts.filter(c => {
+    const slug = slugify(c.slug)
+    if (seenSlugs.has(slug)) return false
+    seenSlugs.add(slug)
+    return true
+  })
+
+  if (concepts.length === 0) {
     if (spinner) spinner.warn('Could not parse concepts. Skipping concept generation.')
     else onProgress?.('⚠ Could not parse concepts. Skipping concept generation.')
     return
