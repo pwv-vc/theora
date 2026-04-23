@@ -51,7 +51,7 @@ Bullet list of the most important facts, findings, or arguments — be specific,
 Concepts, terms, technologies, or ideas introduced or used — one-line definition for each.
 
 ## Named Entities
-People, actors (when applicable), companies, TV series, movies, products (commercial items only), locations, and technical terms mentioned — list each with a brief note on their role or relevance.
+People, actors (when applicable), companies, TV series, movies, products (commercial items only), locations, dates, and technical terms mentioned — list each with a brief note on their role or relevance. Only include categories where entities were actually identified; omit any category with no entities (or "Unknown" dates) rather than showing "None identified" or "Unknown".
 
 ## Notable Details
 Specific data points, quotes, examples, or evidence worth preserving verbatim or near-verbatim. Always include the date context for each.
@@ -138,7 +138,7 @@ Detailed description appropriate to the image type:
 Every piece of text, label, annotation, caption, or legend visible in the image — transcribe exactly.
 
 ## Named Entities
-People, actors (when applicable), companies, TV series, movies, products (commercial items only), locations, and technical terms visible or referenced — with brief notes.
+People, actors (when applicable), companies, TV series, movies, products (commercial items only), locations, dates, and technical terms visible or referenced — with brief notes. Only include categories where entities were actually identified; omit any category with no entities (or "Unknown" dates) rather than showing "None identified" or "Unknown".
 
 ## Key Insights
 What can be learned, concluded, or actioned from this image. Note if insights are time-bounded.

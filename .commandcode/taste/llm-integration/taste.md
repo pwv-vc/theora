@@ -1,4 +1,6 @@
 # llm-integration
+- When extracting named entities, omit categories with no findings — do not include "None identified" entries; only list categories that have actual extracted entities. Confidence: 0.75
+- In the Date & Period section, omit the line entirely when the date is unknown rather than showing "unknown" or "Date: unknown". Confidence: 0.70
 - Prefer non-AI solutions when a simpler approach works — avoid using LLMs or AI models if the task can be accomplished with straightforward code or logic. Confidence: 0.70
 - When including JSON schemas in LLM prompts, load the schema from the actual schema definition file (e.g., from ingest/import/export modules) rather than hardcoding it in the prompt — ensures the prompt always uses the canonical, up-to-date schema. Store schemas in a standard location (e.g., `schemas/` directory or within ingest/import/export modules) to make them easy to find and load. Confidence: 0.85
 - Ensure entity extraction during compile/ingest captures all named entities (people, organizations, bands, products) from source content — empty entity arrays cause RAG retrieval failures when rankers rely on entity matching. Confidence: 0.80
