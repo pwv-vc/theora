@@ -2,11 +2,27 @@ import { writeFileSync, mkdirSync } from 'node:fs'
 import { join, basename, extname } from 'node:path'
 import matter from 'gray-matter'
 import { kbPaths, requireKbRoot } from './paths.js'
-import { llmStream } from './llm.js'
+import { llm, llmStream } from './llm.js'
 import { listWikiArticles, readWikiIndex, normalizeLinks, readWikiArticle, type WikiArticle } from './wiki.js'
-import { findRelevantArticles, buildContext } from './query.js'
+import { findRelevantArticles, buildContext, buildContextBatches } from './query.js'
 import { slugifyShort, normalizeTag } from './utils.js'
-import { MD_SYSTEM, buildMdUserPrompt } from './prompts/index.js'
+import {
+  MD_SYSTEM,
+  buildMdUserPrompt,
+  BATCH_EXTRACT_SYSTEM,
+  buildBatchExtractPrompt,
+  SYNTHESIZE_SYSTEM,
+  buildSynthesizePrompt,
+} from './prompts/index.js'
+
+const MODEL_MAX_TOKENS = 128_000
+const SINGLE_BATCH_SAFETY_MARGIN = 20_000 // Reserve for system, question, index, response, overhead
+const SYNTHESIS_MAX_FACTS_TOKENS = 50_000
+const CHARS_PER_TOKEN = 4
+
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / CHARS_PER_TOKEN)
+}
 
 export interface AskOptions {
   tag?: string
@@ -40,6 +56,7 @@ export interface AskResult {
 export interface AskContext {
   index: string
   context: string
+  contextBatches: string[]
   allArticles: ReturnType<typeof listWikiArticles>
   rankedInfo?: RankedContextInfo
 }
@@ -82,7 +99,9 @@ export async function buildAskContext(question: string, tag?: string, maxContext
 
   const rankingResult = await findRelevantArticles(question, index, wikiArticles, maxContext)
   const relevant = rankingResult.articles
-  const context = buildContext([...relevant, ...outputArticles])
+  const combinedArticles = [...relevant, ...outputArticles]
+  const context = buildContext(combinedArticles)
+  const contextBatches = buildContextBatches(combinedArticles)
 
   const rankedInfo: RankedContextInfo = {
     wikiArticles: rankingResult.articles.map(a => ({ title: a.title, path: a.relativePath, rank: a.rank })),
@@ -92,30 +111,79 @@ export async function buildAskContext(question: string, tag?: string, maxContext
     entityFilter: entity,
   }
 
-  return { index, context, allArticles, rankedInfo }
+  return { index, context, contextBatches, allArticles, rankedInfo }
 }
 
 export async function streamAsk(question: string, options: AskOptions): Promise<AskResult> {
   const root = requireKbRoot()
   const paths = kbPaths(root)
 
-  const { index, context, allArticles, rankedInfo } = await buildAskContext(question, options.tag, options.maxContext, options.entity)
+  const { index, context, contextBatches, allArticles, rankedInfo } = await buildAskContext(question, options.tag, options.maxContext, options.entity)
   options.onContextBuilt?.()
 
-  let firstChunk = true
-  const onChunk = (text: string) => {
-    if (firstChunk) {
-      firstChunk = false
-      options.onFirstAnswerChunk?.()
-    }
-    options.onChunk(text)
-  }
+  let rawAnswer: string
 
-  const rawAnswer = await llmStream(
-    buildMdUserPrompt(question, index, context),
-    { system: MD_SYSTEM, maxTokens: 8192, action: 'ask' },
-    onChunk,
-  )
+  // Check if single-batch mode would overflow (includes truncated index + context + system + question + response)
+  const singleBatchPrompt = buildMdUserPrompt(question, index, context)
+  const singleBatchTotal = estimateTokens(MD_SYSTEM) + estimateTokens(singleBatchPrompt) + 8192
+  const useMultiBatch = contextBatches.length > 1 || singleBatchTotal > (MODEL_MAX_TOKENS - SINGLE_BATCH_SAFETY_MARGIN)
+
+  if (!useMultiBatch) {
+    // Single batch fits safely — stream directly
+    let firstChunk = true
+    const onChunk = (text: string) => {
+      if (firstChunk) {
+        firstChunk = false
+        options.onFirstAnswerChunk?.()
+      }
+      options.onChunk(text)
+    }
+
+    rawAnswer = await llmStream(
+      singleBatchPrompt,
+      { system: MD_SYSTEM, maxTokens: 8192, action: 'ask' },
+      onChunk,
+    )
+  } else {
+    // Multi-batch: extract facts from each batch, then synthesize
+    const extractedFacts: string[] = []
+
+    for (let i = 0; i < contextBatches.length; i++) {
+      const batchPrompt = buildBatchExtractPrompt(question, contextBatches[i])
+      const batchResult = await llm(batchPrompt, {
+        system: BATCH_EXTRACT_SYSTEM,
+        maxTokens: 4096,
+        action: 'ask',
+        meta: `batch-extract-${i + 1}/${contextBatches.length}`,
+      })
+      extractedFacts.push(batchResult)
+    }
+
+    // Truncate extracted facts if synthesis would overflow
+    let factsText = extractedFacts.join('\n\n')
+    const synthesisOverhead = estimateTokens(SYNTHESIZE_SYSTEM) + estimateTokens(question) + 1000 + 8192
+    const factsBudget = MODEL_MAX_TOKENS - SINGLE_BATCH_SAFETY_MARGIN - synthesisOverhead
+    if (estimateTokens(factsText) > factsBudget) {
+      const maxChars = factsBudget * CHARS_PER_TOKEN
+      factsText = factsText.slice(0, maxChars) + '\n\n[Extracted facts truncated due to length]'
+    }
+
+    // Stream final synthesis
+    let firstChunk = true
+    const onChunk = (text: string) => {
+      if (firstChunk) {
+        firstChunk = false
+        options.onFirstAnswerChunk?.()
+      }
+      options.onChunk(text)
+    }
+
+    rawAnswer = await llmStream(
+      buildSynthesizePrompt(question, extractedFacts),
+      { system: SYNTHESIZE_SYSTEM, maxTokens: 8192, action: 'ask' },
+      onChunk,
+    )
+  }
 
   if (options.file === false) {
     return { rawAnswer, filedPath: null, rankedInfo }

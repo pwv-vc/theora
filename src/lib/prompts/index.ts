@@ -10,6 +10,13 @@ export { CONCEPT_SYSTEM, buildConceptPrompt } from './concept.js'
 
 export { SLIDES_SYSTEM, buildSlidesUserPrompt } from './slides.js'
 
-export { MD_SYSTEM, buildMdUserPrompt } from './ask.js'
+export {
+  MD_SYSTEM,
+  buildMdUserPrompt,
+  BATCH_EXTRACT_SYSTEM,
+  buildBatchExtractPrompt,
+  SYNTHESIZE_SYSTEM,
+  buildSynthesizePrompt,
+} from './ask.js'
 
 export { CHART_SYSTEM, buildChartPrompt } from './chart.js'

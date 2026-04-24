@@ -88,11 +88,75 @@ Return a JSON array of the indices (numbers) of the most relevant articles to an
   }
 }
 
+const MAX_CONTEXT_TOKENS = 70_000
+const MAX_ARTICLE_TOKENS = 20_000
+const CHARS_PER_TOKEN = 4
+const MAX_CONTEXT_CHARS = MAX_CONTEXT_TOKENS * CHARS_PER_TOKEN
+const MAX_ARTICLE_CHARS = MAX_ARTICLE_TOKENS * CHARS_PER_TOKEN
+
+function truncateArticleContent(content: string, maxChars: number): string {
+  if (content.length <= maxChars) return content
+  return content.slice(0, maxChars) + '\n\n[Article truncated due to length]'
+}
+
 export function buildContext(articles: WikiArticle[]): string {
-  return articles
-    .map(a => {
-      const slug = basename(a.path, '.md')
-      return `## ${a.title}\nWiki-link: [[${slug}]]\n\n${a.content}`
-    })
-    .join('\n\n---\n\n')
+  let result = ''
+  let totalChars = 0
+
+  for (const a of articles) {
+    const slug = basename(a.path, '.md')
+    const content = truncateArticleContent(a.content, MAX_ARTICLE_CHARS)
+    const piece = `## ${a.title}\nWiki-link: [[${slug}]]\n\n${content}`
+    const separator = '\n\n---\n\n'
+
+    const addedChars = result.length === 0 ? piece.length : separator.length + piece.length
+
+    if (totalChars + addedChars > MAX_CONTEXT_CHARS && totalChars > 0) {
+      break
+    }
+
+    if (result.length === 0) {
+      result = piece
+      totalChars = piece.length
+    } else {
+      result += separator + piece
+      totalChars += separator.length + piece.length
+    }
+  }
+
+  return result
+}
+
+export function buildContextBatches(articles: WikiArticle[], maxTokensPerBatch: number = MAX_CONTEXT_TOKENS): string[] {
+  const batches: string[] = []
+  let currentBatchPieces: string[] = []
+  let currentChars = 0
+  const maxChars = maxTokensPerBatch * CHARS_PER_TOKEN
+  const separator = '\n\n---\n\n'
+
+  for (const a of articles) {
+    const slug = basename(a.path, '.md')
+    const content = truncateArticleContent(a.content, MAX_ARTICLE_CHARS)
+    const piece = `## ${a.title}\nWiki-link: [[${slug}]]\n\n${content}`
+    const pieceChars = piece.length
+    const separatorChars = separator.length
+
+    const wouldNeedSeparator = currentBatchPieces.length > 0
+    const addedChars = wouldNeedSeparator ? separatorChars + pieceChars : pieceChars
+
+    if (currentChars + addedChars > maxChars && currentBatchPieces.length > 0) {
+      batches.push(currentBatchPieces.join(separator))
+      currentBatchPieces = [piece]
+      currentChars = pieceChars
+    } else {
+      currentBatchPieces.push(piece)
+      currentChars += addedChars
+    }
+  }
+
+  if (currentBatchPieces.length > 0) {
+    batches.push(currentBatchPieces.join(separator))
+  }
+
+  return batches
 }
