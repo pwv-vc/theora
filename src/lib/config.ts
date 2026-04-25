@@ -89,6 +89,10 @@ export interface KbConfig {
   whisperPreprocessAudio?: boolean
   whisperAudioTargetSampleRateHz?: number
   whisperAudioMono?: boolean
+  /** Port for the web server / theora serve (default: 4000) */
+  servePort?: number
+  /** Port for the standalone MCP HTTP server (default: 3100) */
+  mcpPort?: number
 }
 
 const OPENAI_ACTION_MODELS: ModelConfig = {
@@ -245,6 +249,12 @@ export function writeConfig(config: KbConfig): void {
   const paths = kbPaths(root)
   writeFileSync(paths.configFile, JSON.stringify(config, null, 2) + '\n')
 }
+
+export const DEFAULT_SERVE_PORT = 4000
+export const SERVE_PORT_ENV = 'PORT'
+
+export const DEFAULT_MCP_PORT = 3100
+export const MCP_PORT_ENV = 'MCP_PORT'
 
 /** Default display name for an unnamed knowledge base */
 export const DEFAULT_KB_NAME = 'Knowledge Base'

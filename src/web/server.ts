@@ -16,6 +16,7 @@ import { ingestRoutes } from './routes/ingest.js'
 import { compileRoutes } from './routes/compile.js'
 import { statsRoutes } from './routes/stats.js'
 import { apiRoutes } from './routes/api.js'
+import { mcpRoutes } from './routes/mcp.js'
 
 export type StartServerOptions = {
   port: number
@@ -41,6 +42,7 @@ export function createWebApp(): Hono {
   app.route('/compile', compileRoutes)
   app.route('/stats', statsRoutes)
   app.route('/api', apiRoutes)
+  app.route('/mcp', mcpRoutes)
   app.route('/settings', settingsRoutes)
 
   app.notFound((c) => {

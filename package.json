@@ -4,7 +4,8 @@
   "description": "LLM-powered knowledge base that turns raw research into a living wiki",
   "type": "module",
   "bin": {
-    "theora": "./dist/index.js"
+    "theora": "./dist/index.js",
+    "theora-mcp": "./dist/mcp/index.js"
   },
   "scripts": {
     "build:css": "tailwindcss -i src/web/styles/input.css -o src/web/static/styles.css --minify",
@@ -39,8 +40,10 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.88.0",
+    "@cfworker/json-schema": "^4.1.1",
     "@clack/prompts": "^1.2.0",
     "@hono/node-server": "^1.19.14",
+    "@modelcontextprotocol/server": "2.0.0-alpha.2",
     "adm-zip": "^0.5.17",
     "commander": "^13.1.0",
     "dotenv": "^17.4.2",
