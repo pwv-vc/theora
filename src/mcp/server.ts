@@ -1,3 +1,4 @@
+import { relative } from 'node:path'
 import { McpServer, fromJsonSchema } from '@modelcontextprotocol/server'
 import type { CallToolResult } from '@modelcontextprotocol/server'
 import { searchArticles } from '../lib/search.js'
@@ -172,6 +173,7 @@ function registerTools(server: McpServer): void {
       title: 'Ask the Wiki',
       description:
         'Ask a question and get an AI-synthesized answer grounded in the knowledge base wiki. ' +
+        'Like the CLI `theora ask` command, the Q&A is filed under `output/` when the run completes. ' +
         'This invokes an LLM call (slower than search) and uses a low-latency MCP profile by default — prefer `search` for simple lookups.',
       inputSchema: fromJsonSchema({
         type: 'object' as const,
@@ -231,7 +233,6 @@ function registerTools(server: McpServer): void {
           streamAsk(question, {
             tag,
             entity,
-            file: false,
             maxContext: effectiveMaxContext,
             onContextBuilt: () => {
               sendMcpProgress(30, 100, 'Context ready, generating answer')
@@ -279,6 +280,10 @@ function registerTools(server: McpServer): void {
         sendMcpProgress(100, 100, 'Complete')
 
         const sections: string[] = [finalAnswer]
+        if (result.filedPath) {
+          const filedRel = relative(requireKbRoot(), result.filedPath).replace(/\\/g, '/')
+          sections.push(`---\n*Filed to: ${filedRel}*`)
+        }
         if (result.rankedInfo?.wikiArticles.length) {
           const sources = result.rankedInfo.wikiArticles
             .map(a => `- ${a.title} (${a.path})`)
