@@ -256,6 +256,28 @@ export const SERVE_PORT_ENV = 'PORT'
 export const DEFAULT_MCP_PORT = 3100
 export const MCP_PORT_ENV = 'MCP_PORT'
 
+function resolvePortCommon(cliPort: string | undefined, envName: string, configValue: number | undefined, defaultPort: number): number {
+  if (cliPort) {
+    const p = parseInt(cliPort, 10)
+    if (!Number.isNaN(p) && p > 0 && p <= 65535) return p
+  }
+  if (process.env[envName]) {
+    const p = parseInt(process.env[envName]!, 10)
+    if (!Number.isNaN(p) && p > 0 && p <= 65535) return p
+  }
+  return configValue ?? defaultPort
+}
+
+/** Resolve the serve port from CLI flag, PORT env, config servePort, or default. */
+export function resolveServePort(cliPort: string | undefined, config: KbConfig): number {
+  return resolvePortCommon(cliPort, SERVE_PORT_ENV, config.servePort, DEFAULT_SERVE_PORT)
+}
+
+/** Resolve the MCP port from CLI flag, MCP_PORT env, config mcpPort, or default. */
+export function resolveMcpPort(cliPort: string | undefined, configValue: number | undefined): number {
+  return resolvePortCommon(cliPort, MCP_PORT_ENV, configValue, DEFAULT_MCP_PORT)
+}
+
 /** Default display name for an unnamed knowledge base */
 export const DEFAULT_KB_NAME = 'Knowledge Base'
 

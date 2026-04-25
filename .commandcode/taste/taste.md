@@ -57,5 +57,12 @@ See [web/taste.md](web/taste.md)
 - Maintain a single source of truth for data that must stay in sync across CLI and web interfaces — export constants like `VALID_EXTS` from a shared library module (e.g., `src/lib/ingest.ts`) and import them in both CLI and web code, rather than duplicating the list. Confidence: 0.80
 - Prefer simpler function signatures without extra parameters when the additional complexity isn't necessary — avoid adding parameters just to support edge cases that can be handled differently. Confidence: 0.70
 
+# mcp
+- For Cursor and Claude Desktop MCP configuration, prefer URL-based setup (e.g., `"url": "http://localhost:3100/mcp"`) over command+args configuration — user explicitly requested URL config. Confidence: 0.80
+- Add a `--debug` flag to both `theora serve` and `theora-mcp` that console-logs progress, steps, and response times so users can observe request lifecycle end-to-end. Confidence: 0.75
+- MCP resource subscription should not subscribe to all wiki sources on initialization — instead, fetch sources on demand via search/read operations rather than subscribing to hundreds of URIs. Confidence: 0.80
+- Session management logic should be shared between HTTP transport and MCP protocol layers, not duplicated across implementations. Confidence: 0.70
+- Skills should support custom MCP server names and allow configuring multiple MCP servers — do not hardcode a server name like "theora" in skill instructions. Confidence: 0.75
+
 # documentation
 See [documentation/taste.md](documentation/taste.md)

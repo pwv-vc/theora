@@ -10,7 +10,44 @@ type McpSession = {
 
 const sessions = new Map<string, McpSession>()
 
+const SESSION_TTL_MS = 5 * 60 * 1000 // 5 minutes idle timeout
+const SESSION_CLEANUP_INTERVAL_MS = 60_000 // check every 60s
 const SSE_KEEP_ALIVE_MS = 15_000
+
+/** Per-session idle expiry timer handle */
+const sessionTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+function touchSession(sessionId: string): void {
+  const existing = sessionTimers.get(sessionId)
+  if (existing) clearTimeout(existing)
+  sessionTimers.set(
+    sessionId,
+    setTimeout(() => closeSession(sessionId, 'idle timeout'), SESSION_TTL_MS),
+  )
+}
+
+function closeSession(sessionId: string, reason: string): void {
+  const session = sessions.get(sessionId)
+  if (!session) return
+  session.transport.onclose?.()
+  mcpLog(`session=${sessionId.slice(0, 8)} closed (${reason})`)
+  sessions.delete(sessionId)
+  sessionTimers.delete(sessionId)
+}
+
+// Periodic sweep for orphaned sessions (e.g. POST-only without close)
+const cleanupInterval = setInterval(() => {
+  for (const id of sessions.keys()) {
+    if (!sessionTimers.has(id)) {
+      // No timer means the session was created without a touch — unlikely
+      // but guard against orphan entries
+      closeSession(id, 'cleanup sweep')
+    }
+  }
+}, SESSION_CLEANUP_INTERVAL_MS)
+
+// Don't prevent process exit
+cleanupInterval.unref()
 
 /** CORS preset for MCP streamable-http endpoints. */
 export const mcpCors = cors({
@@ -92,6 +129,7 @@ export async function handleMcpRequest(raw: Request): Promise<Response> {
 
   if (sessionId && sessions.has(sessionId)) {
     const session = sessions.get(sessionId)!
+    touchSession(sessionId)
     const response = await session.transport.handleRequest(raw)
 
     if (method === 'GET' && isSseResponse(response)) {
@@ -101,6 +139,7 @@ export async function handleMcpRequest(raw: Request): Promise<Response> {
         stopKeepAlive()
         origOnclose?.()
         sessions.delete(sessionId)
+        sessionTimers.delete(sessionId)
       }
       mcpLog(`session=${sessionId.slice(0, 8)} SSE stream opened`)
       return wrapped
@@ -120,10 +159,10 @@ export async function handleMcpRequest(raw: Request): Promise<Response> {
   const newId = response.headers.get('mcp-session-id')
   if (newId) {
     mcpLog(`session=${newId.slice(0, 8)} created`)
+    touchSession(newId)
     sessions.set(newId, { server, transport })
     transport.onclose = () => {
-      mcpLog(`session=${newId.slice(0, 8)} closed`)
-      sessions.delete(newId)
+      closeSession(newId, 'transport close')
     }
   }
 

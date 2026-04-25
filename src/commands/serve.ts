@@ -1,19 +1,7 @@
 import { Command } from 'commander'
 import { requireKbRoot } from '../lib/paths.js'
-import { readConfig, getKbName, DEFAULT_SERVE_PORT, SERVE_PORT_ENV, type KbConfig } from '../lib/config.js'
+import { readConfig, getKbName, DEFAULT_SERVE_PORT, SERVE_PORT_ENV, resolveServePort } from '../lib/config.js'
 import { startServer } from '../web/server.js'
-
-function resolveServePort(cliPort: string | undefined, config: KbConfig): number {
-  if (cliPort) {
-    const p = parseInt(cliPort, 10)
-    if (!Number.isNaN(p) && p > 0 && p <= 65535) return p
-  }
-  if (process.env[SERVE_PORT_ENV]) {
-    const p = parseInt(process.env[SERVE_PORT_ENV]!, 10)
-    if (!Number.isNaN(p) && p > 0 && p <= 65535) return p
-  }
-  return config.servePort ?? DEFAULT_SERVE_PORT
-}
 
 export const serveCommand = new Command('serve')
   .description(

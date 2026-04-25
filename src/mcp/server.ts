@@ -135,8 +135,9 @@ function registerTools(server: McpServer): void {
       const debugEnabled = isMcpDebugEnabled()
       const scope = createMcpRequestScope('tool', 'search', debugEnabled)
       try {
+        const maxResults = Math.min(limit ?? 10, 100)
         const { results, suggestedQuery } = searchArticles(query, tag, entity)
-        const limited = results.slice(0, limit ?? 10)
+        const limited = results.slice(0, maxResults)
 
         if (limited.length === 0) {
           const hint = suggestedQuery ? `\nDid you mean: "${suggestedQuery}"` : ''

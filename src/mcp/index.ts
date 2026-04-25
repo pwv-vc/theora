@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { StdioServerTransport } from '@modelcontextprotocol/server'
 import { createTheoraMcpServer } from './server.js'
 import { createMcpApp } from './transport.js'
-import { readConfigAtRoot, DEFAULT_MCP_PORT, MCP_PORT_ENV } from '../lib/config.js'
+import { resolveMcpPort, readConfigAtRoot, DEFAULT_MCP_PORT } from '../lib/config.js'
 import { findActiveKbRoot } from '../lib/paths.js'
 
 const args = process.argv.slice(2)
@@ -23,22 +23,15 @@ const portArgIdx = args.indexOf('--port')
 const portArg = portArgIdx !== -1 ? args[portArgIdx + 1] : undefined
 
 function resolvePort(): number {
-  if (portArg) {
-    const p = parseInt(portArg, 10)
-    if (!Number.isNaN(p) && p > 0 && p <= 65535) return p
-  }
-  if (process.env[MCP_PORT_ENV]) {
-    const p = parseInt(process.env[MCP_PORT_ENV]!, 10)
-    if (!Number.isNaN(p) && p > 0 && p <= 65535) return p
-  }
+  let configValue: number | undefined
   const root = findActiveKbRoot()
   if (root) {
     try {
-      const config = readConfigAtRoot(root)
-      if (config.mcpPort) return config.mcpPort
-    } catch { /* fall through to default */ }
+      const cfg = readConfigAtRoot(root)
+      configValue = cfg.mcpPort
+    } catch { /* fall through */ }
   }
-  return DEFAULT_MCP_PORT
+  return resolveMcpPort(portArg, configValue)
 }
 
 if (httpMode) {

@@ -89,26 +89,26 @@ describe('createTheoraMcpServer', () => {
     expect(server.server).toBeDefined()
   })
 
-  it('registers 5 tools', () => {
+  it('registers 6 tools', () => {
     const server = createTheoraMcpServer()
     const toolNames = Object.keys(getTools(server))
     expect(toolNames).toContain('search')
     expect(toolNames).toContain('ask')
+    expect(toolNames).toContain('read-article')
     expect(toolNames).toContain('wiki-stats')
     expect(toolNames).toContain('list-tags')
     expect(toolNames).toContain('list-entities')
-    expect(toolNames).toHaveLength(5)
+    expect(toolNames).toHaveLength(6)
   })
 
-  it('registers 4 resource types', () => {
+  it('registers 1 resource (wiki-index)', () => {
     const server = createTheoraMcpServer()
     const staticUris = Object.keys(getResources(server))
-    const templateNames = Object.keys(getResourceTemplates(server))
     expect(staticUris).toContain('theora://wiki/index')
-    expect(templateNames).toContain('wiki-source')
-    expect(templateNames).toContain('wiki-concept')
-    expect(templateNames).toContain('wiki-query')
-    expect(staticUris.length + templateNames.length).toBe(4)
+    expect(staticUris).toHaveLength(1)
+    // Resource templates are intentionally not registered — individual
+    // articles are accessed via the `read-article` tool instead to avoid
+    // Cursor enumerating + subscribing to every article on connect.
   })
 })
 
@@ -193,6 +193,57 @@ describe('MCP tool handlers', () => {
     const text = result.content[0]!.text
     expect(text).toContain('No entities found')
   })
+
+  it('read-article returns source content by path', async () => {
+    const server = createTheoraMcpServer()
+    const tools = getTools(server)
+    const result = await tools['read-article']!.handler({ path: 'wiki/sources/redis-guide' }, {})
+    const text = result.content[0]!.text
+    expect(text).toContain('Redis Caching Guide')
+    expect(text).toContain('in-memory data store')
+  })
+
+  it('read-article returns concept content by path', async () => {
+    const server = createTheoraMcpServer()
+    const tools = getTools(server)
+    const result = await tools['read-article']!.handler({ path: 'wiki/concepts/caching' }, {})
+    const text = result.content[0]!.text
+    expect(text).toContain('Caching')
+    expect(text).toContain('frequently accessed data')
+  })
+
+  it('read-article returns output content by path', async () => {
+    const server = createTheoraMcpServer()
+    const tools = getTools(server)
+    const result = await tools['read-article']!.handler({ path: 'output/what-is-redis' }, {})
+    const text = result.content[0]!.text
+    expect(text).toContain('What is Redis?')
+    expect(text).toContain('key-value store')
+  })
+
+  it('read-article strips .md extension from path', async () => {
+    const server = createTheoraMcpServer()
+    const tools = getTools(server)
+    const result = await tools['read-article']!.handler({ path: 'wiki/sources/redis-guide.md' }, {})
+    const text = result.content[0]!.text
+    expect(text).toContain('Redis Caching Guide')
+  })
+
+  it('read-article returns error for invalid path prefix', async () => {
+    const server = createTheoraMcpServer()
+    const tools = getTools(server)
+    const result = await tools['read-article']!.handler({ path: 'invalid/path' }, {})
+    expect(result.isError).toBe(true)
+    expect(result.content[0]!.text).toContain('Invalid path')
+  })
+
+  it('read-article returns error for non-existent article', async () => {
+    const server = createTheoraMcpServer()
+    const tools = getTools(server)
+    const result = await tools['read-article']!.handler({ path: 'wiki/sources/nonexistent' }, {})
+    expect(result.isError).toBe(true)
+    expect(result.content[0]!.text).toContain('Article not found')
+  })
 })
 
 describe('MCP resource handlers', () => {
@@ -222,51 +273,7 @@ describe('MCP resource handlers', () => {
     expect(result.contents[0]!.text).toContain('Redis')
   })
 
-  it('wiki-source template lists available sources', async () => {
-    const server = createTheoraMcpServer()
-    const templates = getResourceTemplates(server)
-    const listed = await templates['wiki-source']!.resourceTemplate.listCallback()
-    expect(listed.resources.length).toBe(1)
-    expect(listed.resources[0]!.name).toBe('Redis Caching Guide')
-    expect(listed.resources[0]!.uri).toContain('redis-guide')
-  })
-
-  it('wiki-source template reads a specific source', async () => {
-    const server = createTheoraMcpServer()
-    const templates = getResourceTemplates(server)
-    const result = await templates['wiki-source']!.readCallback(
-      new URL('theora://wiki/sources/redis-guide'),
-      { slug: 'redis-guide' },
-    )
-    expect(result.contents).toHaveLength(1)
-    expect(result.contents[0]!.text).toContain('Redis Caching Guide')
-    expect(result.contents[0]!.text).toContain('in-memory data store')
-  })
-
-  it('wiki-concept template lists concepts', async () => {
-    const server = createTheoraMcpServer()
-    const templates = getResourceTemplates(server)
-    const listed = await templates['wiki-concept']!.resourceTemplate.listCallback()
-    expect(listed.resources.length).toBe(1)
-    expect(listed.resources[0]!.name).toBe('Caching')
-  })
-
-  it('wiki-query template lists output queries', async () => {
-    const server = createTheoraMcpServer()
-    const templates = getResourceTemplates(server)
-    const listed = await templates['wiki-query']!.resourceTemplate.listCallback()
-    expect(listed.resources.length).toBe(1)
-    expect(listed.resources[0]!.name).toBe('What is Redis?')
-  })
-
-  it('wiki-source template throws for unknown slug', async () => {
-    const server = createTheoraMcpServer()
-    const templates = getResourceTemplates(server)
-    await expect(
-      templates['wiki-source']!.readCallback(
-        new URL('theora://wiki/sources/nonexistent'),
-        { slug: 'nonexistent' },
-      ),
-    ).rejects.toThrow('Source not found')
-  })
+  // Resource template tests removed — the server intentionally uses the
+  // `read-article` tool instead of resource templates to avoid Cursor
+  // subscribing to every article on connect (~600 POSTs).
 })
