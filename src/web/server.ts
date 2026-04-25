@@ -16,6 +16,7 @@ import { ingestRoutes } from './routes/ingest.js'
 import { compileRoutes } from './routes/compile.js'
 import { statsRoutes } from './routes/stats.js'
 import { apiRoutes } from './routes/api.js'
+import { mcpRoutes } from './routes/mcp.js'
 
 export type StartServerOptions = {
   port: number
@@ -27,6 +28,9 @@ export type StartServerOptions = {
 
 export function createWebApp(): Hono {
   const app = new Hono()
+
+  // MCP endpoint is raw JSON-RPC / SSE — skip web middleware (CSP, KB context)
+  app.route('/mcp', mcpRoutes)
 
   app.use('*', webSecurityHeaders)
   app.use('*', injectKbContext)

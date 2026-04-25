@@ -29,3 +29,5 @@ Files are copied into `raw/` by **basename** when ingested; use unique filenames
 - [Slide decks](slide-decks.md)
 - [Charts](charts.md)
 - [How it compounds](how-it-compounds.md)
+- [MCP Server](mcp.md) — expose your KB to AI agents via the Model Context Protocol
+- [Agent Skills](skills.md) — Cursor agent skills for researching and exploring your KB

@@ -89,6 +89,10 @@ export interface KbConfig {
   whisperPreprocessAudio?: boolean
   whisperAudioTargetSampleRateHz?: number
   whisperAudioMono?: boolean
+  /** Port for the web server / theora serve (default: 4000) */
+  servePort?: number
+  /** Port for the standalone MCP HTTP server (default: 3100) */
+  mcpPort?: number
 }
 
 const OPENAI_ACTION_MODELS: ModelConfig = {
@@ -244,6 +248,34 @@ export function writeConfig(config: KbConfig): void {
   const root = requireKbRoot()
   const paths = kbPaths(root)
   writeFileSync(paths.configFile, JSON.stringify(config, null, 2) + '\n')
+}
+
+export const DEFAULT_SERVE_PORT = 4000
+export const SERVE_PORT_ENV = 'PORT'
+
+export const DEFAULT_MCP_PORT = 3100
+export const MCP_PORT_ENV = 'MCP_PORT'
+
+function resolvePortCommon(cliPort: string | undefined, envName: string, configValue: number | undefined, defaultPort: number): number {
+  if (cliPort) {
+    const p = parseInt(cliPort, 10)
+    if (!Number.isNaN(p) && p > 0 && p <= 65535) return p
+  }
+  if (process.env[envName]) {
+    const p = parseInt(process.env[envName]!, 10)
+    if (!Number.isNaN(p) && p > 0 && p <= 65535) return p
+  }
+  return configValue ?? defaultPort
+}
+
+/** Resolve the serve port from CLI flag, PORT env, config servePort, or default. */
+export function resolveServePort(cliPort: string | undefined, config: KbConfig): number {
+  return resolvePortCommon(cliPort, SERVE_PORT_ENV, config.servePort, DEFAULT_SERVE_PORT)
+}
+
+/** Resolve the MCP port from CLI flag, MCP_PORT env, config mcpPort, or default. */
+export function resolveMcpPort(cliPort: string | undefined, configValue: number | undefined): number {
+  return resolvePortCommon(cliPort, MCP_PORT_ENV, configValue, DEFAULT_MCP_PORT)
 }
 
 /** Default display name for an unnamed knowledge base */
