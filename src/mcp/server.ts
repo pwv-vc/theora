@@ -87,8 +87,8 @@ export function createTheoraMcpServer(): McpServer {
       instructions: [
         'Theora is an LLM-powered knowledge base that turns raw research into a living wiki.',
         'Use `search` to find articles by keyword (BM25 full-text search).',
+        'Use `read-article` with a path from search results to fetch full article content.',
         'Use `ask` to get an AI-synthesized answer grounded in the wiki.',
-        'Browse `theora://wiki/sources/*` and `theora://wiki/concepts/*` resources for raw article content.',
         'Use `list-tags` and `list-entities` to discover what the KB covers before querying.',
         'Prefer searching before asking — search is instant, ask invokes an LLM.',
       ].join(' '),

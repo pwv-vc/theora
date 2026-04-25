@@ -14,8 +14,8 @@ Theora includes a built-in [Model Context Protocol](https://modelcontextprotocol
 
 MCP is a standard protocol that lets AI applications (Cursor, Claude Desktop, VS Code Copilot, custom agents) connect to external tools and data sources. Theora's MCP server exposes your wiki as:
 
-- **Tools** — actions the AI can invoke (search, ask, list tags/entities, stats)
-- **Resources** — read-only wiki content the AI can browse (sources, concepts, queries, index)
+- **Tools** — actions the AI can invoke (search, ask, read articles, list tags/entities, stats)
+- **Resources** — the wiki index for orientation
 
 ## Transports
 
@@ -96,11 +96,11 @@ theora-mcp --http --port 3200
 MCP_PORT=3200 theora-mcp --http
 ```
 
-The endpoint will be at `http://localhost:<port>/mcp` with a health check at `/health`.
+The endpoint will be at `http://localhost:<port>/mcp` with health checks at `/health` and `/mcp/health`.
 
 ### Embedded HTTP (via `theora serve`)
 
-When you run `theora serve`, the MCP endpoint is on the same port as the web UI (**4000** by default), at path `/mcp` (e.g. `http://localhost:4000/mcp`). If you change the web port, use the matching host/port in the URL. Any MCP client that supports Streamable HTTP can connect to it.
+When you run `theora serve`, the MCP endpoint is on the same port as the web UI (**4000** by default), at path `/mcp` (e.g. `http://localhost:4000/mcp`). A health check is available at `/mcp/health`. If you change the web port, use the matching host/port in the URL. Any MCP client that supports Streamable HTTP can connect to it.
 
 ## Port configuration
 
@@ -188,7 +188,7 @@ To query both in one request:
 ### Troubleshooting multiple MCP servers
 
 - **Port already in use**: choose another port with `--port <n>` (or set `MCP_PORT`) and update the matching Cursor `url`.
-- **Server not reachable**: confirm each process is running, then check `http://localhost:<port>/health`.
+- **Server not reachable**: confirm each process is running, then check `http://localhost:<port>/mcp/health`.
 - **Wrong KB results**: start each server from the intended KB root (or set active KB with `theora kb use <path>` before launch).
 - **Cursor not picking up config changes**: restart MCP servers and reload Cursor after editing `.cursor/mcp.json`.
 
@@ -198,6 +198,7 @@ To query both in one request:
 |------|-------------|-----------|
 | `search` | BM25 full-text search across the wiki | Yes |
 | `ask` | AI-synthesized answer grounded in the wiki | No (invokes LLM) |
+| `read-article` | Read the full content of a wiki article by path | Yes |
 | `wiki-stats` | Article counts, word count, KB configuration | Yes |
 | `list-tags` | All tags with article counts | Yes |
 | `list-entities` | All named entities with occurrence counts | Yes |
@@ -220,16 +221,21 @@ To query both in one request:
 | `entity` | string | No | Filter by entity (`type/name`) |
 | `maxContext` | number | No | Max wiki articles in context |
 
+### `read-article`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Article relative path from search results (e.g. `wiki/sources/my-article`, `wiki/concepts/my-concept`, or `output/my-query`). Omit the `.md` extension. |
+
+The typical workflow is: use `search` to find articles by keyword, then `read-article` to fetch full text for specific results.
+
 ## Available resources
 
 | Resource URI | Description |
 |-------------|-------------|
-| `theora://wiki/index` | Full wiki index |
-| `theora://wiki/sources/{slug}` | Individual source articles |
-| `theora://wiki/concepts/{slug}` | Individual concept articles |
-| `theora://output/{slug}` | Previously filed query results |
+| `theora://wiki/index` | Full wiki index listing all articles |
 
-All resources support `list` — clients can discover available articles before reading them.
+Individual wiki articles are accessed via the `read-article` tool rather than as MCP resources. This keeps the connection lightweight — large KBs can have hundreds of articles, and MCP clients subscribe to every listed resource on connect.
 
 ## Environment variables
 

@@ -14,7 +14,7 @@ Use the Theora MCP server tools to research topics and answer questions grounded
 
 A **Theora** MCP server must be registered in Cursor. The name you assign in `.cursor/mcp.json` (or `~/.cursor/mcp.json`) is **arbitrary and customer-specific** — e.g. `theora`, `theora-work`, `theora-research`, `acme-kb`. It does **not** have to be the string `theora`.
 
-**Verify** by confirming that server exposes at least: `search`, `ask`, `list-tags`, `list-entities`, `wiki-stats`.
+**Verify** the server is reachable by checking its health endpoint at `/mcp/health` (e.g. `http://localhost:4000/mcp/health`). It should return `{ "status": "ok" }`.
 
 **One vs many:** If only one Theora server is connected, use it for all research steps. If **multiple** Theora servers are registered, follow the user’s disambiguation: they (or the prompt) should name the target, e.g. *"Ask `acme-kb` about …"* or *"Search both `theora-research` and `theora-notes` for …"*. For cross-KB questions, run `search` / `ask` (and reads) on each named server and **attribute quotes and citations to the server name** so answers do not conflate different knowledge bases.
 
@@ -34,10 +34,12 @@ Review the returned titles, snippets, and scores. BM25 scores above 1.0 indicate
 
 ### 3. Read sources — fetch article content
 
-For promising search results, read the full article via MCP resources:
-- Sources: `theora://wiki/sources/{slug}`
-- Concepts: `theora://wiki/concepts/{slug}`
-- Previous queries: `theora://output/{slug}`
+For promising search results, call `read-article` with the `path` from the search result:
+- Sources: `wiki/sources/my-article`
+- Concepts: `wiki/concepts/my-concept`
+- Previous queries: `output/my-query`
+
+The `relativePath` field in search results maps directly to the `read-article` `path` parameter (omit the `.md` extension).
 
 ### 4. Ask — get a synthesized answer
 
@@ -58,4 +60,4 @@ Always cite the wiki articles used. The `ask` tool returns source paths; `search
 - **Search first, ask second.** Search is instant (BM25 index); ask invokes an LLM and costs tokens.
 - **Use entity filters** for questions about specific people, places, orgs, or works — e.g., `entity: "person/alan-turing"`.
 - **Chain queries.** Search broadly, read a few articles, then ask a focused question with the right tag filter.
-- **Check previous queries.** Browse `theora://output/*` resources to see if this question was already asked.
+- **Check previous queries.** Search with a broad query and look for `output/` paths to see if this question was already asked, then `read-article` to review them.

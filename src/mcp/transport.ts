@@ -150,6 +150,9 @@ export async function handleMcpRequest(raw: Request): Promise<Response> {
 export function createMcpApp(): Hono {
   const app = new Hono()
   app.use('*', mcpCors)
+  app.get('/health', (c) =>
+    c.json({ status: 'ok', server: 'theora-mcp', sessions: sessions.size }),
+  )
   app.all('/', (c) => handleMcpRequest(c.req.raw))
   return app
 }

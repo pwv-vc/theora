@@ -19,7 +19,7 @@ Theora ships with Cursor agent skills that teach AI agents how to use the MCP se
 **Workflow:**
 1. Orient — call `wiki-stats`, `list-tags`, `list-entities` to understand the KB
 2. Search — find articles with `search` (optionally filtered by tag or entity)
-3. Read — fetch full article content via MCP resources
+3. Read — fetch full article content with `read-article`
 4. Ask — get an AI-synthesized answer with `ask` for complex questions
 5. Cite — reference the wiki articles used
 
@@ -31,7 +31,7 @@ Theora ships with Cursor agent skills that teach AI agents how to use the MCP se
 1. Overview — `wiki-stats` for the big picture
 2. Browse by topic — `list-tags` then `search` with tag filter
 3. Browse by entity — `list-entities` then `search` with entity filter
-4. Browse previous queries — list `theora://output/*` resources
+4. Browse previous queries — `search` in the output directory, then `read-article` for details
 
 ## Location
 
