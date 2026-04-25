@@ -29,6 +29,9 @@ export type StartServerOptions = {
 export function createWebApp(): Hono {
   const app = new Hono()
 
+  // MCP endpoint is raw JSON-RPC / SSE — skip web middleware (CSP, KB context)
+  app.route('/mcp', mcpRoutes)
+
   app.use('*', webSecurityHeaders)
   app.use('*', injectKbContext)
 
@@ -42,7 +45,6 @@ export function createWebApp(): Hono {
   app.route('/compile', compileRoutes)
   app.route('/stats', statsRoutes)
   app.route('/api', apiRoutes)
-  app.route('/mcp', mcpRoutes)
   app.route('/settings', settingsRoutes)
 
   app.notFound((c) => {

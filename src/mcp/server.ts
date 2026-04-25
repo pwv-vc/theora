@@ -1,4 +1,4 @@
-import { McpServer, ResourceTemplate, fromJsonSchema } from '@modelcontextprotocol/server'
+import { McpServer, fromJsonSchema } from '@modelcontextprotocol/server'
 import type { CallToolResult } from '@modelcontextprotocol/server'
 import { searchArticles } from '../lib/search.js'
 import { streamAsk } from '../lib/ask.js'
@@ -94,13 +94,17 @@ export function createTheoraMcpServer(): McpServer {
       ].join(' '),
       capabilities: {
         logging: {},
-        resources: { subscribe: true },
       },
     },
   )
 
   registerTools(server)
   registerResources(server)
+
+  // No-op subscribe/unsubscribe — the SDK doesn't implement these and
+  // Cursor will retry method-not-found errors in a loop.
+  server.server.setRequestHandler('resources/subscribe', async () => ({}))
+  server.server.setRequestHandler('resources/unsubscribe', async () => ({}))
 
   return server
 }
@@ -430,115 +434,76 @@ function registerResources(server: McpServer): void {
     },
   )
 
-  server.registerResource(
-    'wiki-source',
-    new ResourceTemplate('theora://wiki/sources/{slug}', {
-      list: async () => {
-        const scope = createMcpRequestScope('resource', 'wiki-source.list', isMcpDebugEnabled())
-        try {
-          const root = requireKbRoot()
-          const paths = kbPaths(root)
-          const articles = listWikiArticles().filter(a => a.path.startsWith(paths.wikiSources))
-          scope.done(`count=${articles.length}`)
-          return {
-            resources: articles.map(a => ({
-              uri: `theora://wiki/sources/${slugFromRelativePath(a.relativePath, 'wiki/sources/')}`,
-              name: a.title,
-              description: a.tags.length ? `Tags: ${a.tags.join(', ')}` : undefined,
-            })),
-          }
-        } catch (err) {
-          scope.fail(err)
-          throw err
-        }
-      },
-    }),
-    { title: 'Wiki Source Article', description: 'A compiled source article from the knowledge base.', mimeType: 'text/markdown' },
-    async (uri, { slug }) => {
-      const scope = createMcpRequestScope('resource', 'wiki-source.read', isMcpDebugEnabled())
-      try {
-        const article = findArticleBySlug(slug as string, 'sources')
-        if (!article) throw new Error(`Source not found: ${slug}`)
-        scope.done(`slug=${String(slug)}`)
-        return { contents: [{ uri: uri.href, text: formatArticleResource(article) }] }
-      } catch (err) {
-        scope.fail(err)
-        throw err
-      }
+  // Individual articles are exposed via the `read-article` tool rather than
+  // as resources.  Resource templates caused Cursor to enumerate + subscribe
+  // to every article on connect (~600 POSTs for a large KB).
+  server.registerTool(
+    'read-article',
+    {
+      title: 'Read Article',
+      description:
+        'Read the full content of a wiki article by path. ' +
+        'Use `search` first to discover article paths, then read specific ones for full text.',
+      inputSchema: fromJsonSchema({
+        type: 'object' as const,
+        properties: {
+          path: {
+            type: 'string',
+            description:
+              'Article relative path from search results (e.g. "wiki/sources/my-article" or "wiki/concepts/my-concept" or "output/my-query"). ' +
+              'Omit the .md extension.',
+          },
+        },
+        required: ['path'],
+      }),
+      annotations: { readOnlyHint: true },
     },
-  )
-
-  server.registerResource(
-    'wiki-concept',
-    new ResourceTemplate('theora://wiki/concepts/{slug}', {
-      list: async () => {
-        const scope = createMcpRequestScope('resource', 'wiki-concept.list', isMcpDebugEnabled())
-        try {
-          const root = requireKbRoot()
-          const paths = kbPaths(root)
-          const articles = listWikiArticles().filter(a => a.path.startsWith(paths.wikiConcepts))
-          scope.done(`count=${articles.length}`)
-          return {
-            resources: articles.map(a => ({
-              uri: `theora://wiki/concepts/${slugFromRelativePath(a.relativePath, 'wiki/concepts/')}`,
-              name: a.title,
-              description: a.tags.length ? `Tags: ${a.tags.join(', ')}` : undefined,
-            })),
-          }
-        } catch (err) {
-          scope.fail(err)
-          throw err
-        }
-      },
-    }),
-    { title: 'Wiki Concept Article', description: 'A concept article extracted during compilation.', mimeType: 'text/markdown' },
-    async (uri, { slug }) => {
-      const scope = createMcpRequestScope('resource', 'wiki-concept.read', isMcpDebugEnabled())
+    async (args): Promise<CallToolResult> => {
+      const { path: articlePath } = args as { path: string }
+      const debugEnabled = isMcpDebugEnabled()
+      const scope = createMcpRequestScope('tool', 'read-article', debugEnabled)
       try {
-        const article = findArticleBySlug(slug as string, 'concepts')
-        if (!article) throw new Error(`Concept not found: ${slug}`)
-        scope.done(`slug=${String(slug)}`)
-        return { contents: [{ uri: uri.href, text: formatArticleResource(article) }] }
+        const normalized = articlePath.replace(/\.md$/, '')
+        const kind = normalized.startsWith('wiki/sources/')
+          ? 'sources' as const
+          : normalized.startsWith('wiki/concepts/')
+            ? 'concepts' as const
+            : normalized.startsWith('output/')
+              ? 'output' as const
+              : null
+
+        if (!kind) {
+          scope.done(`path="${normalized}" → invalid prefix`)
+          return {
+            content: [{
+              type: 'text',
+              text: `Invalid path "${normalized}". Must start with wiki/sources/, wiki/concepts/, or output/.`,
+            }],
+            isError: true,
+          }
+        }
+
+        const prefix = kind === 'output' ? 'output/' : `wiki/${kind}/`
+        const slug = normalized.replace(prefix, '')
+        const article = findArticleBySlug(slug, kind)
+
+        if (!article) {
+          scope.done(`path="${normalized}" → not found`)
+          return {
+            content: [{ type: 'text', text: `Article not found: ${normalized}` }],
+            isError: true,
+          }
+        }
+
+        const text = formatArticleResource(article)
+        scope.done(`path="${normalized}" → ${text.length} chars`)
+        return { content: [{ type: 'text', text }] }
       } catch (err) {
         scope.fail(err)
-        throw err
-      }
-    },
-  )
-
-  server.registerResource(
-    'wiki-query',
-    new ResourceTemplate('theora://output/{slug}', {
-      list: async () => {
-        const scope = createMcpRequestScope('resource', 'wiki-query.list', isMcpDebugEnabled())
-        try {
-          const root = requireKbRoot()
-          const paths = kbPaths(root)
-          const articles = listWikiArticles().filter(a => a.path.startsWith(paths.output))
-          scope.done(`count=${articles.length}`)
-          return {
-            resources: articles.map(a => ({
-              uri: `theora://output/${slugFromRelativePath(a.relativePath, 'output/')}`,
-              name: a.title,
-            })),
-          }
-        } catch (err) {
-          scope.fail(err)
-          throw err
+        return {
+          content: [{ type: 'text', text: `Read failed: ${err instanceof Error ? err.message : String(err)}` }],
+          isError: true,
         }
-      },
-    }),
-    { title: 'Previous Query Result', description: 'A previously filed ask result from the output directory.', mimeType: 'text/markdown' },
-    async (uri, { slug }) => {
-      const scope = createMcpRequestScope('resource', 'wiki-query.read', isMcpDebugEnabled())
-      try {
-        const article = findArticleBySlug(slug as string, 'output')
-        if (!article) throw new Error(`Query result not found: ${slug}`)
-        scope.done(`slug=${String(slug)}`)
-        return { contents: [{ uri: uri.href, text: formatArticleResource(article) }] }
-      } catch (err) {
-        scope.fail(err)
-        throw err
       }
     },
   )
