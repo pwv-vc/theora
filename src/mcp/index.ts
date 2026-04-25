@@ -11,6 +11,16 @@ import { readConfigAtRoot, DEFAULT_MCP_PORT, MCP_PORT_ENV } from '../lib/config.
 import { findActiveKbRoot } from '../lib/paths.js'
 
 const args = process.argv.slice(2)
+if (args.includes('--debug')) {
+  process.env.THEORA_MCP_DEBUG = '1'
+}
+
+function isDebugEnabled(): boolean {
+  if (args.includes('--debug')) return true
+  const raw = process.env.THEORA_MCP_DEBUG?.trim().toLowerCase()
+  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on'
+}
+
 const httpMode = args.includes('--http')
 const portArgIdx = args.indexOf('--port')
 const portArg = portArgIdx !== -1 ? args[portArgIdx + 1] : undefined
@@ -38,7 +48,12 @@ const server = createTheoraMcpServer()
 
 if (httpMode) {
   const port = resolvePort()
-  const transport = new WebStandardStreamableHTTPServerTransport()
+  if (isDebugEnabled()) {
+    console.error('Theora MCP: debug mode enabled (THEORA_MCP_DEBUG=1)')
+  }
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: () => crypto.randomUUID(),
+  })
   await server.connect(transport)
 
   const app = new Hono()
@@ -61,11 +76,54 @@ if (httpMode) {
     console.error(`Health check: http://localhost:${port}/health`)
   })
 } else {
+  const debugEnabled = isDebugEnabled()
+  if (debugEnabled) {
+    console.error('Theora MCP: debug mode enabled (THEORA_MCP_DEBUG=1)')
+  }
   const transport = new StdioServerTransport()
+
+  if (debugEnabled) {
+    const originalSend = transport.send.bind(transport)
+    transport.send = async (message: unknown, options?: unknown) => {
+      const json = JSON.stringify(message)
+      const isResponse = typeof message === 'object' && message !== null && 'result' in message
+      const isError = typeof message === 'object' && message !== null && 'error' in message
+      const ts = new Date().toISOString()
+      if (isResponse || isError) {
+        console.error(`[theora:mcp][${ts}] transport.send RESPONSE (${json.length} bytes): ${json.slice(0, 300)}…`)
+      } else {
+        console.error(`[theora:mcp][${ts}] transport.send notification: ${json.slice(0, 200)}`)
+      }
+      try {
+        await originalSend(message, options)
+        if (isResponse || isError) {
+          console.error(`[theora:mcp][${ts}] transport.send RESPONSE delivered OK`)
+        }
+      } catch (err) {
+        console.error(`[theora:mcp][${ts}] transport.send FAILED: ${err instanceof Error ? err.message : String(err)}`)
+        throw err
+      }
+    }
+  }
+
   await server.connect(transport)
+
+  // Catch SDK-internal errors that silently swallow responses
+  server.server.onerror = (error) => {
+    console.error(`[theora:mcp] SDK error: ${error instanceof Error ? error.message : String(error)}`)
+  }
 }
 
 process.on('SIGINT', async () => {
   await server.close()
   process.exit(0)
+})
+
+process.on('uncaughtException', (err) => {
+  console.error(`[theora:mcp] uncaughtException: ${err.message}`)
+  console.error(err.stack)
+})
+
+process.on('unhandledRejection', (reason) => {
+  console.error(`[theora:mcp] unhandledRejection: ${reason instanceof Error ? reason.message : String(reason)}`)
 })

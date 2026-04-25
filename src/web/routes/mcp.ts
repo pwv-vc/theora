@@ -6,7 +6,9 @@ import { createTheoraMcpServer } from '../../mcp/server.js'
 export const mcpRoutes = new Hono()
 
 const mcpServer = createTheoraMcpServer()
-const mcpTransport = new WebStandardStreamableHTTPServerTransport()
+const mcpTransport = new WebStandardStreamableHTTPServerTransport({
+  sessionIdGenerator: () => crypto.randomUUID(),
+})
 
 const connectPromise = mcpServer.connect(mcpTransport)
 

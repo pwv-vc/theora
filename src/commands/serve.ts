@@ -24,7 +24,11 @@ export const serveCommand = new Command('serve')
     '--share',
     'show LAN URLs, terminal QR code, and Safari (iOS) plain-HTTP tips for other devices on your network',
   )
-  .action((options: { port?: string; share?: boolean }) => {
+  .option('--debug', 'enable MCP debug logging (THEORA_MCP_DEBUG)')
+  .action((options: { port?: string; share?: boolean; debug?: boolean }) => {
+    if (options.debug) {
+      process.env.THEORA_MCP_DEBUG = '1'
+    }
     const root = requireKbRoot()
     const config = readConfig()
     const port = resolveServePort(options.port, config)
