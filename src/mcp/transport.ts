@@ -29,7 +29,6 @@ function touchSession(sessionId: string): void {
 function closeSession(sessionId: string, reason: string): void {
   const session = sessions.get(sessionId)
   if (!session) return
-  session.transport.onclose?.()
   mcpLog(`session=${sessionId.slice(0, 8)} closed (${reason})`)
   sessions.delete(sessionId)
   sessionTimers.delete(sessionId)
@@ -138,8 +137,6 @@ export async function handleMcpRequest(raw: Request): Promise<Response> {
       session.transport.onclose = () => {
         stopKeepAlive()
         origOnclose?.()
-        sessions.delete(sessionId)
-        sessionTimers.delete(sessionId)
       }
       mcpLog(`session=${sessionId.slice(0, 8)} SSE stream opened`)
       return wrapped
